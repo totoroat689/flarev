@@ -1,3 +1,6 @@
+
+
+
 <!DOCTYPE html>
 <html lang="ko">
   <head>
@@ -234,87 +237,92 @@
         background: #0d1117;
       }
 
-      /* 구글 지도 다크 모드 */
-      #map {
-        width: 100%;
-        height: 100%;
-      }
-
-      /* 커스텀 핑 마커 */
-      .custom-pin {
-        position: absolute;
-        transform: translate(-50%, -100%);
+      /* ── 커스텀 축제 핀 ── */
+      .flare-pin {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 7px;
         cursor: pointer;
-        z-index: 10;
-        animation: pin-appear 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        transform: translate(-50%, -50%);
+        transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
       }
 
-      @keyframes pin-appear {
-        from {
-          transform: translate(-50%, -120%) scale(0);
-          opacity: 0;
-        }
-        to {
-          transform: translate(-50%, -100%) scale(1);
-          opacity: 1;
-        }
+      /* 발광하는 점 (항상 보임) */
+      .flare-dot {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 35% 35%, #ffb3a0, #ff6b8b);
+        box-shadow: 0 0 10px rgba(255, 107, 139, 0.9),
+          0 0 20px rgba(255, 107, 139, 0.5);
+        flex-shrink: 0;
+        position: relative;
+        animation: dot-pulse 2.5s ease-in-out infinite;
       }
 
-      .pin-body {
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-size: 0.72rem;
+      /* 점 바깥의 은은한 파동 */
+      .flare-dot::after {
+        content: '';
+        position: absolute;
+        inset: -6px;
+        border-radius: 50%;
+        border: 1px solid rgba(255, 107, 139, 0.5);
+        animation: ring-pulse 2.5s ease-in-out infinite;
+      }
+
+      @keyframes dot-pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.15); }
+      }
+
+      @keyframes ring-pulse {
+        0% { transform: scale(0.8); opacity: 0.8; }
+        70% { transform: scale(1.8); opacity: 0; }
+        100% { opacity: 0; }
+      }
+
+      /* 축제명 라벨 (가까이 가면 보임) */
+      .flare-label {
+        font-size: 0.74rem;
         font-weight: 700;
-        letter-spacing: 0.5px;
+        color: #fff;
         white-space: nowrap;
-        border: 1px solid;
-        transition: all 0.2s;
-        backdrop-filter: blur(10px);
+        padding: 4px 11px;
+        border-radius: 20px;
+        background: rgba(20, 20, 31, 0.82);
+        border: 1px solid rgba(255, 107, 139, 0.55);
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5),
+          0 0 14px rgba(255, 107, 139, 0.25);
+        backdrop-filter: blur(8px);
+        letter-spacing: 0.3px;
+        /* 기본은 숨김 (멀리서) */
+        opacity: 0;
+        transform: translateX(-6px) scale(0.9);
+        pointer-events: none;
+        transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        max-width: 180px;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
-      .pin-body:hover {
-        transform: scale(1.08);
+      /* 가까이(확대) 상태일 때 라벨 보이기 */
+      .flare-pin.zoomed .flare-label {
+        opacity: 1;
+        transform: translateX(0) scale(1);
       }
 
-      .pin-festival {
-        background: rgba(255, 107, 107, 0.2);
+      /* 마우스 올리면 강조 */
+      .flare-pin:hover {
+        z-index: 999 !important;
+      }
+      .flare-pin:hover .flare-dot {
+        transform: scale(1.3);
+      }
+      .flare-pin:hover .flare-label {
+        opacity: 1;
+        transform: translateX(0) scale(1.05);
         border-color: var(--festival);
-        color: var(--festival);
-        box-shadow: 0 0 16px rgba(255, 107, 107, 0.4);
-      }
-
-      .pin-discount {
-        background: rgba(255, 217, 61, 0.2);
-        border-color: var(--discount);
-        color: var(--discount);
-        box-shadow: 0 0 16px rgba(255, 217, 61, 0.4);
-      }
-
-      .pin-live {
-        background: rgba(107, 255, 184, 0.2);
-        border-color: var(--live);
-        color: var(--live);
-        box-shadow: 0 0 16px rgba(107, 255, 184, 0.4);
-      }
-
-      .pin-tail {
-        width: 2px;
-        height: 10px;
-        margin: 0 auto;
-        border-radius: 2px;
-      }
-
-      .tail-festival {
-        background: var(--festival);
-        box-shadow: 0 0 6px rgba(255, 107, 107, 0.8);
-      }
-      .tail-discount {
-        background: var(--discount);
-        box-shadow: 0 0 6px rgba(255, 217, 61, 0.8);
-      }
-      .tail-live {
-        background: var(--live);
-        box-shadow: 0 0 6px rgba(107, 255, 184, 0.8);
       }
 
       /* ── INFO PANEL ── */
@@ -365,16 +373,6 @@
         background: var(--festival-bg);
         color: var(--festival);
         border: 1px solid rgba(255, 107, 107, 0.3);
-      }
-      .badge-discount {
-        background: var(--discount-bg);
-        color: var(--discount);
-        border: 1px solid rgba(255, 217, 61, 0.3);
-      }
-      .badge-live {
-        background: var(--live-bg);
-        color: var(--live);
-        border: 1px solid rgba(107, 255, 184, 0.3);
       }
 
       .panel-close {
@@ -488,14 +486,6 @@
         background: var(--festival);
         color: #0a0a0f;
       }
-      .nav-discount {
-        background: var(--discount);
-        color: #0a0a0f;
-      }
-      .nav-live {
-        background: var(--live);
-        color: #0a0a0f;
-      }
 
       .nav-btn:hover {
         opacity: 0.85;
@@ -528,6 +518,22 @@
       #upload-btn:hover {
         transform: translateY(-2px);
         box-shadow: 0 0 36px rgba(255, 107, 107, 0.7);
+      }
+
+      /* 로딩 표시 */
+      #loading {
+        position: absolute;
+        top: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 10px 20px;
+        font-size: 0.8rem;
+        color: var(--muted);
+        z-index: 300;
+        display: none;
       }
 
       /* 로그인 모달 */
@@ -648,7 +654,7 @@
           >
             <div class="filter-dot dot-festival"></div>
             <span class="filter-text">🎪 축제</span>
-            <span class="filter-count" id="cnt-festival">3</span>
+            <span class="filter-count" id="cnt-festival">0</span>
           </div>
           <div
             class="filter-item active-discount"
@@ -656,7 +662,7 @@
           >
             <div class="filter-dot dot-discount"></div>
             <span class="filter-text">🏷️ 할인 / 이벤트</span>
-            <span class="filter-count" id="cnt-discount">5</span>
+            <span class="filter-count" id="cnt-discount">0</span>
           </div>
           <div
             class="filter-item active-live"
@@ -664,7 +670,7 @@
           >
             <div class="filter-dot dot-live"></div>
             <span class="filter-text">📸 실시간 현장</span>
-            <span class="filter-count" id="cnt-live">8</span>
+            <span class="filter-count" id="cnt-live">0</span>
           </div>
         </div>
       </div>
@@ -680,6 +686,9 @@
     <div id="map-container">
       <div id="map"></div>
 
+      <!-- 로딩 표시 -->
+      <div id="loading">🔄 축제 정보를 불러오는 중...</div>
+
       <!-- 정보 패널 -->
       <div id="info-panel">
         <div class="panel-header">
@@ -688,27 +697,27 @@
         </div>
         <div class="panel-img" id="panel-img">🎪</div>
         <div class="panel-body">
-          <div class="panel-title" id="panel-title">서울 빛 축제 2025</div>
+          <div class="panel-title" id="panel-title">축제명</div>
           <div class="panel-meta">
             <div class="meta-row">
               <span class="meta-icon">📅</span
-              ><span id="panel-date">2025.05.25 (토) ~ 06.01 (일)</span>
+              ><span id="panel-date">날짜</span>
             </div>
             <div class="meta-row">
               <span class="meta-icon">📍</span
-              ><span id="panel-loc">서울 광화문 광장</span>
+              ><span id="panel-loc">장소</span>
             </div>
             <div class="meta-row">
-              <span class="meta-icon">🕐</span
-              ><span id="panel-time">오후 6시 ~ 오후 11시</span>
+              <span class="meta-icon">🏠</span
+              ><span id="panel-time">주소</span>
             </div>
           </div>
           <div class="reaction-row">
             <button class="reaction-btn" id="like-btn" onclick="toggleLike()">
-              <span>👍</span><span id="like-count">128</span>
+              <span>👍</span><span id="like-count">0</span>
             </button>
             <button class="reaction-btn" onclick="openComment()">
-              <span>💬</span><span>댓글 24</span>
+              <span>💬</span><span>댓글</span>
             </button>
           </div>
           <button class="nav-btn" id="nav-btn">📍 길 찾기</button>
@@ -736,7 +745,25 @@
       </div>
     </div>
 
+    <!-- Supabase 라이브러리 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
     <script>
+      // ============================================
+      // Supabase 연결 설정
+      // ⚠️ 아래 SUPABASE_KEY 자리에 본인 anon key를 넣으세요
+      // ============================================
+      const SUPABASE_URL = 'https://pbrbzjxdjqqmhvhzhwlp.supabase.co';
+      const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicmJ6anhkanFxbWh2aHpod2xwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjc3NTcsImV4cCI6MjA5NTMwMzc1N30.E6-GthxwIFN2-jy4ojf5ZxR7YcdPJULG6Mxj9LvkI1c';
+
+      const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+      // 가져온 축제 데이터 저장용
+      let festivalData = [];
+      let map;
+      let currentLikes = 0;
+      let liked = false;
+
       // ── 구글 지도 다크 스타일 ──
       const darkStyle = [
         { elementType: 'geometry', stylers: [{ color: '#0d0d14' }] },
@@ -779,12 +806,11 @@
         },
       ];
 
-      let map;
-
+      // ── 지도 초기화 (구글 지도가 부르는 함수) ──
       function initMap() {
         map = new google.maps.Map(document.getElementById('map'), {
-          center: { lat: 37.5665, lng: 126.978 },
-          zoom: 13,
+          center: { lat: 36.5, lng: 127.8 }, // 한국 중앙쯤
+          zoom: 7,
           styles: darkStyle,
           disableDefaultUI: true,
           zoomControl: true,
@@ -793,179 +819,147 @@
           },
         });
 
-        // 마커 데이터
-        const markers = [
-          {
-            lat: 37.575,
-            lng: 126.9768,
-            type: 'festival',
-            idx: 0,
-            label: '🎪 서울 빛축제',
-          },
-          {
-            lat: 37.512,
-            lng: 126.9947,
-            type: 'festival',
-            idx: 1,
-            label: '🎪 한강 버스킹',
-          },
-          {
-            lat: 37.5563,
-            lng: 126.9236,
-            type: 'discount',
-            idx: 0,
-            label: '🏷️ 홍대 팝업스토어',
-          },
-          {
-            lat: 37.4979,
-            lng: 127.0276,
-            type: 'discount',
-            idx: 1,
-            label: '🏷️ 강남 50% 세일',
-          },
-          {
-            lat: 37.5596,
-            lng: 126.937,
-            type: 'live',
-            idx: 0,
-            label: '📸 지금 여기!',
-          },
-          {
-            lat: 37.5345,
-            lng: 126.994,
-            type: 'live',
-            idx: 1,
-            label: '📸 실시간 현장',
-          },
-        ];
-
-        const colors = {
-          festival: '#FF6B6B',
-          discount: '#FFD93D',
-          live: '#6BFFB8',
-        };
-
-        markers.forEach((m) => {
-          const marker = new google.maps.Marker({
-            position: { lat: m.lat, lng: m.lng },
-            map,
-            label: {
-              text: m.label,
-              color: colors[m.type],
-              fontSize: '12px',
-              fontWeight: 'bold',
-              fontFamily: 'Noto Sans KR, sans-serif',
-            },
-            icon: {
-              path: google.maps.SymbolPath.CIRCLE,
-              scale: 10,
-              fillColor: colors[m.type],
-              fillOpacity: 0.9,
-              strokeColor: colors[m.type],
-              strokeWeight: 2,
-            },
-          });
-
-          marker.addListener('click', () => openPanel(m.type, m.idx));
-        });
+        // 이미 데이터를 불러왔으면 핀 표시
+        if (festivalData.length > 0) showFestivalPins();
       }
 
-      // ── 데이터 ──
-      const data = {
-        festival: [
-          {
-            title: '서울 빛 축제 2025',
-            date: '2025.05.25 (토) ~ 06.01 (일)',
-            loc: '서울 광화문 광장',
-            time: '오후 6시 ~ 오후 11시',
-            emoji: '🎪',
-            likes: 128,
-            comments: 24,
-          },
-          {
-            title: '한강 버스킹 페스티벌',
-            date: '2025.05.25 (토)',
-            loc: '한강공원 잠원지구',
-            time: '오후 4시 ~ 오후 9시',
-            emoji: '🎸',
-            likes: 74,
-            comments: 11,
-          },
-        ],
-        discount: [
-          {
-            title: '홍대 팝업스토어 오픈',
-            date: '2025.05.24 ~ 05.31',
-            loc: '홍대 걷고싶은거리',
-            time: '오전 11시 ~ 오후 9시',
-            emoji: '🛍️',
-            likes: 56,
-            comments: 8,
-          },
-          {
-            title: '강남 여름 세일 50%',
-            date: '2025.05.25 ~ 05.30',
-            loc: '강남역 지하상가',
-            time: '종일',
-            emoji: '🏷️',
-            likes: 203,
-            comments: 41,
-          },
-        ],
-        live: [
-          {
-            title: '지금 여기! 거리 공연 중',
-            date: '2025.05.25 오늘',
-            loc: '신촌 연세로',
-            time: '지금 진행 중 🔴',
-            emoji: '🎤',
-            likes: 32,
-            comments: 7,
-          },
-          {
-            title: '실시간 현장 공유',
-            date: '2025.05.25 오늘',
-            loc: '이태원 앤틱가구거리',
-            time: '지금 진행 중 🔴',
-            emoji: '📸',
-            likes: 19,
-            comments: 3,
-          },
-        ],
-      };
+      // ── Supabase에서 축제 데이터 가져오기 ──
+      async function loadFestivals() {
+        document.getElementById('loading').style.display = 'block';
 
-      let currentLikes = 0;
-      let liked = false;
+        const { data, error } = await supabaseClient
+          .from('festivals')
+          .select('*')
+          .eq('is_active', true);
 
-      // 패널 열기
-      function openPanel(type, idx) {
-        const d = data[type][idx];
+        document.getElementById('loading').style.display = 'none';
+
+        if (error) {
+          console.log('❌ 에러:', error.message);
+          return;
+        }
+
+        festivalData = data;
+        console.log('✅ 축제', data.length, '개 불러옴');
+
+        // 사이드바 개수 업데이트
+        document.getElementById('cnt-festival').textContent = data.length;
+
+        // 지도가 준비됐으면 핀 표시
+        if (map) showFestivalPins();
+      }
+
+      // 화면에 올린 핀들을 모아두는 곳 (줌 변화 시 한꺼번에 제어)
+      let pinOverlays = [];
+      // 이 줌 이상이면 "가까이" 로 보고 축제명 라벨을 보여줌
+      const LABEL_ZOOM = 11;
+
+      // ── 축제를 지도에 커스텀 핀으로 표시 ──
+      function showFestivalPins() {
+        // 커스텀 HTML 마커를 만들기 위한 오버레이 클래스
+        class FlarePin extends google.maps.OverlayView {
+          constructor(festival) {
+            super();
+            this.festival = festival;
+            this.position = new google.maps.LatLng(
+              festival.latitude,
+              festival.longitude
+            );
+            this.div = null;
+          }
+
+          onAdd() {
+            const div = document.createElement('div');
+            div.className = 'flare-pin';
+            div.style.position = 'absolute';
+            div.innerHTML =
+              '<div class="flare-dot"></div>' +
+              '<div class="flare-label">' +
+              (this.festival.title || '축제') +
+              '</div>';
+
+            // 핀 클릭 → 정보 패널 열기
+            div.addEventListener('click', (e) => {
+              e.stopPropagation();
+              openFestivalPanel(this.festival);
+            });
+
+            this.div = div;
+            this.getPanes().overlayMouseTarget.appendChild(div);
+          }
+
+          draw() {
+            if (!this.div) return;
+            const point = this.getProjection().fromLatLngToDivPixel(
+              this.position
+            );
+            if (point) {
+              this.div.style.left = point.x + 'px';
+              this.div.style.top = point.y + 'px';
+            }
+          }
+
+          // 줌 상태에 따라 라벨 켜고 끄기
+          setZoomed(isZoomed) {
+            if (!this.div) return;
+            if (isZoomed) this.div.classList.add('zoomed');
+            else this.div.classList.remove('zoomed');
+          }
+
+          onRemove() {
+            if (this.div) {
+              this.div.parentNode.removeChild(this.div);
+              this.div = null;
+            }
+          }
+        }
+
+        // 모든 축제에 핀 생성
+        festivalData.forEach((f) => {
+          if (!f.latitude || !f.longitude) return; // 좌표 없으면 건너뜀
+          const pin = new FlarePin(f);
+          pin.setMap(map);
+          pinOverlays.push(pin);
+        });
+
+        // 현재 줌에 맞게 라벨 표시 여부 한번 적용
+        updatePinLabels();
+
+        // 줌이 바뀔 때마다 라벨 표시 갱신
+        map.addListener('zoom_changed', updatePinLabels);
+      }
+
+      // 현재 줌 레벨을 보고 모든 핀의 라벨을 켜거나 끔
+      function updatePinLabels() {
+        const zoomedIn = map.getZoom() >= LABEL_ZOOM;
+        pinOverlays.forEach((pin) => pin.setZoomed(zoomedIn));
+      }
+
+      // ── 핀 클릭 시 정보 패널 열기 ──
+      function openFestivalPanel(f) {
         const panel = document.getElementById('info-panel');
         const badge = document.getElementById('panel-badge');
-        const navBtn = document.getElementById('nav-btn');
 
-        badge.className = 'panel-badge badge-' + type;
-        badge.textContent =
-          type === 'festival'
-            ? '🎪 축제'
-            : type === 'discount'
-            ? '🏷️ 할인/이벤트'
-            : '📸 실시간 현장';
+        badge.className = 'panel-badge badge-festival';
+        badge.textContent = '🎪 축제';
 
-        document.getElementById('panel-img').textContent = d.emoji;
+        document.getElementById('panel-img').textContent = '🎪';
         document.getElementById('panel-img').style.fontSize = '4rem';
-        document.getElementById('panel-title').textContent = d.title;
-        document.getElementById('panel-date').textContent = d.date;
-        document.getElementById('panel-loc').textContent = d.loc;
-        document.getElementById('panel-time').textContent = d.time;
+        document.getElementById('panel-title').textContent =
+          f.title || '제목 없음';
+        document.getElementById('panel-date').textContent = f.date_start
+          ? f.date_start + (f.date_end ? ' ~ ' + f.date_end : '')
+          : '날짜 미정';
+        document.getElementById('panel-loc').textContent =
+          f.location_name || '장소 미정';
+        document.getElementById('panel-time').textContent = f.address || '';
 
-        currentLikes = d.likes;
+        currentLikes = 0;
         liked = false;
         document.getElementById('like-btn').className = 'reaction-btn';
         document.getElementById('like-count').textContent = currentLikes;
 
-        navBtn.className = 'nav-btn nav-' + type;
-
+        document.getElementById('nav-btn').className = 'nav-btn nav-festival';
         panel.style.display = 'block';
       }
 
@@ -973,7 +967,7 @@
         document.getElementById('info-panel').style.display = 'none';
       }
 
-      // 따봉
+      // 따봉 (임시 - 나중에 DB 연동)
       function toggleLike() {
         liked = !liked;
         currentLikes += liked ? 1 : -1;
@@ -1014,9 +1008,12 @@
           document.getElementById('modal-overlay').classList.remove('show');
         }
       }
+
+      // ── 페이지 열리면 데이터 불러오기 시작 ──
+      loadFestivals();
     </script>
 
-    <!-- 구글 지도 API (YOUR_API_KEY 를 본인 키로 교체하세요) -->
+    <!-- 구글 지도 API (key= 뒤에 본인 구글 키 그대로 두세요) -->
     <script
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB00WMTxhIKSr_rRXGjnK-wCABbvbkilPU&callback=initMap"
       async
