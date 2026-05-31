@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <!-- ============================================
      Flare(V) 홈페이지
-     버전: v1.6
+     버전: v1.7
      수정일: 2026-06-01
      수정사항:
-       - 첫 화면: 전체 축제 + 날짜 미정 축제 기본 표시
-       - 길찾기: 카카오/네이버/구글 지도 선택 팝업
-       - 교통/국도 정보 숨김
+       - 날짜 필터 UI 변경: 오늘/이번주/이번달/직접입력
+         (직접입력 누르면 날짜 칸 두 개가 아래로 뿅)
+       - 팝업 열린 축제 핀: 핑크 → 노란색으로 표시
+       - 핀 누를 때마다 길찾기 메뉴(카카오/네이버/구글) 자동 닫힘
+       - 같은 자리 핀 여러 개 → 숫자 뭉치로 표시,
+         누르면 이름이 흩어지고, 빈 곳 누르면 다시 합쳐짐
      ============================================ -->
 <html lang="ko">
   <head>
@@ -100,7 +103,7 @@
         margin-bottom: 10px;
       }
 
-      /* 날짜 버튼 (4개) */
+      /* 날짜 버튼 (4개: 오늘/이번주/이번달/직접입력) */
       .date-row {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -130,17 +133,34 @@
         color: var(--text);
       }
 
-      /* 기간 설정 (달력) */
+      /* 기간 설정 (달력) - 평소엔 숨김, '직접 입력' 누르면 뿅 */
       .date-range {
         margin-top: 10px;
-        display: flex;
+        display: none;
         flex-direction: column;
         gap: 6px;
       }
 
-      .date-range label {
-        font-size: 0.65rem;
+      .date-range.show {
+        display: flex;
+        animation: range-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+
+      @keyframes range-pop {
+        0% {
+          opacity: 0;
+          transform: translateY(-8px) scale(0.97);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      .date-range .range-label {
+        font-size: 0.62rem;
         color: var(--muted);
+        margin-bottom: -2px;
       }
 
       .date-range input[type='date'] {
@@ -376,6 +396,51 @@
       }
       .flare-pin.unknown .flare-label {
         border-color: rgba(160, 160, 170, 0.55);
+      }
+
+      /* 선택된(팝업 열린) 핀 → 노란색 */
+      .flare-pin.selected .flare-dot {
+        background: radial-gradient(circle at 35% 35%, #fff4b0, #ffd93d);
+        box-shadow: 0 0 12px rgba(255, 217, 61, 0.95),
+          0 0 22px rgba(255, 217, 61, 0.5);
+      }
+      .flare-pin.selected .flare-dot::after {
+        border-color: rgba(255, 217, 61, 0.6);
+      }
+      .flare-pin.selected .flare-label {
+        border-color: rgba(255, 217, 61, 0.7);
+      }
+      .flare-pin.selected {
+        z-index: 998 !important;
+      }
+
+      /* 흩어진(스파이더) 핀: 이름표 항상 보이기 */
+      .flare-pin.spider {
+        z-index: 997 !important;
+      }
+      .flare-pin.spider .flare-label {
+        opacity: 1;
+        transform: translateY(-50%) translateX(0) scale(1);
+      }
+
+      /* 숫자 뭉치 마커 */
+      .flare-cluster {
+        position: absolute;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 35% 35%, #ffb3a0, #ff6b8b);
+        box-shadow: 0 0 12px rgba(255, 107, 139, 0.85),
+          0 0 22px rgba(255, 107, 139, 0.45);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        color: #fff;
+        font-weight: 700;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        will-change: transform;
       }
 
       @keyframes dot-pulse {
@@ -819,21 +884,22 @@
           <button class="date-btn" onclick="setDate(this,'today')">
             오늘
           </button>
-          <button class="date-btn" onclick="setDate(this,'tomorrow')">
-            내일
-          </button>
           <button class="date-btn" onclick="setDate(this,'week')">
             이번 주
           </button>
           <button class="date-btn" onclick="setDate(this,'month')">
             이번 달
           </button>
+          <button class="date-btn" onclick="setDate(this,'custom')">
+            직접 입력
+          </button>
         </div>
 
-        <!-- 기간 직접 설정 -->
-        <div class="date-range">
-          <label>기간 직접 설정</label>
+        <!-- 기간 직접 설정 (직접 입력 버튼 누르면 뿅) -->
+        <div class="date-range" id="date-range">
+          <span class="range-label">시작일</span>
           <input type="date" id="range-start" onchange="setCustomRange()" />
+          <span class="range-label">종료일</span>
           <input type="date" id="range-end" onchange="setCustomRange()" />
         </div>
 
@@ -980,6 +1046,15 @@
       let currentFestival = null; // 현재 열린 축제 (길찾기용)
       const LABEL_ZOOM = 11;
 
+      // 핀 색 변경(선택)·뭉치기용 상태
+      let selectedPin = null; // 현재 팝업 열린(노란) 핀
+      let clusterMarkers = []; // 숫자 뭉치 마커들
+      let expandedCluster = null; // 펼쳐진(흩어진) 뭉치
+      let projectionHelper = null; // 화면 좌표 계산 도우미
+      let FlarePinClass = null; // 핀 클래스 (지도 로드 후 정의)
+      let ClusterMarkerClass = null; // 뭉치 클래스 (지도 로드 후 정의)
+      const CLUSTER_RADIUS = 48; // 이 픽셀 거리 안에 있으면 한 뭉치로 묶음
+
       // 필터 상태
       let activeCategories = { festival: true, discount: false, live: false };
       let dateFilter = 'none'; // 기본: 전체 표시
@@ -1052,7 +1127,159 @@
           },
         });
 
+        defineOverlayClasses(); // 핀·뭉치 클래스 정의 (지도 로드 후)
+
+        // 빈 지도 클릭 → 흩어진 이름 다시 합치기
+        map.addListener('click', collapseSpider);
+        // 지도 이동/줌이 끝나면 뭉치 다시 계산
+        map.addListener('idle', recluster);
+        map.addListener('zoom_changed', updatePinLabels);
+
         if (festivalData.length > 0) showFestivalPins();
+      }
+
+      // ── 핀·뭉치 클래스 정의 (google.maps 로드된 뒤 실행) ──
+      function defineOverlayClasses() {
+        // 화면 픽셀 좌표 계산용 도우미 (뭉치 거리 계산에 사용)
+        class ProjectionHelper extends google.maps.OverlayView {
+          onAdd() {}
+          draw() {}
+          onRemove() {}
+          px(latLng) {
+            const proj = this.getProjection();
+            return proj ? proj.fromLatLngToContainerPixel(latLng) : null;
+          }
+        }
+        projectionHelper = new ProjectionHelper();
+        projectionHelper.setMap(map);
+
+        // 축제 핀
+        FlarePinClass = class extends google.maps.OverlayView {
+          constructor(festival) {
+            super();
+            this.festival = festival;
+            this.position = new google.maps.LatLng(
+              festival.latitude,
+              festival.longitude
+            );
+            this.div = null;
+            this.isUnknown = !festival.date_start; // 날짜 미확인 여부
+            this.passesFilter = true; // 필터 통과 여부
+            this.spiderOffset = null; // 흩어질 때 위치 보정값
+          }
+
+          onAdd() {
+            const div = document.createElement('div');
+            div.className = 'flare-pin' + (this.isUnknown ? ' unknown' : '');
+            div.style.position = 'absolute';
+            div.style.willChange = 'transform';
+            div.innerHTML =
+              '<div class="flare-dot"></div>' +
+              '<div class="flare-label">' +
+              (this.festival.title || '축제') +
+              '</div>';
+
+            const self = this;
+            div.addEventListener('click', (e) => {
+              e.stopPropagation();
+              selectPin(self); // 노란색으로 표시
+              openFestivalPanel(self.festival);
+            });
+
+            this.div = div;
+            this.getPanes().overlayMouseTarget.appendChild(div);
+          }
+
+          draw() {
+            if (!this.div) return;
+            const point = this.getProjection().fromLatLngToDivPixel(
+              this.position
+            );
+            if (point) {
+              let x = point.x - 7;
+              let y = point.y - 7;
+              if (this.spiderOffset) {
+                x += this.spiderOffset.dx;
+                y += this.spiderOffset.dy;
+              }
+              this.div.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+            }
+          }
+
+          setZoomed(isZoomed) {
+            if (!this.div) return;
+            this.div.classList.toggle('zoomed', isZoomed);
+          }
+
+          // 화면에 보일지 숨길지
+          setVisible(visible) {
+            if (!this.div) return;
+            this.div.style.display = visible ? 'block' : 'none';
+          }
+
+          // 선택(팝업 열림) → 노란색
+          setSelected(isSel) {
+            if (!this.div) return;
+            this.div.classList.toggle('selected', isSel);
+          }
+
+          // 흩어지기: offset 있으면 펼침, null이면 제자리
+          setSpider(offset) {
+            this.spiderOffset = offset;
+            if (this.div) this.div.classList.toggle('spider', !!offset);
+            this.draw();
+          }
+
+          onRemove() {
+            if (this.div) {
+              this.div.parentNode.removeChild(this.div);
+              this.div = null;
+            }
+          }
+        };
+
+        // 숫자 뭉치 마커
+        ClusterMarkerClass = class extends google.maps.OverlayView {
+          constructor(position, members) {
+            super();
+            this.position = position; // 뭉치 중심 좌표
+            this.members = members; // 이 뭉치에 속한 핀들
+            this.div = null;
+          }
+          onAdd() {
+            const div = document.createElement('div');
+            div.className = 'flare-cluster';
+            div.style.willChange = 'transform';
+            div.textContent = this.members.length;
+            const self = this;
+            div.addEventListener('click', (e) => {
+              e.stopPropagation();
+              expandCluster(self); // 누르면 이름 흩뿌리기
+            });
+            this.div = div;
+            this.getPanes().overlayMouseTarget.appendChild(div);
+          }
+          draw() {
+            if (!this.div) return;
+            const p = this.getProjection().fromLatLngToDivPixel(this.position);
+            if (p) {
+              this.div.style.transform =
+                'translate(' + (p.x - 18) + 'px,' + (p.y - 18) + 'px)';
+            }
+          }
+          hide() {
+            if (this.div) this.div.style.display = 'none';
+          }
+          show() {
+            if (this.div) this.div.style.display = 'flex';
+          }
+          onRemove() {
+            if (this.div) {
+              this.div.parentNode.removeChild(this.div);
+              this.div = null;
+            }
+          }
+        };
       }
 
       // ── 데이터 가져오기 ──
@@ -1080,85 +1307,114 @@
 
       // ── 핀 표시 ──
       function showFestivalPins() {
-        class FlarePin extends google.maps.OverlayView {
-          constructor(festival) {
-            super();
-            this.festival = festival;
-            this.position = new google.maps.LatLng(
-              festival.latitude,
-              festival.longitude
-            );
-            this.div = null;
-            // 날짜 미확인 여부
-            this.isUnknown = !festival.date_start;
-          }
-
-          onAdd() {
-            const div = document.createElement('div');
-            div.className = 'flare-pin' + (this.isUnknown ? ' unknown' : '');
-            div.style.position = 'absolute';
-            div.style.willChange = 'transform';
-            div.innerHTML =
-              '<div class="flare-dot"></div>' +
-              '<div class="flare-label">' +
-              (this.festival.title || '축제') +
-              '</div>';
-
-            div.addEventListener('click', (e) => {
-              e.stopPropagation();
-              openFestivalPanel(this.festival);
-            });
-
-            this.div = div;
-            this.getPanes().overlayMouseTarget.appendChild(div);
-          }
-
-          draw() {
-            if (!this.div) return;
-            const point = this.getProjection().fromLatLngToDivPixel(
-              this.position
-            );
-            if (point) {
-              this.div.style.transform =
-                'translate(' + (point.x - 7) + 'px,' + (point.y - 7) + 'px)';
-            }
-          }
-
-          setZoomed(isZoomed) {
-            if (!this.div) return;
-            if (isZoomed) this.div.classList.add('zoomed');
-            else this.div.classList.remove('zoomed');
-          }
-
-          // 화면에 보일지 숨길지
-          setVisible(visible) {
-            if (!this.div) return;
-            this.div.style.display = visible ? 'block' : 'none';
-          }
-
-          onRemove() {
-            if (this.div) {
-              this.div.parentNode.removeChild(this.div);
-              this.div = null;
-            }
-          }
-        }
-
         festivalData.forEach((f) => {
           if (!f.latitude || !f.longitude) return;
-          const pin = new FlarePin(f);
+          const pin = new FlarePinClass(f);
           pin.setMap(map);
           pinOverlays.push(pin);
         });
 
         updatePinLabels();
-        applyFilters(); // 초기 필터 적용
-        map.addListener('zoom_changed', updatePinLabels);
+        applyFilters(); // 초기 필터 + 뭉치 계산
       }
 
       function updatePinLabels() {
         const zoomedIn = map.getZoom() >= LABEL_ZOOM;
         pinOverlays.forEach((pin) => pin.setZoomed(zoomedIn));
+      }
+
+      // ── 뭉치 계산: 가까운 핀끼리 묶어서 숫자로 ──
+      function recluster() {
+        if (!projectionHelper || !projectionHelper.getProjection()) return;
+
+        // 흩어진 상태가 있으면 먼저 제자리로
+        if (expandedCluster) {
+          expandedCluster.members.forEach((p) => p.setSpider(null));
+          expandedCluster = null;
+        }
+        // 기존 숫자 뭉치 제거
+        clusterMarkers.forEach((c) => c.setMap(null));
+        clusterMarkers = [];
+
+        // 필터 통과한 핀들의 화면 좌표 모으기
+        const pts = [];
+        pinOverlays.forEach((pin) => {
+          if (!pin.passesFilter) return;
+          const px = projectionHelper.px(pin.position);
+          if (px) pts.push({ pin: pin, px: px });
+        });
+
+        // 가까운 것끼리 그룹화
+        const used = new Set();
+        for (let i = 0; i < pts.length; i++) {
+          if (used.has(i)) continue;
+          const group = [pts[i]];
+          used.add(i);
+          for (let j = i + 1; j < pts.length; j++) {
+            if (used.has(j)) continue;
+            const dx = pts[i].px.x - pts[j].px.x;
+            const dy = pts[i].px.y - pts[j].px.y;
+            if (Math.hypot(dx, dy) < CLUSTER_RADIUS) {
+              group.push(pts[j]);
+              used.add(j);
+            }
+          }
+
+          if (group.length === 1) {
+            // 혼자면 그냥 핀 표시
+            group[0].pin.setVisible(true);
+          } else {
+            // 여러 개면 핀 숨기고 숫자 뭉치 생성
+            let latSum = 0;
+            let lngSum = 0;
+            group.forEach((o) => {
+              o.pin.setVisible(false);
+              latSum += o.pin.position.lat();
+              lngSum += o.pin.position.lng();
+            });
+            const center = new google.maps.LatLng(
+              latSum / group.length,
+              lngSum / group.length
+            );
+            const cm = new ClusterMarkerClass(
+              center,
+              group.map((o) => o.pin)
+            );
+            cm.setMap(map);
+            clusterMarkers.push(cm);
+          }
+        }
+      }
+
+      // ── 뭉치 펼치기: 이름을 동그랗게 흩뿌리기 ──
+      function expandCluster(cm) {
+        // 다른 뭉치가 펼쳐져 있으면 먼저 접기
+        if (expandedCluster) collapseSpider();
+
+        expandedCluster = cm;
+        cm.hide(); // 숫자 숨김
+
+        const n = cm.members.length;
+        const radius = 30 + n * 6; // 개수 많을수록 넓게
+        cm.members.forEach((pin, idx) => {
+          const angle = (2 * Math.PI * idx) / n - Math.PI / 2;
+          pin.setVisible(true);
+          pin.setSpider({
+            dx: Math.cos(angle) * radius,
+            dy: Math.sin(angle) * radius,
+          });
+        });
+      }
+
+      // ── 흩어진 이름 다시 합치기 ──
+      function collapseSpider() {
+        if (!expandedCluster) return;
+        expandedCluster.members.forEach((pin) => {
+          pin.setSpider(null);
+          pin.setVisible(false); // 다시 뭉치 속으로
+        });
+        expandedCluster.show(); // 숫자 다시 보이기
+        expandedCluster = null;
       }
 
       // ── 날짜 비교 도우미 ──
@@ -1183,10 +1439,6 @@
         if (dateFilter === 'today') {
           from = new Date(today);
           to = new Date(today);
-        } else if (dateFilter === 'tomorrow') {
-          from = new Date(today);
-          from.setDate(from.getDate() + 1);
-          to = new Date(from);
         } else if (dateFilter === 'week') {
           from = new Date(today);
           to = new Date(today);
@@ -1200,14 +1452,14 @@
           from = toDate(customRange.start);
           to = toDate(customRange.end);
         } else {
-          return true; // 필터 없음
+          return true; // 필터 없음 = 전체
         }
 
         // 축제 기간이 [from, to]와 겹치면 표시
         return start <= to && end >= from;
       }
 
-      // ── 필터 적용 (핀 보이기/숨기기) ──
+      // ── 필터 적용 (핀 보이기/숨기기 + 뭉치 재계산) ──
       function applyFilters() {
         let visibleCount = 0;
 
@@ -1221,21 +1473,26 @@
           // 2. 날짜 미정 축제 처리
           if (pin.isUnknown) {
             show = showUnknown; // 토글에 따라
-          } else {
+          } else if (show && !matchesDateFilter(f)) {
             // 3. 날짜 필터
-            if (show && !matchesDateFilter(f)) show = false;
+            show = false;
           }
 
+          pin.passesFilter = show;
           pin.setVisible(show);
           if (show) visibleCount++;
         });
 
         document.getElementById('cnt-festival').textContent = visibleCount;
+        recluster(); // 보이는 핀들로 뭉치 다시 계산
       }
 
       // ── 정보 패널 ──
       function openFestivalPanel(f) {
         const panel = document.getElementById('info-panel');
+
+        // 길찾기 메뉴는 매번 닫고 시작 (다른 축제 누를 때 초기화)
+        document.getElementById('map-picker').classList.remove('show');
 
         document.getElementById('panel-img').textContent = '🎪';
         document.getElementById('panel-img').style.fontSize = '4rem';
@@ -1263,6 +1520,18 @@
       function closePanel() {
         document.getElementById('info-panel').classList.remove('show');
         document.getElementById('map-picker').classList.remove('show');
+        // 노란 핀 다시 핑크로
+        if (selectedPin) {
+          selectedPin.setSelected(false);
+          selectedPin = null;
+        }
+      }
+
+      // ── 핀 선택(노란색) 처리 ──
+      function selectPin(pin) {
+        if (selectedPin && selectedPin !== pin) selectedPin.setSelected(false);
+        selectedPin = pin;
+        pin.setSelected(true);
       }
 
       function toggleLike() {
@@ -1283,37 +1552,56 @@
       }
 
       function openMap(type) {
-  if (!currentFestival) return;
-  const lat = currentFestival.latitude;
-  const lng = currentFestival.longitude;
-  const place = encodeURIComponent(
-    currentFestival.location_name || currentFestival.address || currentFestival.title || '목적지'
-  );
-  let url = '';
+        if (!currentFestival) return;
+        const lat = currentFestival.latitude;
+        const lng = currentFestival.longitude;
+        const place = encodeURIComponent(
+          currentFestival.location_name ||
+            currentFestival.address ||
+            currentFestival.title ||
+            '목적지'
+        );
+        let url = '';
 
-  if (type === 'kakao') {
-    url = `https://map.kakao.com/?q=${place}`;
-  } else if (type === 'naver') {
-    url = `https://map.naver.com/v5/search/${place}`;
-  } else if (type === 'google') {
-    // 좌표가 있으면 정확한 좌표로, 없으면 장소명으로
-    url = (lat && lng)
-      ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
-      : `https://www.google.com/maps/search/?api=1&query=${place}`;
-  }
+        if (type === 'kakao') {
+          url = `https://map.kakao.com/?q=${place}`;
+        } else if (type === 'naver') {
+          url = `https://map.naver.com/v5/search/${place}`;
+        } else if (type === 'google') {
+          // 좌표가 있으면 정확한 좌표로, 없으면 장소명으로
+          url =
+            lat && lng
+              ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
+              : `https://www.google.com/maps/search/?api=1&query=${place}`;
+        }
 
-  if (url) window.open(url, '_blank');
-}function setDate(el, type) {
+        if (url) window.open(url, '_blank');
+      }
+
+      // ── 날짜 버튼 ──
+      function setDate(el, type) {
         document
           .querySelectorAll('.date-btn')
           .forEach((b) => b.classList.remove('active'));
         el.classList.add('active');
-        dateFilter = type;
 
-        // 기간 설정 입력칸 비우기 (버튼 선택 시)
-        document.getElementById('range-start').value = '';
-        document.getElementById('range-end').value = '';
-        customRange = { start: null, end: null };
+        const rangeBox = document.getElementById('date-range');
+
+        if (type === 'custom') {
+          // 직접 입력: 날짜 칸 뿅
+          rangeBox.classList.add('show');
+          const s = document.getElementById('range-start').value;
+          const e = document.getElementById('range-end').value;
+          // 아직 둘 다 안 골랐으면 전체 표시, 다 골랐으면 기간 필터
+          dateFilter = s && e ? 'custom' : 'none';
+        } else {
+          // 다른 버튼: 날짜 칸 숨기고 입력값 초기화
+          rangeBox.classList.remove('show');
+          document.getElementById('range-start').value = '';
+          document.getElementById('range-end').value = '';
+          customRange = { start: null, end: null };
+          dateFilter = type;
+        }
 
         applyFilters();
       }
@@ -1325,13 +1613,7 @@
         customRange.start = s || null;
         customRange.end = e || null;
 
-        // 둘 다 입력되면 날짜 버튼 선택 해제
-        if (s && e) {
-          document
-            .querySelectorAll('.date-btn')
-            .forEach((b) => b.classList.remove('active'));
-          dateFilter = 'custom';
-        }
+        if (s && e) dateFilter = 'custom';
 
         applyFilters();
       }
