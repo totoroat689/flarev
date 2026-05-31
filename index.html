@@ -1,4 +1,14 @@
 <!DOCTYPE html>
+<!-- ============================================
+     Flare(V) 홈페이지
+     버전: v1.3
+     수정일: 2026-06-01
+     수정사항:
+       - 핀 위치 보정 (점 중앙이 좌표에 정확히 오도록)
+       - 라벨을 점 옆에 띄워 점 위치에 영향 없게 변경
+       - 핀 출렁임 개선 (transform + GPU 가속)
+       - Supabase festivals 연동
+     ============================================ -->
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
@@ -237,14 +247,10 @@
       /* ── 커스텀 축제 핀 ── */
       .flare-pin {
         position: relative;
-        display: flex;
-        align-items: center;
-        gap: 7px;
         cursor: pointer;
-        transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
       }
 
-      /* 발광하는 점 (항상 보임) */
+      /* 발광하는 점 (항상 좌표 중심에 위치) */
       .flare-dot {
         width: 14px;
         height: 14px;
@@ -252,7 +258,6 @@
         background: radial-gradient(circle at 35% 35%, #ffb3a0, #ff6b8b);
         box-shadow: 0 0 10px rgba(255, 107, 139, 0.9),
           0 0 20px rgba(255, 107, 139, 0.5);
-        flex-shrink: 0;
         position: relative;
         animation: dot-pulse 2.5s ease-in-out infinite;
       }
@@ -278,8 +283,12 @@
         100% { opacity: 0; }
       }
 
-      /* 축제명 라벨 (가까이 가면 보임) */
+      /* 축제명 라벨 (점 오른쪽에 둥둥 떠 있음 - 점 위치엔 영향 없음) */
       .flare-label {
+        position: absolute;
+        left: 20px;              /* 점 오른쪽에 띄움 */
+        top: 50%;
+        transform: translateY(-50%) translateX(-6px) scale(0.9);
         font-size: 0.74rem;
         font-weight: 700;
         color: #fff;
@@ -292,11 +301,9 @@
           0 0 14px rgba(255, 107, 139, 0.25);
         backdrop-filter: blur(8px);
         letter-spacing: 0.3px;
-        /* 기본은 숨김 (멀리서) */
-        opacity: 0;
-        transform: translateX(-6px) scale(0.9);
+        opacity: 0;              /* 멀리서는 숨김 */
         pointer-events: none;
-        transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
         max-width: 180px;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -305,7 +312,7 @@
       /* 가까이(확대) 상태일 때 라벨 보이기 */
       .flare-pin.zoomed .flare-label {
         opacity: 1;
-        transform: translateX(0) scale(1);
+        transform: translateY(-50%) translateX(0) scale(1);
       }
 
       /* 마우스 올리면 강조 */
@@ -317,7 +324,7 @@
       }
       .flare-pin:hover .flare-label {
         opacity: 1;
-        transform: translateX(0) scale(1.05);
+        transform: translateY(-50%) translateX(0) scale(1.05);
         border-color: var(--festival);
       }
 
@@ -890,12 +897,12 @@
               this.position
             );
             if (point) {
-              // left/top 대신 transform 사용 → 훨씬 부드럽고 빠름
+              // 점(14px)의 중앙(7px,7px)이 정확히 좌표에 오도록 보정
               this.div.style.transform =
-                'translate(-50%, -50%) translate(' +
-                point.x +
+                'translate(' +
+                (point.x - 7) +
                 'px,' +
-                point.y +
+                (point.y - 7) +
                 'px)';
             }
           }
