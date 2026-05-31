@@ -1,6 +1,3 @@
-
-
-
 <!DOCTYPE html>
 <html lang="ko">
   <head>
@@ -244,7 +241,6 @@
         align-items: center;
         gap: 7px;
         cursor: pointer;
-        transform: translate(-50%, -50%);
         transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
       }
 
@@ -849,14 +845,12 @@
         if (map) showFestivalPins();
       }
 
-      // 화면에 올린 핀들을 모아두는 곳 (줌 변화 시 한꺼번에 제어)
+      // 화면에 올린 핀들을 모아두는 곳
       let pinOverlays = [];
-      // 이 줌 이상이면 "가까이" 로 보고 축제명 라벨을 보여줌
       const LABEL_ZOOM = 11;
 
-      // ── 축제를 지도에 커스텀 핀으로 표시 ──
+      // ── 축제를 지도에 커스텀 핀으로 표시 (부드러운 추적) ──
       function showFestivalPins() {
-        // 커스텀 HTML 마커를 만들기 위한 오버레이 클래스
         class FlarePin extends google.maps.OverlayView {
           constructor(festival) {
             super();
@@ -872,19 +866,21 @@
             const div = document.createElement('div');
             div.className = 'flare-pin';
             div.style.position = 'absolute';
+            // GPU 가속용 (출렁임/지연 줄이기)
+            div.style.willChange = 'transform';
             div.innerHTML =
               '<div class="flare-dot"></div>' +
               '<div class="flare-label">' +
               (this.festival.title || '축제') +
               '</div>';
 
-            // 핀 클릭 → 정보 패널 열기
             div.addEventListener('click', (e) => {
               e.stopPropagation();
               openFestivalPanel(this.festival);
             });
 
             this.div = div;
+            // floatPane 대신 overlayLayer 사용 (지도와 함께 더 부드럽게 이동)
             this.getPanes().overlayMouseTarget.appendChild(div);
           }
 
@@ -894,12 +890,16 @@
               this.position
             );
             if (point) {
-              this.div.style.left = point.x + 'px';
-              this.div.style.top = point.y + 'px';
+              // left/top 대신 transform 사용 → 훨씬 부드럽고 빠름
+              this.div.style.transform =
+                'translate(-50%, -50%) translate(' +
+                point.x +
+                'px,' +
+                point.y +
+                'px)';
             }
           }
 
-          // 줌 상태에 따라 라벨 켜고 끄기
           setZoomed(isZoomed) {
             if (!this.div) return;
             if (isZoomed) this.div.classList.add('zoomed');
@@ -914,22 +914,17 @@
           }
         }
 
-        // 모든 축제에 핀 생성
         festivalData.forEach((f) => {
-          if (!f.latitude || !f.longitude) return; // 좌표 없으면 건너뜀
+          if (!f.latitude || !f.longitude) return;
           const pin = new FlarePin(f);
           pin.setMap(map);
           pinOverlays.push(pin);
         });
 
-        // 현재 줌에 맞게 라벨 표시 여부 한번 적용
         updatePinLabels();
-
-        // 줌이 바뀔 때마다 라벨 표시 갱신
         map.addListener('zoom_changed', updatePinLabels);
       }
 
-      // 현재 줌 레벨을 보고 모든 핀의 라벨을 켜거나 끔
       function updatePinLabels() {
         const zoomedIn = map.getZoom() >= LABEL_ZOOM;
         pinOverlays.forEach((pin) => pin.setZoomed(zoomedIn));
