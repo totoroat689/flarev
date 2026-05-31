@@ -1283,23 +1283,27 @@
       }
 
       function openMap(type) {
-        if (!currentFestival) return;
-        const lat = currentFestival.latitude;
-        const lng = currentFestival.longitude;
-        const name = encodeURIComponent(currentFestival.title || '목적지');
-        let url = '';
+  if (!currentFestival) return;
+  const lat = currentFestival.latitude;
+  const lng = currentFestival.longitude;
+  const place = encodeURIComponent(
+    currentFestival.location_name || currentFestival.address || currentFestival.title || '목적지'
+  );
+  let url = '';
 
-        if (type === 'kakao') {
-          url = `https://map.kakao.com/?q=${name}`;
-        } else if (type === 'naver') {
-          url = `https://map.naver.com/v5/search/${name}`;
-        } else if (type === 'google') {
-          url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-        }
+  if (type === 'kakao') {
+    url = `https://map.kakao.com/?q=${place}`;
+  } else if (type === 'naver') {
+    url = `https://map.naver.com/v5/search/${place}`;
+  } else if (type === 'google') {
+    // 좌표가 있으면 정확한 좌표로, 없으면 장소명으로
+    url = (lat && lng)
+      ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
+      : `https://www.google.com/maps/search/?api=1&query=${place}`;
+  }
 
-        if (url) window.open(url, '_blank');
-      }
-      function setDate(el, type) {
+  if (url) window.open(url, '_blank');
+}function setDate(el, type) {
         document
           .querySelectorAll('.date-btn')
           .forEach((b) => b.classList.remove('active'));
