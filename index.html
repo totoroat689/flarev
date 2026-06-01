@@ -1,15 +1,17 @@
 <!DOCTYPE html>
 <!-- ============================================
      Flare(V) 홈페이지
-     버전: v1.8
+     버전: v1.9
      수정일: 2026-06-01
      수정사항:
-       - 핀 흩어질 때 겹침 방지: 2개 좌우 / 3개 삼각형 / 그 이상 다각형
-         (왼쪽 핀은 이름표도 왼쪽으로 빼서 안 겹치게)
-       - 날짜 버튼 1x4 한 줄 + 직접입력 시 시작일/종료일 좌우 1줄
-       - 내 위치 버튼(나침반) 우측 상단 추가, 권한 거부 시 안내
-       - 진행 중 축제 강조: 빛+크기 강조 & "NOW" 뱃지
-         (오늘이 date_start ~ date_end 안에 들면 진행 중)
+       - 팝업: 좋아요/별점 제거 → 조명탄 버튼으로 변경
+         (누르면 팡 터지고 누적 +1, 여러 번 가능 / 임시 숫자, DB 연동 예정)
+       - 팝업 제목 옆 링크(🔗) 아이콘: 누르면 구글에 축제명 검색
+       - 팝업 제목 2줄 방지: 길면 글자 크기 자동 축소(한 줄 유지)
+       - 모바일 메뉴: 열릴 때 햄버거 버튼도 같이 밀려나가고 ✕로 전환
+       - 지도 라벨 글자 제한 180px → 220px
+       - 로고 조명탄 효과: (V) 은은한 호흡 글로우 +
+         15초마다 조명탄 수직 발사 → 노란 불빛 하나가 천천히 낙하
      ============================================ -->
 <html lang="ko">
   <head>
@@ -68,6 +70,8 @@
       .logo-wrap {
         padding: 28px 24px 20px;
         border-bottom: 1px solid var(--border);
+        position: relative;
+        overflow: hidden;
       }
 
       .logo {
@@ -75,11 +79,70 @@
         font-size: 2rem;
         letter-spacing: 3px;
         line-height: 1;
+        position: relative;
+        display: inline-block;
+        z-index: 2;
       }
 
+      /* (V) 은은한 호흡 글로우 */
       .logo span {
         color: var(--festival);
-        text-shadow: 0 0 18px rgba(255, 107, 107, 0.7);
+        animation: logo-breath 3.5s ease-in-out infinite;
+      }
+      @keyframes logo-breath {
+        0%, 100% {
+          text-shadow: 0 0 10px rgba(255, 107, 107, 0.55);
+        }
+        50% {
+          text-shadow: 0 0 22px rgba(255, 107, 107, 1),
+            0 0 38px rgba(255, 107, 107, 0.6);
+        }
+      }
+
+      /* 조명탄: (V) 오른쪽에서 수직으로 발사 → 정점에서 사라짐 (15초마다) */
+      .logo-flare {
+        position: absolute;
+        left: 96px;
+        top: 46px;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: #ffb3a0;
+        box-shadow: 0 0 10px #ff6b6b, 0 0 18px #ff6b6b;
+        opacity: 0;
+        z-index: 1;
+        animation: logo-launch 15s ease-out infinite;
+      }
+      @keyframes logo-launch {
+        0% { transform: translateY(0) scale(1); opacity: 0; }
+        2% { opacity: 1; }
+        7% { transform: translateY(-32px) scale(0.7); opacity: 1; }
+        9% { transform: translateY(-38px) scale(1.6); opacity: 0.5; }
+        10% { transform: translateY(-40px) scale(0.2); opacity: 0; }
+        100% { transform: translateY(-40px) scale(0.2); opacity: 0; }
+      }
+
+      /* 터진 뒤 노란 불빛 하나가 곧게 천천히 낙하 */
+      .logo-light {
+        position: absolute;
+        left: 98px;
+        top: 6px;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #ffe88a;
+        box-shadow: 0 0 14px #ffd93d, 0 0 26px rgba(255, 217, 61, 0.7);
+        opacity: 0;
+        z-index: 1;
+        animation: logo-fall 15s ease-in infinite;
+      }
+      @keyframes logo-fall {
+        0%, 9% { opacity: 0; transform: translateY(0) scale(0.4); }
+        11% { opacity: 1; transform: translateY(0) scale(1.3); }
+        14% { opacity: 1; transform: translateY(4px) scale(1); }
+        30% { opacity: 0.85; transform: translateY(40px) scale(0.85); }
+        34% { opacity: 0; transform: translateY(48px) scale(0.5); }
+        100% { opacity: 0; transform: translateY(48px) scale(0.5); }
       }
 
       .logo-sub {
@@ -88,6 +151,8 @@
         letter-spacing: 1.5px;
         margin-top: 4px;
         text-transform: uppercase;
+        position: relative;
+        z-index: 2;
       }
 
       .section {
@@ -342,6 +407,7 @@
         display: none; /* PC에선 숨김 */
         align-items: center;
         justify-content: center;
+        transition: transform 0.3s ease; /* 메뉴 따라 부드럽게 이동 */
       }
 
       /* 사이드바 바깥 어두운 배경 (모바일에서 열렸을 때) */
@@ -532,7 +598,7 @@
         pointer-events: none;
         transition: opacity 0.25s ease,
           transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-        max-width: 180px;
+        max-width: 220px;
         overflow: hidden;
         text-overflow: ellipsis;
       }
@@ -645,12 +711,44 @@
         padding: 16px 18px;
       }
 
+      /* 제목 + 링크 아이콘 한 줄 */
+      .panel-title-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 6px;
+      }
+
       .panel-title {
         font-size: 1rem;
         font-weight: 700;
-        margin-bottom: 6px;
         line-height: 1.3;
         color: #fff;
+        /* 2줄 방지: 한 줄로 유지하고 넘치면 ... (JS가 글자크기 먼저 줄임) */
+        flex: 1;
+        min-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      /* 제목 옆 구글 검색 링크 버튼 */
+      .title-link-btn {
+        flex-shrink: 0;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 0.85rem;
+        padding: 2px 4px;
+        border-radius: 6px;
+        opacity: 0.6;
+        transition: all 0.2s;
+        line-height: 1;
+      }
+      .title-link-btn:hover {
+        opacity: 1;
+        background: rgba(255, 255, 255, 0.08);
+        transform: scale(1.15);
       }
 
       .panel-meta {
@@ -702,10 +800,43 @@
         color: var(--festival);
       }
 
-      .reaction-btn.liked {
-        background: rgba(255, 107, 107, 0.15);
-        border-color: var(--festival);
-        color: var(--festival);
+      /* 조명탄 버튼 */
+      .flare-btn {
+        position: relative;
+        overflow: visible;
+      }
+      .flare-btn:hover {
+        background: rgba(255, 217, 61, 0.12);
+        border-color: rgba(255, 217, 61, 0.5);
+        color: var(--discount);
+      }
+      .flare-btn .flare-icon {
+        display: inline-block;
+        font-size: 0.95rem;
+      }
+      /* 눌렀을 때 아이콘 팡 튀는 효과 */
+      .flare-btn.popping .flare-icon {
+        animation: flare-pop 0.45s ease-out;
+      }
+      @keyframes flare-pop {
+        0% { transform: scale(1) rotate(0deg); }
+        40% { transform: scale(1.6) rotate(-12deg); }
+        70% { transform: scale(0.9) rotate(8deg); }
+        100% { transform: scale(1) rotate(0deg); }
+      }
+
+      /* 조명탄 터질 때 사방으로 퍼지는 불꽃 입자 */
+      .flare-particle {
+        position: absolute;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 10;
+      }
+      @keyframes particle-fly {
+        0% { opacity: 1; transform: translate(0, 0) scale(1); }
+        100% { opacity: 0; transform: translate(var(--px), var(--py)) scale(0.3); }
       }
 
       .nav-btn {
@@ -949,6 +1080,11 @@
           transform: translateX(0); /* 햄버거 누르면 나옴 */
         }
 
+        /* 메뉴가 열리면 버튼도 메뉴 폭만큼 같이 오른쪽으로 밀려나감 */
+        #menu-toggle.menu-open {
+          transform: translateX(280px);
+        }
+
         #info-panel {
           right: 12px;
           left: 12px;
@@ -976,6 +1112,8 @@
       <div class="logo-wrap">
         <div class="logo">FLARE<span>(V)</span></div>
         <div class="logo-sub">기쁨을 발견하고 순간을 공유하다</div>
+        <span class="logo-flare"></span>
+        <span class="logo-light"></span>
       </div>
 
       <!-- 날짜 필터 -->
@@ -1064,7 +1202,10 @@
         </div>
         <div class="panel-img" id="panel-img">🎪</div>
         <div class="panel-body">
-          <div class="panel-title" id="panel-title">축제명</div>
+          <div class="panel-title-row">
+            <span class="panel-title" id="panel-title">축제명</span>
+            <button class="title-link-btn" id="title-link-btn" onclick="searchFestival()" title="구글에서 검색">🔗</button>
+          </div>
           <div class="panel-meta">
             <div class="meta-row">
               <span class="meta-icon">📅</span
@@ -1080,8 +1221,8 @@
             </div>
           </div>
           <div class="reaction-row">
-            <button class="reaction-btn" id="like-btn" onclick="toggleLike()">
-              <span>👍</span><span id="like-count">0</span>
+            <button class="reaction-btn flare-btn" id="flare-btn" onclick="shootFlare(event)">
+              <span class="flare-icon">🎆</span><span id="flare-count">0</span>
             </button>
             <button class="reaction-btn" onclick="openComment()">
               <span>💬</span><span>댓글</span>
@@ -1149,8 +1290,7 @@
       let festivalData = [];
       let map;
       let pinOverlays = []; // 핀 객체들 (필터링용)
-      let currentLikes = 0;
-      let liked = false;
+      let flareCount = 0; // 현재 팝업 축제의 조명탄 누적 수 (임시)
       let currentFestival = null; // 현재 열린 축제 (길찾기용)
       const LABEL_ZOOM = 11;
 
@@ -1632,8 +1772,11 @@
 
         document.getElementById('panel-img').textContent = '🎪';
         document.getElementById('panel-img').style.fontSize = '4rem';
-        document.getElementById('panel-title').textContent =
-          f.title || '제목 없음';
+
+        // 제목 설정 (크기 조절은 패널이 화면에 뜬 뒤에 함)
+        const titleEl = document.getElementById('panel-title');
+        titleEl.textContent = f.title || '제목 없음';
+
         document.getElementById('panel-date').textContent = f.date_start
           ? f.date_start + (f.date_end ? ' ~ ' + f.date_end : '')
           : '날짜 미정';
@@ -1641,16 +1784,29 @@
           f.location_name || '장소 미정';
         document.getElementById('panel-time').textContent = f.address || '';
 
-        currentFestival = f; // 길찾기용 저장
-        currentLikes = 0;
-        liked = false;
-        document.getElementById('like-btn').className = 'reaction-btn';
-        document.getElementById('like-count').textContent = currentLikes;
+        currentFestival = f; // 길찾기/검색용 저장
+
+        // 조명탄 누적 수 (지금은 임시값, 추후 Supabase 연동)
+        flareCount = getInitialFlareCount(f);
+        document.getElementById('flare-count').textContent = flareCount;
 
         // 애니메이션 재생을 위해 클래스 재적용
         panel.classList.remove('show');
         void panel.offsetWidth; // 리플로우 트릭
         panel.classList.add('show');
+
+        // 패널이 화면에 뜬 뒤 제목 폭을 재서 글자 크기 조절 (2줄 방지)
+        fitTitle(titleEl);
+      }
+
+      // ── 제목 길이에 따라 글자 크기 줄여 한 줄 유지 ──
+      function fitTitle(el) {
+        const sizes = [1, 0.92, 0.85, 0.78]; // rem 단계
+        // 넘치면 한 단계씩 줄임 (마지막 단계까지 넘치면 ...으로 잘림)
+        for (let i = 0; i < sizes.length; i++) {
+          el.style.fontSize = sizes[i] + 'rem';
+          if (el.scrollWidth <= el.clientWidth) break;
+        }
       }
 
       function closePanel() {
@@ -1670,12 +1826,59 @@
         pin.setSelected(true);
       }
 
-      function toggleLike() {
-        liked = !liked;
-        currentLikes += liked ? 1 : -1;
-        const btn = document.getElementById('like-btn');
-        btn.className = liked ? 'reaction-btn liked' : 'reaction-btn';
-        document.getElementById('like-count').textContent = currentLikes;
+      // ── 조명탄 쏘기 (여러 번 가능, 팡 효과 + 카운트 +1) ──
+      function shootFlare(e) {
+        flareCount += 1;
+        document.getElementById('flare-count').textContent = flareCount;
+
+        const btn = document.getElementById('flare-btn');
+        // 아이콘 팡 튀기기
+        btn.classList.remove('popping');
+        void btn.offsetWidth; // 리플로우로 애니메이션 재시작
+        btn.classList.add('popping');
+
+        // 사방으로 퍼지는 불꽃 입자
+        spawnFlareParticles(btn);
+
+        // TODO: 추후 Supabase에 조명탄 수 저장/집계 연동
+      }
+
+      // ── 불꽃 입자 생성 (버튼 중심에서 사방으로) ──
+      function spawnFlareParticles(btn) {
+        const colors = ['#ff6b6b', '#ffd93d', '#ffb3a0', '#ff8fa0', '#fff'];
+        const count = 10;
+        const rect = btn.getBoundingClientRect();
+        for (let i = 0; i < count; i++) {
+          const p = document.createElement('span');
+          p.className = 'flare-particle';
+          p.style.background = colors[i % colors.length];
+          p.style.boxShadow = '0 0 6px ' + colors[i % colors.length];
+          // 버튼 중앙에 배치
+          p.style.left = rect.width / 2 + 'px';
+          p.style.top = rect.height / 2 + 'px';
+          // 원형으로 고르게 퍼지는 방향
+          const angle = (2 * Math.PI * i) / count;
+          const dist = 26 + Math.random() * 12;
+          p.style.setProperty('--px', Math.cos(angle) * dist + 'px');
+          p.style.setProperty('--py', Math.sin(angle) * dist + 'px');
+          p.style.animation = 'particle-fly 0.55s ease-out forwards';
+          btn.appendChild(p);
+          setTimeout(() => p.remove(), 600);
+        }
+      }
+
+      // ── DB 연동 전 임시 조명탄 시작값 ──
+      // (제목 길이 기반으로 그럴듯한 숫자 — 추후 실제 집계로 교체)
+      function getInitialFlareCount(f) {
+        const base = (f.title || '').length * 3 + 7;
+        return base % 90; // 0~89 사이 적당한 값
+      }
+
+      // ── 제목 옆 링크: 구글에 축제명 검색 ──
+      function searchFestival() {
+        if (!currentFestival) return;
+        const q = encodeURIComponent(currentFestival.title || '축제');
+        window.open('https://www.google.com/search?q=' + q, '_blank');
       }
 
       function openComment() {
@@ -1865,12 +2068,20 @@
 
       // ── 모바일 사이드바 ──
       function toggleSidebar() {
-        document.getElementById('sidebar').classList.toggle('open');
+        const sidebar = document.getElementById('sidebar');
+        const btn = document.getElementById('menu-toggle');
+        const isOpen = sidebar.classList.toggle('open');
         document.getElementById('sidebar-overlay').classList.toggle('show');
+        // 버튼도 메뉴 따라 이동 + 아이콘 전환 (☰ ↔ ✕)
+        btn.classList.toggle('menu-open', isOpen);
+        btn.textContent = isOpen ? '✕' : '☰';
       }
       function closeSidebar() {
+        const btn = document.getElementById('menu-toggle');
         document.getElementById('sidebar').classList.remove('open');
         document.getElementById('sidebar-overlay').classList.remove('show');
+        btn.classList.remove('menu-open');
+        btn.textContent = '☰';
       }
 
       // ── 모달 ──
