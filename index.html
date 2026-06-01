@@ -1,15 +1,15 @@
 <!DOCTYPE html>
 <!-- ============================================
      Flare(V) 홈페이지
-     버전: v1.7
+     버전: v1.8
      수정일: 2026-06-01
      수정사항:
-       - 날짜 필터 UI 변경: 오늘/이번주/이번달/직접입력
-         (직접입력 누르면 날짜 칸 두 개가 아래로 뿅)
-       - 팝업 열린 축제 핀: 핑크 → 노란색으로 표시
-       - 핀 누를 때마다 길찾기 메뉴(카카오/네이버/구글) 자동 닫힘
-       - 같은 자리 핀 여러 개 → 숫자 뭉치로 표시,
-         누르면 이름이 흩어지고, 빈 곳 누르면 다시 합쳐짐
+       - 핀 흩어질 때 겹침 방지: 2개 좌우 / 3개 삼각형 / 그 이상 다각형
+         (왼쪽 핀은 이름표도 왼쪽으로 빼서 안 겹치게)
+       - 날짜 버튼 1x4 한 줄 + 직접입력 시 시작일/종료일 좌우 1줄
+       - 내 위치 버튼(나침반) 우측 상단 추가, 권한 거부 시 안내
+       - 진행 중 축제 강조: 빛+크기 강조 & "NOW" 뱃지
+         (오늘이 date_start ~ date_end 안에 들면 진행 중)
      ============================================ -->
 <html lang="ko">
   <head>
@@ -103,23 +103,25 @@
         margin-bottom: 10px;
       }
 
-      /* 날짜 버튼 (4개: 오늘/이번주/이번달/직접입력) */
+      /* 날짜 버튼 (4개: 오늘/이번주/이번달/직접입력) - 한 줄 배치 */
       .date-row {
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 6px;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 5px;
       }
 
       .date-btn {
-        padding: 8px 0;
+        padding: 8px 2px;
         border-radius: 8px;
         border: 1px solid var(--border);
         background: transparent;
         color: var(--muted);
-        font-size: 0.72rem;
+        font-size: 0.66rem;
         font-family: 'Noto Sans KR', sans-serif;
         cursor: pointer;
         transition: all 0.2s;
+        white-space: nowrap;
+        word-break: keep-all;
       }
 
       .date-btn.active {
@@ -133,17 +135,24 @@
         color: var(--text);
       }
 
-      /* 기간 설정 (달력) - 평소엔 숨김, '직접 입력' 누르면 뿅 */
+      /* 기간 설정 (달력) - 평소엔 숨김, '직접 입력' 누르면 뿅 / 좌우 2칸 */
       .date-range {
         margin-top: 10px;
         display: none;
-        flex-direction: column;
-        gap: 6px;
+        gap: 8px;
       }
 
       .date-range.show {
         display: flex;
         animation: range-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+
+      .range-col {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
       }
 
       @keyframes range-pop {
@@ -160,19 +169,19 @@
       .date-range .range-label {
         font-size: 0.62rem;
         color: var(--muted);
-        margin-bottom: -2px;
       }
 
       .date-range input[type='date'] {
         width: 100%;
-        padding: 7px 10px;
+        padding: 7px 8px;
         border-radius: 8px;
         border: 1px solid var(--border);
         background: rgba(255, 255, 255, 0.03);
         color: var(--text);
-        font-size: 0.72rem;
+        font-size: 0.66rem;
         font-family: 'Noto Sans KR', sans-serif;
         color-scheme: dark; /* 달력 팝업도 다크로 */
+        min-width: 0;
       }
 
       .date-range input[type='date']:focus {
@@ -396,6 +405,54 @@
       }
       .flare-pin.unknown .flare-label {
         border-color: rgba(160, 160, 170, 0.55);
+      }
+
+      /* 진행 중 축제 핀 (빛 강하게 + 크게) */
+      .flare-pin.ongoing .flare-dot {
+        width: 18px;
+        height: 18px;
+        margin: -2px; /* 14→18px 커진 만큼 중심 보정 */
+        background: radial-gradient(circle at 35% 35%, #ffd9cc, #ff5577);
+        box-shadow: 0 0 16px rgba(255, 90, 120, 1),
+          0 0 30px rgba(255, 90, 120, 0.7),
+          0 0 44px rgba(255, 90, 120, 0.4);
+      }
+      .flare-pin.ongoing .flare-dot::after {
+        inset: -8px;
+        border-color: rgba(255, 90, 120, 0.7);
+      }
+      .flare-pin.ongoing {
+        z-index: 996;
+      }
+
+      /* NOW 뱃지 (진행 중 표시) */
+      .now-badge {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #ff5577;
+        color: #fff;
+        font-size: 0.56rem;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        padding: 2px 7px;
+        border-radius: 20px;
+        white-space: nowrap;
+        box-shadow: 0 2px 8px rgba(255, 90, 120, 0.6);
+        pointer-events: none;
+      }
+
+      /* 이름표를 왼쪽으로 빼는 경우 (흩어질 때 왼쪽 핀) */
+      .flare-pin.label-left .flare-label {
+        left: auto;
+        right: 20px;
+        transform: translateY(-50%) translateX(6px) scale(0.9);
+      }
+      .flare-pin.label-left.spider .flare-label,
+      .flare-pin.label-left.zoomed .flare-label,
+      .flare-pin.label-left:hover .flare-label {
+        transform: translateY(-50%) translateX(0) scale(1);
       }
 
       /* 선택된(팝업 열린) 핀 → 노란색 */
@@ -711,6 +768,50 @@
         display: none;
       }
 
+      /* 내 위치 버튼 (나침반) - 우측 상단 */
+      #locate-btn {
+        position: absolute;
+        top: 24px;
+        right: 24px;
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: rgba(20, 20, 31, 0.85);
+        backdrop-filter: blur(10px);
+        color: var(--text);
+        font-size: 1.2rem;
+        cursor: pointer;
+        z-index: 150;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+      }
+      #locate-btn:hover {
+        background: rgba(255, 107, 107, 0.15);
+        border-color: var(--festival);
+        color: var(--festival);
+      }
+      #locate-btn.locating {
+        animation: locate-spin 1s linear infinite;
+      }
+      @keyframes locate-spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+
+      /* 내 위치 표시 점 (파란 점) */
+      .my-location-dot {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #4285f4;
+        border: 2px solid #fff;
+        box-shadow: 0 0 0 6px rgba(66, 133, 244, 0.25),
+          0 0 12px rgba(66, 133, 244, 0.6);
+      }
+
       /* 길찾기 지도 선택 팝업 */
       .map-picker {
         display: none;
@@ -897,10 +998,14 @@
 
         <!-- 기간 직접 설정 (직접 입력 버튼 누르면 뿅) -->
         <div class="date-range" id="date-range">
-          <span class="range-label">시작일</span>
-          <input type="date" id="range-start" onchange="setCustomRange()" />
-          <span class="range-label">종료일</span>
-          <input type="date" id="range-end" onchange="setCustomRange()" />
+          <div class="range-col">
+            <span class="range-label">시작일</span>
+            <input type="date" id="range-start" onchange="setCustomRange()" />
+          </div>
+          <div class="range-col">
+            <span class="range-label">종료일</span>
+            <input type="date" id="range-end" onchange="setCustomRange()" />
+          </div>
         </div>
 
         <!-- 미정 축제 보기 토글 -->
@@ -945,6 +1050,9 @@
     <!-- ── MAP ── -->
     <div id="map-container">
       <div id="map"></div>
+
+      <!-- 내 위치 버튼 (나침반) -->
+      <button id="locate-btn" onclick="goToMyLocation()" title="내 위치로 이동">🧭</button>
 
       <div id="loading">🔄 축제 정보를 불러오는 중...</div>
 
@@ -1053,6 +1161,7 @@
       let projectionHelper = null; // 화면 좌표 계산 도우미
       let FlarePinClass = null; // 핀 클래스 (지도 로드 후 정의)
       let ClusterMarkerClass = null; // 뭉치 클래스 (지도 로드 후 정의)
+      let myLocationMarker = null; // 내 위치 파란 점
       const CLUSTER_RADIUS = 48; // 이 픽셀 거리 안에 있으면 한 뭉치로 묶음
 
       // 필터 상태
@@ -1164,17 +1273,22 @@
             );
             this.div = null;
             this.isUnknown = !festival.date_start; // 날짜 미확인 여부
+            this.isOngoing = isOngoingFestival(festival); // 진행 중 여부
             this.passesFilter = true; // 필터 통과 여부
             this.spiderOffset = null; // 흩어질 때 위치 보정값
           }
 
           onAdd() {
             const div = document.createElement('div');
-            div.className = 'flare-pin' + (this.isUnknown ? ' unknown' : '');
+            div.className =
+              'flare-pin' +
+              (this.isUnknown ? ' unknown' : '') +
+              (this.isOngoing ? ' ongoing' : '');
             div.style.position = 'absolute';
             div.style.willChange = 'transform';
             div.innerHTML =
               '<div class="flare-dot"></div>' +
+              (this.isOngoing ? '<div class="now-badge">NOW</div>' : '') +
               '<div class="flare-label">' +
               (this.festival.title || '축제') +
               '</div>';
@@ -1224,9 +1338,16 @@
           }
 
           // 흩어지기: offset 있으면 펼침, null이면 제자리
+          // offset.labelLeft 가 true면 이름표를 왼쪽으로 뺌
           setSpider(offset) {
             this.spiderOffset = offset;
-            if (this.div) this.div.classList.toggle('spider', !!offset);
+            if (this.div) {
+              this.div.classList.toggle('spider', !!offset);
+              this.div.classList.toggle(
+                'label-left',
+                !!(offset && offset.labelLeft)
+              );
+            }
             this.draw();
           }
 
@@ -1386,7 +1507,8 @@
         }
       }
 
-      // ── 뭉치 펼치기: 이름을 동그랗게 흩뿌리기 ──
+      // ── 뭉치 펼치기: 이름을 겹치지 않게 흩뿌리기 ──
+      // 2개=좌우, 3개=삼각형, 그 이상=다각형(골고루)
       function expandCluster(cm) {
         // 다른 뭉치가 펼쳐져 있으면 먼저 접기
         if (expandedCluster) collapseSpider();
@@ -1395,14 +1517,28 @@
         cm.hide(); // 숫자 숨김
 
         const n = cm.members.length;
-        const radius = 30 + n * 6; // 개수 많을수록 넓게
+        // 개수 많을수록 넓게 (이름표가 안 겹치게 충분히)
+        const radius = 46 + n * 10;
+
+        // 시작 각도: 2개는 좌우(수평), 그 외는 위에서 시작
+        // 수평선에 정확히 겹치지 않도록 살짝 기울임
+        let startAngle;
+        if (n === 2) {
+          startAngle = 0; // 0도(오른쪽) / 180도(왼쪽) → 좌우 배치
+        } else if (n === 3) {
+          startAngle = -Math.PI / 2; // 위 꼭짓점부터 → 삼각형
+        } else {
+          startAngle = -Math.PI / 2 + Math.PI / n; // 다각형, 살짝 회전
+        }
+
         cm.members.forEach((pin, idx) => {
-          const angle = (2 * Math.PI * idx) / n - Math.PI / 2;
+          const angle = startAngle + (2 * Math.PI * idx) / n;
+          const dx = Math.cos(angle) * radius;
+          const dy = Math.sin(angle) * radius;
+          // 핀이 중심보다 왼쪽에 놓이면 이름표를 왼쪽으로 빼기
+          const labelLeft = dx < -2;
           pin.setVisible(true);
-          pin.setSpider({
-            dx: Math.cos(angle) * radius,
-            dy: Math.sin(angle) * radius,
-          });
+          pin.setSpider({ dx: dx, dy: dy, labelLeft: labelLeft });
         });
       }
 
@@ -1638,6 +1774,93 @@
           activeCategories[type] = true;
         }
         applyFilters();
+      }
+
+      // ── 진행 중 축제인지 판단 (오늘이 시작~종료 사이) ──
+      function isOngoingFestival(f) {
+        if (!f.date_start) return false; // 날짜 미정은 제외
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const start = toDate(f.date_start);
+        const end = toDate(f.date_end) || start;
+        return start <= today && today <= end;
+      }
+
+      // ── 내 위치로 이동 ──
+      function goToMyLocation() {
+        const btn = document.getElementById('locate-btn');
+
+        if (!navigator.geolocation) {
+          alert('이 브라우저에서는 위치 기능을 쓸 수 없어요 😢');
+          return;
+        }
+
+        btn.classList.add('locating'); // 빙글빙글 표시
+
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            btn.classList.remove('locating');
+            const latLng = new google.maps.LatLng(
+              pos.coords.latitude,
+              pos.coords.longitude
+            );
+            map.panTo(latLng);
+            map.setZoom(13);
+            showMyLocationDot(latLng);
+          },
+          (err) => {
+            btn.classList.remove('locating');
+            if (err.code === err.PERMISSION_DENIED) {
+              alert(
+                '위치 권한이 거부되어 있어요.\n브라우저 주소창 옆 자물쇠 아이콘에서 위치를 "허용"으로 바꿔주세요 📍'
+              );
+            } else {
+              alert('위치를 찾지 못했어요. 잠시 후 다시 시도해주세요.');
+            }
+          },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+      }
+
+      // ── 내 위치 파란 점 표시 ──
+      function showMyLocationDot(latLng) {
+        if (myLocationMarker) {
+          myLocationMarker.setMap(null);
+          myLocationMarker = null;
+        }
+
+        class MyDot extends google.maps.OverlayView {
+          constructor(position) {
+            super();
+            this.position = position;
+            this.div = null;
+          }
+          onAdd() {
+            const div = document.createElement('div');
+            div.className = 'my-location-dot';
+            div.style.position = 'absolute';
+            div.style.willChange = 'transform';
+            this.div = div;
+            this.getPanes().overlayLayer.appendChild(div);
+          }
+          draw() {
+            if (!this.div) return;
+            const p = this.getProjection().fromLatLngToDivPixel(this.position);
+            if (p) {
+              this.div.style.transform =
+                'translate(' + (p.x - 8) + 'px,' + (p.y - 8) + 'px)';
+            }
+          }
+          onRemove() {
+            if (this.div) {
+              this.div.parentNode.removeChild(this.div);
+              this.div = null;
+            }
+          }
+        }
+
+        myLocationMarker = new MyDot(latLng);
+        myLocationMarker.setMap(map);
       }
 
       // ── 모바일 사이드바 ──
