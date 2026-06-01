@@ -1878,7 +1878,7 @@
       function searchFestival() {
         if (!currentFestival) return;
         const q = encodeURIComponent(currentFestival.title || '축제');
-        window.open('https://www.google.com/search?q=' + q, '_blank');
+        window.open('https://www.google.com/search?q=' + q + '&udm=50', '_blank');
       }
 
       function openComment() {
