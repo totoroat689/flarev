@@ -1,17 +1,17 @@
 <!DOCTYPE html>
 <!-- ============================================
      Flare(V) 홈페이지
-     버전: v1.9
+     버전: v2.0
      수정일: 2026-06-01
      수정사항:
-       - 팝업: 좋아요/별점 제거 → 조명탄 버튼으로 변경
-         (누르면 팡 터지고 누적 +1, 여러 번 가능 / 임시 숫자, DB 연동 예정)
-       - 팝업 제목 옆 링크(🔗) 아이콘: 누르면 구글에 축제명 검색
-       - 팝업 제목 2줄 방지: 길면 글자 크기 자동 축소(한 줄 유지)
-       - 모바일 메뉴: 열릴 때 햄버거 버튼도 같이 밀려나가고 ✕로 전환
-       - 지도 라벨 글자 제한 180px → 220px
-       - 로고 조명탄 효과: (V) 은은한 호흡 글로우 +
-         15초마다 조명탄 수직 발사 → 노란 불빛 하나가 천천히 낙하
+       - 핀 흩어짐/합쳐짐 0.2초 애니메이션 + 거리 절반 + 흩어질 때 살짝 밝아짐
+       - 팝업 링크 버튼: 노란색 + 은은한 빛
+       - 검색 양식: "연도 + 장소 + 행사이름"
+         (축제 연도 있으면 그 연도, 없으면 올해)
+       - 지난 축제 핀(종료일이 어제 이하): 어두운 회보라 + 퍼짐 효과 제거
+       - FLARE 로고 클릭 → 초기 화면으로 새로고침
+       - "개발자에게 메시지 보내기" 버튼 + 폼 → Supabase messages 테이블 저장
+         (※ messages 테이블 먼저 생성 필요: 아래 안내 SQL 참고)
      ============================================ -->
 <html lang="ko">
   <head>
@@ -473,6 +473,20 @@
         border-color: rgba(160, 160, 170, 0.55);
       }
 
+      /* 지난 축제 핀 (종료일이 어제 이하): 어두운 회보라 + 퍼짐 효과 제거 */
+      .flare-pin.past .flare-dot {
+        background: radial-gradient(circle at 35% 35%, #6a5a7e, #3e3450);
+        box-shadow: 0 0 6px rgba(90, 75, 110, 0.5);
+        animation: none; /* 두근거림(pulse) 제거 */
+      }
+      .flare-pin.past .flare-dot::after {
+        display: none; /* 퍼지는 링 제거 */
+      }
+      .flare-pin.past .flare-label {
+        border-color: rgba(120, 105, 140, 0.5);
+        color: #d8d0e0;
+      }
+
       /* 진행 중 축제 핀 (빛 강하게 + 크게) */
       .flare-pin.ongoing .flare-dot {
         width: 18px;
@@ -537,13 +551,17 @@
         z-index: 998 !important;
       }
 
-      /* 흩어진(스파이더) 핀: 이름표 항상 보이기 */
+      /* 흩어진(스파이더) 핀: 이름표 항상 보이기 + 살짝 밝아짐 */
       .flare-pin.spider {
         z-index: 997 !important;
       }
       .flare-pin.spider .flare-label {
         opacity: 1;
         transform: translateY(-50%) translateX(0) scale(1);
+      }
+      /* 흩어졌을 때 일반 핀들과 구분되게 살짝 밝게 */
+      .flare-pin.spider .flare-dot {
+        filter: brightness(1.35) saturate(1.15);
       }
 
       /* 숫자 뭉치 마커 */
@@ -735,20 +753,36 @@
       /* 제목 옆 구글 검색 링크 버튼 */
       .title-link-btn {
         flex-shrink: 0;
-        background: none;
-        border: none;
+        background: rgba(255, 217, 61, 0.14);
+        border: 1px solid rgba(255, 217, 61, 0.4);
         cursor: pointer;
-        font-size: 0.85rem;
-        padding: 2px 4px;
-        border-radius: 6px;
-        opacity: 0.6;
-        transition: all 0.2s;
+        font-size: 0.8rem;
+        padding: 3px 7px;
+        border-radius: 8px;
+        color: var(--discount);
         line-height: 1;
+        font-weight: 600;
+        font-family: 'Noto Sans KR', sans-serif;
+        white-space: nowrap;
+        transition: all 0.25s;
+        /* 은은한 노란 빛 */
+        box-shadow: 0 0 8px rgba(255, 217, 61, 0.35);
+        animation: link-glow 2.8s ease-in-out infinite;
+      }
+      @keyframes link-glow {
+        0%, 100% {
+          box-shadow: 0 0 7px rgba(255, 217, 61, 0.3);
+        }
+        50% {
+          box-shadow: 0 0 14px rgba(255, 217, 61, 0.6),
+            0 0 22px rgba(255, 217, 61, 0.3);
+        }
       }
       .title-link-btn:hover {
-        opacity: 1;
-        background: rgba(255, 255, 255, 0.08);
-        transform: scale(1.15);
+        background: rgba(255, 217, 61, 0.25);
+        border-color: var(--discount);
+        transform: scale(1.12);
+        box-shadow: 0 0 16px rgba(255, 217, 61, 0.7);
       }
 
       .panel-meta {
@@ -1061,6 +1095,102 @@
         color: var(--text);
       }
 
+      /* 개발자에게 메시지 보내기 버튼 (사이드바) */
+      .contact-btn {
+        width: 100%;
+        padding: 11px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: transparent;
+        color: var(--muted);
+        font-size: 0.8rem;
+        font-family: 'Noto Sans KR', sans-serif;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+      .contact-btn:hover {
+        background: rgba(255, 107, 107, 0.1);
+        border-color: var(--festival);
+        color: var(--festival);
+      }
+
+      /* 메시지 모달 오버레이 (로그인 모달과 동일 스타일) */
+      #contact-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(4px);
+        z-index: 999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+      }
+      #contact-overlay.show {
+        display: flex;
+      }
+
+      /* 입력 필드 */
+      .contact-field {
+        text-align: left;
+        margin-bottom: 14px;
+      }
+      .contact-field label {
+        display: block;
+        font-size: 0.7rem;
+        color: var(--muted);
+        margin-bottom: 6px;
+        letter-spacing: 0.5px;
+      }
+      .contact-field input,
+      .contact-field textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text);
+        font-size: 0.82rem;
+        font-family: 'Noto Sans KR', sans-serif;
+        resize: vertical;
+      }
+      .contact-field input:focus,
+      .contact-field textarea:focus {
+        outline: none;
+        border-color: var(--festival);
+      }
+
+      .contact-send {
+        background: var(--festival);
+        color: #0a0a0f;
+        font-weight: 700;
+        border: none;
+      }
+      .contact-send:hover {
+        opacity: 0.88;
+      }
+      .contact-send:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      /* 전송 상태 메시지 */
+      .contact-status {
+        font-size: 0.74rem;
+        min-height: 18px;
+        margin-bottom: 10px;
+        text-align: center;
+      }
+      .contact-status.ok {
+        color: var(--live);
+      }
+      .contact-status.err {
+        color: var(--festival);
+      }
+
       /* ── 모바일 대응 ── */
       @media (max-width: 768px) {
         #menu-toggle {
@@ -1110,10 +1240,17 @@
     <!-- ── SIDEBAR ── -->
     <nav id="sidebar">
       <div class="logo-wrap">
-        <div class="logo">FLARE<span>(V)</span></div>
+        <div class="logo" onclick="location.reload()" style="cursor: pointer;" title="처음 화면으로">FLARE<span>(V)</span></div>
         <div class="logo-sub">기쁨을 발견하고 순간을 공유하다</div>
         <span class="logo-flare"></span>
         <span class="logo-light"></span>
+      </div>
+
+      <!-- 개발자에게 메시지 보내기 -->
+      <div class="section">
+        <button class="contact-btn" onclick="openContact()">
+          <span>✉️</span> 개발자에게 메시지 보내기
+        </button>
       </div>
 
       <!-- 날짜 필터 -->
@@ -1204,7 +1341,7 @@
         <div class="panel-body">
           <div class="panel-title-row">
             <span class="panel-title" id="panel-title">축제명</span>
-            <button class="title-link-btn" id="title-link-btn" onclick="searchFestival()" title="구글에서 검색">🔗</button>
+            <button class="title-link-btn" id="title-link-btn" onclick="searchFestival()" title="구글에서 검색">⌕ 검색</button>
           </div>
           <div class="panel-meta">
             <div class="meta-row">
@@ -1270,6 +1407,35 @@
         <button class="modal-btn"><span>🍎</span> 애플로 계속하기</button>
         <button class="modal-btn"><span>📧</span> 이메일로 계속하기</button>
         <button class="modal-cancel" onclick="closeModal()">취소</button>
+      </div>
+    </div>
+
+    <!-- 개발자에게 메시지 보내기 모달 -->
+    <div id="contact-overlay" onclick="closeContact(event)">
+      <div class="modal">
+        <div class="modal-logo">FLARE<span>(V)</span></div>
+        <h3 style="margin-bottom: 20px">개발자에게 메시지 보내기</h3>
+        <div class="contact-field">
+          <label>회신받을 이메일</label>
+          <input
+            type="email"
+            id="contact-email"
+            placeholder="example@email.com"
+          />
+        </div>
+        <div class="contact-field">
+          <label>내용</label>
+          <textarea
+            id="contact-content"
+            rows="4"
+            placeholder="의견이나 문의를 남겨주세요"
+          ></textarea>
+        </div>
+        <div id="contact-status" class="contact-status"></div>
+        <button class="modal-btn contact-send" id="contact-send-btn" onclick="sendContact()">
+          보내기
+        </button>
+        <button class="modal-cancel" onclick="closeContact()">취소</button>
       </div>
     </div>
 
@@ -1414,6 +1580,7 @@
             this.div = null;
             this.isUnknown = !festival.date_start; // 날짜 미확인 여부
             this.isOngoing = isOngoingFestival(festival); // 진행 중 여부
+            this.isPast = isPastFestival(festival); // 지난 축제 여부
             this.passesFilter = true; // 필터 통과 여부
             this.spiderOffset = null; // 흩어질 때 위치 보정값
           }
@@ -1423,7 +1590,8 @@
             div.className =
               'flare-pin' +
               (this.isUnknown ? ' unknown' : '') +
-              (this.isOngoing ? ' ongoing' : '');
+              (this.isOngoing ? ' ongoing' : '') +
+              (this.isPast ? ' past' : '');
             div.style.position = 'absolute';
             div.style.willChange = 'transform';
             div.innerHTML =
@@ -1479,7 +1647,8 @@
 
           // 흩어지기: offset 있으면 펼침, null이면 제자리
           // offset.labelLeft 가 true면 이름표를 왼쪽으로 뺌
-          setSpider(offset) {
+          // animate=true 면 흩어짐/합쳐짐 순간에만 0.2초 미끄러지는 효과
+          setSpider(offset, animate) {
             this.spiderOffset = offset;
             if (this.div) {
               this.div.classList.toggle('spider', !!offset);
@@ -1487,6 +1656,17 @@
                 'label-left',
                 !!(offset && offset.labelLeft)
               );
+
+              if (animate) {
+                // 이 순간에만 부드럽게 미끄러지도록 transition 켬
+                this.div.style.transition =
+                  'transform 0.2s cubic-bezier(0.34, 1.4, 0.6, 1)';
+                // 0.2초 뒤 transition 제거 → 지도 이동 시 출렁임 방지
+                clearTimeout(this._spiderTimer);
+                this._spiderTimer = setTimeout(() => {
+                  if (this.div) this.div.style.transition = '';
+                }, 220);
+              }
             }
             this.draw();
           }
@@ -1650,15 +1830,23 @@
       // ── 뭉치 펼치기: 이름을 겹치지 않게 흩뿌리기 ──
       // 2개=좌우, 3개=삼각형, 그 이상=다각형(골고루)
       function expandCluster(cm) {
-        // 다른 뭉치가 펼쳐져 있으면 먼저 접기
-        if (expandedCluster) collapseSpider();
+        // 다른 뭉치가 펼쳐져 있으면 즉시(애니메이션 없이) 접고 새로 펼침
+        if (expandedCluster && expandedCluster !== cm) {
+          const prev = expandedCluster;
+          prev.members.forEach((p) => {
+            p.setSpider(null);
+            p.setVisible(false);
+          });
+          prev.show();
+          expandedCluster = null;
+        }
 
         expandedCluster = cm;
         cm.hide(); // 숫자 숨김
 
         const n = cm.members.length;
-        // 개수 많을수록 넓게 (이름표가 안 겹치게 충분히)
-        const radius = 46 + n * 10;
+        // 흩어지는 거리 (이전의 절반)
+        const radius = 23 + n * 5;
 
         // 시작 각도: 2개는 좌우(수평), 그 외는 위에서 시작
         // 수평선에 정확히 겹치지 않도록 살짝 기울임
@@ -1671,26 +1859,43 @@
           startAngle = -Math.PI / 2 + Math.PI / n; // 다각형, 살짝 회전
         }
 
-        cm.members.forEach((pin, idx) => {
-          const angle = startAngle + (2 * Math.PI * idx) / n;
-          const dx = Math.cos(angle) * radius;
-          const dy = Math.sin(angle) * radius;
-          // 핀이 중심보다 왼쪽에 놓이면 이름표를 왼쪽으로 빼기
-          const labelLeft = dx < -2;
+        // 1단계: 모든 핀을 숫자 자리(중심)에서 시작 (애니메이션 출발점)
+        cm.members.forEach((pin) => {
           pin.setVisible(true);
-          pin.setSpider({ dx: dx, dy: dy, labelLeft: labelLeft });
+          pin.setSpider({ dx: 0, dy: 0, labelLeft: false });
+        });
+
+        // 2단계: 다음 프레임에 각자 방향으로 퍼지기 (0.2초 애니메이션)
+        requestAnimationFrame(() => {
+          cm.members.forEach((pin, idx) => {
+            const angle = startAngle + (2 * Math.PI * idx) / n;
+            const dx = Math.cos(angle) * radius;
+            const dy = Math.sin(angle) * radius;
+            const labelLeft = dx < -2; // 왼쪽 핀은 이름표도 왼쪽으로
+            pin.setSpider({ dx: dx, dy: dy, labelLeft: labelLeft }, true);
+          });
         });
       }
 
-      // ── 흩어진 이름 다시 합치기 ──
+      // ── 흩어진 이름 다시 합치기 (애니메이션) ──
       function collapseSpider() {
         if (!expandedCluster) return;
-        expandedCluster.members.forEach((pin) => {
-          pin.setSpider(null);
-          pin.setVisible(false); // 다시 뭉치 속으로
+        const cm = expandedCluster;
+        expandedCluster = null; // 즉시 비워서 중복 호출 방지
+
+        // 1단계: 핀들을 숫자 자리(중심)로 0.2초 모으기
+        cm.members.forEach((pin) => {
+          pin.setSpider({ dx: 0, dy: 0, labelLeft: false }, true);
         });
-        expandedCluster.show(); // 숫자 다시 보이기
-        expandedCluster = null;
+
+        // 2단계: 다 모인 뒤(0.2초) 핀 숨기고 숫자 다시 표시
+        setTimeout(() => {
+          cm.members.forEach((pin) => {
+            pin.setSpider(null);
+            pin.setVisible(false);
+          });
+          cm.show();
+        }, 200);
       }
 
       // ── 날짜 비교 도우미 ──
@@ -1877,8 +2082,22 @@
       // ── 제목 옆 링크: 구글에 축제명 검색 ──
       function searchFestival() {
         if (!currentFestival) return;
-        const q = encodeURIComponent(currentFestival.title || '축제');
-        window.open('https://www.google.com/search?q=' + q + '&udm=50', '_blank');
+        const f = currentFestival;
+
+        // 연도: 축제 시작일의 연도가 있으면 그걸, 없으면 올해
+        let year;
+        if (f.date_start) {
+          year = f.date_start.slice(0, 4); // 'YYYY-MM-DD' → 'YYYY'
+        } else {
+          year = String(new Date().getFullYear()); // 올해
+        }
+
+        // "연도 + 장소 + 행사이름" 조합 (빈 값은 자연스럽게 생략)
+        const parts = [year, f.location_name, f.title].filter(
+          (s) => s && String(s).trim()
+        );
+        const q = encodeURIComponent(parts.join(' '));
+        window.open('https://www.google.com/search?q=' + q, '_blank');
       }
 
       function openComment() {
@@ -1989,6 +2208,15 @@
         return start <= today && today <= end;
       }
 
+      // ── 지난 축제인지 판단 (종료일이 어제 이하 = 오늘보다 이전) ──
+      function isPastFestival(f) {
+        if (!f.date_start) return false; // 날짜 미정은 제외
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const end = toDate(f.date_end) || toDate(f.date_start);
+        return end < today; // 종료일이 오늘보다 앞 → 지난 축제
+      }
+
       // ── 내 위치로 이동 ──
       function goToMyLocation() {
         const btn = document.getElementById('locate-btn');
@@ -2092,6 +2320,71 @@
         if (!e || e.target === document.getElementById('modal-overlay')) {
           document.getElementById('modal-overlay').classList.remove('show');
         }
+      }
+
+      // ── 개발자에게 메시지 보내기 ──
+      function openContact() {
+        // 모바일에서 메뉴 열린 상태면 닫기
+        closeSidebar();
+        document.getElementById('contact-status').textContent = '';
+        document.getElementById('contact-status').className = 'contact-status';
+        document.getElementById('contact-overlay').classList.add('show');
+      }
+
+      function closeContact(e) {
+        if (!e || e.target === document.getElementById('contact-overlay')) {
+          document.getElementById('contact-overlay').classList.remove('show');
+        }
+      }
+
+      async function sendContact() {
+        const emailEl = document.getElementById('contact-email');
+        const contentEl = document.getElementById('contact-content');
+        const statusEl = document.getElementById('contact-status');
+        const sendBtn = document.getElementById('contact-send-btn');
+
+        const email = emailEl.value.trim();
+        const content = contentEl.value.trim();
+
+        // 간단한 입력 검증
+        if (!content) {
+          statusEl.textContent = '내용을 입력해주세요.';
+          statusEl.className = 'contact-status err';
+          return;
+        }
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          statusEl.textContent = '이메일 형식을 확인해주세요.';
+          statusEl.className = 'contact-status err';
+          return;
+        }
+
+        // 전송 중 표시
+        sendBtn.disabled = true;
+        statusEl.textContent = '보내는 중...';
+        statusEl.className = 'contact-status';
+
+        const { error } = await supabaseClient
+          .from('messages')
+          .insert([{ email: email || null, content: content }]);
+
+        sendBtn.disabled = false;
+
+        if (error) {
+          console.log('메시지 전송 에러:', error.message);
+          statusEl.textContent = '전송에 실패했어요. 잠시 후 다시 시도해주세요.';
+          statusEl.className = 'contact-status err';
+          return;
+        }
+
+        // 성공
+        statusEl.textContent = '메시지가 전달되었어요. 감사합니다! 🎆';
+        statusEl.className = 'contact-status ok';
+        emailEl.value = '';
+        contentEl.value = '';
+        // 1.5초 뒤 자동으로 닫기
+        setTimeout(() => {
+          document.getElementById('contact-overlay').classList.remove('show');
+        }, 1500);
       }
 
       // ── 시작 ──
