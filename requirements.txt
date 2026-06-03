@@ -1,0 +1,6 @@
+requests
+beautifulsoup4
+supabase
+anthropic
+newspaper3k
+lxml_html_clean
