@@ -1,0 +1,46 @@
+name: Flare(V) 자동 수집
+
+# 언제 실행할지 (시간표)
+on:
+  schedule:
+# 2일마다 오후 8시(한국시간) 실행
+    # GitHub은 UTC 기준이라 한국시간 20:00 = UTC 11:00 (같은 날)
+    # "*/2"는 2일 간격을 보장하진 않지만(짝수일 실행), 실용적으로 충분함
+    - cron: "0 11 */2 * *"
+  # 손으로 "지금 실행" 버튼을 누를 수 있게 해줌 (테스트용)
+  workflow_dispatch:
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. 내 코드 가져오기
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      # 2. 파이썬 준비
+      - name: 파이썬 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # 3. 필요한 라이브러리 설치
+      - name: 라이브러리 설치
+        run: pip install -r requirements.txt
+
+      # 4. 크롤링 실행 (뉴스 수집 → raw_events 저장)
+      - name: 크롤링 실행
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+        run: python crawler.py
+
+      # 5. 정제 실행 (raw_events → festivals)
+      #    크롤링이 끝난 뒤에만 실행됨 (순서 보장)
+      - name: 정제 실행
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+        run: python refiner.py
