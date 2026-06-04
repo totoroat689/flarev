@@ -1,0 +1,24 @@
+name: 공공API 테스트
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: 파이썬 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 라이브러리 설치
+        run: pip install -r requirements.txt
+
+      - name: 공공 수집기 실행
+        env:
+          TOURAPI_KEY: ${{ secrets.TOURAPI_KEY }}
+        run: python api_collector.py
