@@ -1,20 +1,18 @@
 <!DOCTYPE html>
 <!-- ============================================
      Flare(V) 홈페이지
-     버전: v2.0.2
-     수정일: 2026-06-01
+     버전: v2.1.0
+     수정일: 2026-06-05
      수정사항:
-       - SEO 메타 정보 추가: 검색용 제목/설명, canonical
-       - 소셜 공유 정보(Open Graph/트위터 카드) + 공유 썸네일(og-image.png)
-       - 구글 서치 콘솔 소유권 확인용 메타태그 추가
-       - 핀 흩어짐/합쳐짐 0.2초 애니메이션 + 거리 절반 + 흩어질 때 살짝 밝아짐
-       - 팝업 링크 버튼: 노란색 + 은은한 빛
-       - 검색 양식: "연도 + 장소 + 행사이름"
-         (축제 연도 있으면 그 연도, 없으면 올해)
-       - 지난 축제 핀(종료일이 어제 이하): 어두운 회보라 + 퍼짐 효과 제거
-       - FLARE 로고 클릭 → 초기 화면으로 새로고침
-       - "개발자에게 메시지 보내기" 버튼 + 폼 → Supabase messages 테이블 저장
-         (※ messages 테이블 먼저 생성 필요: 아래 안내 SQL 참고)
+       - 팝업 개편: 공공 데이터(사진/장소/운영시간/요금/설명/프로그램) 표시
+         · 없는 항목은 줄째로 자동 숨김 (빈칸/"정보없음" 표시 안 함)
+       - 팝업 사진: 상단 가로 배너 + 잘리는 쪽으로 자동 훑기(세로↕/가로↔, 9초)
+         · 사진 클릭 시 원본 이미지 새 탭으로 열기 (사진 있을 때만)
+       - 팝업 장소는 place_name(없으면 location_name)만 표시, 주소 줄 제거
+       - 설명 3줄 + 더보기/접기 토글
+       - 예정 핀 색상 핑크 → 주황(#FF7A1A) (진행중 NOW와 구분 강화)
+       - '날짜 미정 축제 보기' 토글 + 회색 핀 관련 코드 전체 제거
+       - 첫 진입 기본 날짜 필터를 '이번 주'로 설정 (사이드바 메뉴도 활성 표시)
      ============================================ -->
 <html lang="ko">
   <head>
@@ -67,6 +65,7 @@
         --text: #f0f0f5;
         --muted: #6b6b80;
         --festival: #ff6b6b;
+        --upcoming: #ff7a1a; /* 예정 핀 주황 */
         --discount: #ffd93d;
         --live: #6bffb8;
         --festival-bg: rgba(255, 107, 107, 0.12);
@@ -290,39 +289,6 @@
         border-color: var(--festival);
       }
 
-      /* 미정 축제 보기 토글 */
-      .unknown-toggle {
-        margin-top: 12px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 10px 12px;
-        border-radius: 10px;
-        border: 1px solid var(--border);
-        background: transparent;
-        color: var(--muted);
-        font-size: 0.76rem;
-        font-family: 'Noto Sans KR', sans-serif;
-        cursor: pointer;
-        transition: all 0.2s;
-        width: 100%;
-        text-align: left;
-      }
-
-      .unknown-toggle .dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: #888;
-        flex-shrink: 0;
-      }
-
-      .unknown-toggle.active {
-        background: rgba(150, 150, 150, 0.15);
-        border-color: #999;
-        color: var(--text);
-      }
-
       /* 카테고리 필터 */
       .filter-list {
         display: flex;
@@ -476,13 +442,14 @@
         cursor: pointer;
       }
 
+      /* 기본(예정) 핀 = 주황 */
       .flare-dot {
         width: 14px;
         height: 14px;
         border-radius: 50%;
-        background: radial-gradient(circle at 35% 35%, #ffb3a0, #ff6b8b);
-        box-shadow: 0 0 10px rgba(255, 107, 139, 0.9),
-          0 0 20px rgba(255, 107, 139, 0.5);
+        background: radial-gradient(circle at 35% 35%, #ffc285, #ff7a1a);
+        box-shadow: 0 0 10px rgba(255, 122, 26, 0.9),
+          0 0 20px rgba(255, 122, 26, 0.5);
         position: relative;
         animation: dot-pulse 2.5s ease-in-out infinite;
       }
@@ -492,21 +459,8 @@
         position: absolute;
         inset: -6px;
         border-radius: 50%;
-        border: 1px solid rgba(255, 107, 139, 0.5);
+        border: 1px solid rgba(255, 122, 26, 0.5);
         animation: ring-pulse 2.5s ease-in-out infinite;
-      }
-
-      /* 날짜 미확인 핀 (회색) */
-      .flare-pin.unknown .flare-dot {
-        background: radial-gradient(circle at 35% 35%, #c8c8d0, #888);
-        box-shadow: 0 0 10px rgba(150, 150, 160, 0.8),
-          0 0 20px rgba(150, 150, 160, 0.4);
-      }
-      .flare-pin.unknown .flare-dot::after {
-        border-color: rgba(160, 160, 170, 0.5);
-      }
-      .flare-pin.unknown .flare-label {
-        border-color: rgba(160, 160, 170, 0.55);
       }
 
       /* 지난 축제 핀 (종료일이 어제 이하): 어두운 회보라 + 퍼짐 효과 제거 */
@@ -523,7 +477,7 @@
         color: #d8d0e0;
       }
 
-      /* 진행 중 축제 핀 (빛 강하게 + 크게) */
+      /* 진행 중 축제 핀 (빛 강하게 + 크게, 빨강) */
       .flare-pin.ongoing .flare-dot {
         width: 18px;
         height: 18px;
@@ -536,6 +490,9 @@
       .flare-pin.ongoing .flare-dot::after {
         inset: -8px;
         border-color: rgba(255, 90, 120, 0.7);
+      }
+      .flare-pin.ongoing .flare-label {
+        border-color: rgba(255, 90, 120, 0.6);
       }
       .flare-pin.ongoing {
         z-index: 996;
@@ -606,9 +563,9 @@
         width: 36px;
         height: 36px;
         border-radius: 50%;
-        background: radial-gradient(circle at 35% 35%, #ffb3a0, #ff6b8b);
-        box-shadow: 0 0 12px rgba(255, 107, 139, 0.85),
-          0 0 22px rgba(255, 107, 139, 0.45);
+        background: radial-gradient(circle at 35% 35%, #ffc285, #ff7a1a);
+        box-shadow: 0 0 12px rgba(255, 122, 26, 0.85),
+          0 0 22px rgba(255, 122, 26, 0.45);
         border: 2px solid rgba(255, 255, 255, 0.3);
         color: #fff;
         font-weight: 700;
@@ -643,9 +600,9 @@
         padding: 4px 11px;
         border-radius: 20px;
         background: rgba(20, 20, 31, 0.82);
-        border: 1px solid rgba(255, 107, 139, 0.55);
+        border: 1px solid rgba(255, 122, 26, 0.55);
         box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5),
-          0 0 14px rgba(255, 107, 139, 0.25);
+          0 0 14px rgba(255, 122, 26, 0.25);
         backdrop-filter: blur(8px);
         letter-spacing: 0.3px;
         opacity: 0;
@@ -671,7 +628,7 @@
       .flare-pin:hover .flare-label {
         opacity: 1;
         transform: translateY(-50%) translateX(0) scale(1.05);
-        border-color: var(--festival);
+        border-color: var(--upcoming);
       }
 
       /* ── INFO PANEL ── */
@@ -683,7 +640,8 @@
         background: var(--panel);
         border: 1px solid var(--border);
         border-radius: 16px;
-        overflow: hidden;
+        overflow: hidden auto; /* 내용 길면 안에서 스크롤 */
+        max-height: calc(100vh - 48px);
         z-index: 200;
         display: none;
         backdrop-filter: blur(20px);
@@ -750,15 +708,49 @@
         color: var(--text);
       }
 
+      /* ── 팝업 사진 영역 ── */
       .panel-img {
+        position: relative;
         width: 100%;
         height: 160px;
-        object-fit: cover;
         background: linear-gradient(135deg, #1a1a2e, #16213e);
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 3rem;
+        overflow: hidden;
+      }
+      .panel-img img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        display: none; /* 사진 있을 때만 보임 */
+      }
+      /* 사진 있을 때: 이미지 표시 + 이모지 숨김 + 클릭(돋보기) */
+      .panel-img.has-photo {
+        cursor: zoom-in;
+      }
+      .panel-img.has-photo img {
+        display: block;
+      }
+      .panel-img.has-photo .panel-img-emoji {
+        display: none;
+      }
+      /* 잘리는 쪽으로 천천히 훑기 (9초, 왕복) */
+      .panel-img.pan-v img {
+        animation: img-pan-v 9s ease-in-out infinite alternate;
+      }
+      .panel-img.pan-h img {
+        animation: img-pan-h 9s ease-in-out infinite alternate;
+      }
+      @keyframes img-pan-v {
+        from { object-position: 50% 0%; }
+        to   { object-position: 50% 100%; }
+      }
+      @keyframes img-pan-h {
+        from { object-position: 0% 50%; }
+        to   { object-position: 100% 50%; }
       }
 
       .panel-body {
@@ -770,7 +762,7 @@
         display: flex;
         align-items: center;
         gap: 8px;
-        margin-bottom: 6px;
+        margin-bottom: 12px;
       }
 
       .panel-title {
@@ -819,26 +811,6 @@
         border-color: var(--discount);
         transform: scale(1.12);
         box-shadow: 0 0 16px rgba(255, 217, 61, 0.7);
-      }
-
-      .panel-meta {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        margin-bottom: 14px;
-      }
-
-      /* 팝업 정보 글자 흰색으로 */
-      .meta-row {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 0.75rem;
-        color: #e8e8f0;
-      }
-
-      .meta-icon {
-        font-size: 0.85rem;
       }
 
       .reaction-row {
@@ -907,6 +879,79 @@
       @keyframes particle-fly {
         0% { opacity: 1; transform: translate(0, 0) scale(1); }
         100% { opacity: 0; transform: translate(var(--px), var(--py)) scale(0.3); }
+      }
+
+      .panel-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 14px;
+      }
+
+      /* 팝업 정보 글자 흰색으로 */
+      .meta-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        font-size: 0.75rem;
+        color: #e8e8f0;
+        line-height: 1.45;
+      }
+
+      .meta-icon {
+        font-size: 0.85rem;
+        flex-shrink: 0;
+      }
+
+      /* 설명 */
+      .panel-desc {
+        font-size: 0.78rem;
+        line-height: 1.65;
+        color: #d2d2de;
+        margin-bottom: 14px;
+      }
+      .panel-desc .desc-text {
+        display: -webkit-box;
+        -webkit-line-clamp: 3; /* 기본 3줄 */
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        white-space: pre-line; /* 줄바꿈 반영 */
+      }
+      .panel-desc.expanded .desc-text {
+        display: block;
+        -webkit-line-clamp: unset;
+        overflow: visible;
+      }
+      .desc-more {
+        display: none; /* 넘칠 때만 JS가 표시 */
+        margin-top: 6px;
+        font-size: 0.72rem;
+        color: var(--upcoming);
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .desc-more:hover {
+        text-decoration: underline;
+      }
+
+      /* 프로그램 */
+      .panel-program {
+        margin-bottom: 14px;
+      }
+      .program-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.75rem;
+        color: #e8e8f0;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+      .program-body {
+        font-size: 0.74rem;
+        line-height: 1.6;
+        color: #c2c2d0;
+        white-space: pre-line;
       }
 
       .nav-btn {
@@ -1256,6 +1301,7 @@
           left: 12px;
           width: auto;
           top: 70px;
+          max-height: calc(100vh - 88px);
         }
 
         #upload-btn {
@@ -1289,14 +1335,14 @@
         </button>
       </div>
 
-      <!-- 날짜 필터 -->
+      <!-- 날짜 필터 (기본 '이번 주' 활성) -->
       <div class="section">
         <div class="section-label">날짜</div>
         <div class="date-row">
           <button class="date-btn" onclick="setDate(this,'today')">
             오늘
           </button>
-          <button class="date-btn" onclick="setDate(this,'week')">
+          <button class="date-btn active" onclick="setDate(this,'week')">
             이번 주
           </button>
           <button class="date-btn" onclick="setDate(this,'month')">
@@ -1318,12 +1364,6 @@
             <input type="date" id="range-end" onchange="setCustomRange()" />
           </div>
         </div>
-
-        <!-- 미정 축제 보기 토글 -->
-        <button class="unknown-toggle active" id="unknown-toggle" onclick="toggleUnknown()">
-          <span class="dot"></span>
-          <span>날짜 미정 축제 보기</span>
-        </button>
       </div>
 
       <!-- 카테고리 필터 -->
@@ -1373,26 +1413,21 @@
           <span class="panel-badge badge-festival" id="panel-badge">축제</span>
           <button class="panel-close" onclick="closePanel()">✕</button>
         </div>
-        <div class="panel-img" id="panel-img">🎪</div>
+
+        <!-- 사진 (있을 때만 표시 + 클릭 시 원본 새 탭) -->
+        <div class="panel-img" id="panel-img" onclick="openPhoto()">
+          <img id="panel-img-el" alt="축제 사진" />
+          <span class="panel-img-emoji" id="panel-img-emoji">🎪</span>
+        </div>
+
         <div class="panel-body">
+          <!-- 제목 + 검색 -->
           <div class="panel-title-row">
             <span class="panel-title" id="panel-title">축제명</span>
             <button class="title-link-btn" id="title-link-btn" onclick="searchFestival()" title="구글에서 검색">⌕ 검색</button>
           </div>
-          <div class="panel-meta">
-            <div class="meta-row">
-              <span class="meta-icon">📅</span
-              ><span id="panel-date">날짜</span>
-            </div>
-            <div class="meta-row">
-              <span class="meta-icon">📍</span
-              ><span id="panel-loc">장소</span>
-            </div>
-            <div class="meta-row">
-              <span class="meta-icon">🏠</span
-              ><span id="panel-time">주소</span>
-            </div>
-          </div>
+
+          <!-- 조명탄 / 댓글 -->
           <div class="reaction-row">
             <button class="reaction-btn flare-btn" id="flare-btn" onclick="shootFlare(event)">
               <span class="flare-icon">🎆</span><span id="flare-count">0</span>
@@ -1401,6 +1436,35 @@
               <span>💬</span><span>댓글</span>
             </button>
           </div>
+
+          <!-- 정보 (없는 줄은 자동 숨김): 📍장소 📅날짜 🕐운영시간 💰요금 -->
+          <div class="panel-meta">
+            <div class="meta-row" id="row-place">
+              <span class="meta-icon">📍</span><span id="panel-place"></span>
+            </div>
+            <div class="meta-row" id="row-date">
+              <span class="meta-icon">📅</span><span id="panel-date"></span>
+            </div>
+            <div class="meta-row" id="row-time">
+              <span class="meta-icon">🕐</span><span id="panel-time"></span>
+            </div>
+            <div class="meta-row" id="row-price">
+              <span class="meta-icon">💰</span><span id="panel-price"></span>
+            </div>
+          </div>
+
+          <!-- 설명 (3줄 + 더보기) -->
+          <div class="panel-desc" id="panel-desc">
+            <div class="desc-text" id="panel-desc-text"></div>
+            <span class="desc-more" id="panel-desc-more" onclick="toggleDesc()">더보기</span>
+          </div>
+
+          <!-- 프로그램 -->
+          <div class="panel-program" id="panel-program">
+            <div class="program-head"><span class="meta-icon">📋</span><span>프로그램</span></div>
+            <div class="program-body" id="panel-program-body"></div>
+          </div>
+
           <button class="nav-btn nav-festival" id="nav-btn" onclick="toggleMapPicker()">📍 길 찾기</button>
 
           <!-- 지도 앱 선택 -->
@@ -1493,7 +1557,7 @@
       let map;
       let pinOverlays = []; // 핀 객체들 (필터링용)
       let flareCount = 0; // 현재 팝업 축제의 조명탄 누적 수 (임시)
-      let currentFestival = null; // 현재 열린 축제 (길찾기용)
+      let currentFestival = null; // 현재 열린 축제 (길찾기/검색/사진용)
       const LABEL_ZOOM = 11;
 
       // 핀 색 변경(선택)·뭉치기용 상태
@@ -1508,9 +1572,8 @@
 
       // 필터 상태
       let activeCategories = { festival: true, discount: false, live: false };
-      let dateFilter = 'none'; // 기본: 전체 표시
+      let dateFilter = 'week'; // 기본: 이번 주
       let customRange = { start: null, end: null };
-      let showUnknown = true; // 기본: 날짜 미정 축제 표시
 
       // ── 구글 지도 다크 스타일 ──
       const darkStyle = [
@@ -1614,7 +1677,6 @@
               festival.longitude
             );
             this.div = null;
-            this.isUnknown = !festival.date_start; // 날짜 미확인 여부
             this.isOngoing = isOngoingFestival(festival); // 진행 중 여부
             this.isPast = isPastFestival(festival); // 지난 축제 여부
             this.passesFilter = true; // 필터 통과 여부
@@ -1625,7 +1687,6 @@
             const div = document.createElement('div');
             div.className =
               'flare-pin' +
-              (this.isUnknown ? ' unknown' : '') +
               (this.isOngoing ? ' ongoing' : '') +
               (this.isPast ? ' past' : '');
             div.style.position = 'absolute';
@@ -1634,7 +1695,7 @@
               '<div class="flare-dot"></div>' +
               (this.isOngoing ? '<div class="now-badge">NOW</div>' : '') +
               '<div class="flare-label">' +
-              (this.festival.title || '축제') +
+              escapeHtml(this.festival.title || '축제') +
               '</div>';
 
             const self = this;
@@ -1777,7 +1838,6 @@
 
         festivalData = data;
         console.log('✅ 축제', data.length, '개 불러옴');
-        document.getElementById('cnt-festival').textContent = data.length;
 
         if (map) showFestivalPins();
       }
@@ -1792,7 +1852,7 @@
         });
 
         updatePinLabels();
-        applyFilters(); // 초기 필터 + 뭉치 계산
+        applyFilters(); // 초기 필터(이번 주) + 뭉치 계산
       }
 
       function updatePinLabels() {
@@ -1942,7 +2002,7 @@
 
       // 축제가 현재 날짜 필터에 맞는지
       function matchesDateFilter(f) {
-        // 날짜 없는 축제는 별도 토글로 관리
+        // 날짜 없는 축제는 표시하지 않음
         if (!f.date_start) return false;
 
         const start = toDate(f.date_start);
@@ -1987,13 +2047,8 @@
           // 1. 카테고리: 현재는 축제만 데이터 있음
           if (!activeCategories.festival) show = false;
 
-          // 2. 날짜 미정 축제 처리
-          if (pin.isUnknown) {
-            show = showUnknown; // 토글에 따라
-          } else if (show && !matchesDateFilter(f)) {
-            // 3. 날짜 필터
-            show = false;
-          }
+          // 2. 날짜 필터
+          if (show && !matchesDateFilter(f)) show = false;
 
           pin.passesFilter = show;
           pin.setVisible(show);
@@ -2004,28 +2059,177 @@
         recluster(); // 보이는 핀들로 뭉치 다시 계산
       }
 
-      // ── 정보 패널 ──
+      // ── HTML 태그/특수문자 정리 (설명·프로그램 등 공공 데이터용) ──
+      function cleanText(s) {
+        return String(s)
+          .replace(/<br\s*\/?>/gi, '\n') // 줄바꿈 태그 → 실제 줄바꿈
+          .replace(/<[^>]+>/g, '') // 그 외 태그 제거
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/[ \t]+\n/g, '\n')
+          .replace(/\n{3,}/g, '\n\n')
+          .trim();
+      }
+      // 한 줄짜리 정보용(줄바꿈을 공백으로)
+      function cleanInline(s) {
+        return cleanText(s).replace(/\s*\n\s*/g, ' ').trim();
+      }
+      // 이름표 등에 넣을 때 태그 깨짐 방지용 escape
+      function escapeHtml(s) {
+        return String(s)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      // ── 메타 한 줄 채우기 (값 없으면 줄 숨김) ──
+      function setMetaRow(rowId, textId, value) {
+        const row = document.getElementById(rowId);
+        const txt = document.getElementById(textId);
+        const v = value && String(value).trim();
+        if (v) {
+          txt.textContent = cleanInline(v);
+          row.style.display = 'flex';
+        } else {
+          row.style.display = 'none';
+        }
+      }
+
+      // ── 팝업 사진 설정 (있을 때만 표시 + 잘리는 쪽 자동 훑기) ──
+      function setupPanelImage(f) {
+        const box = document.getElementById('panel-img');
+        const img = document.getElementById('panel-img-el');
+
+        box.classList.remove('has-photo', 'pan-v', 'pan-h');
+        img.onload = null;
+        img.onerror = null;
+
+        const url = f.image_url && String(f.image_url).trim();
+        if (!url) {
+          img.removeAttribute('src'); // 사진 없음 → 기본 아이콘
+          return;
+        }
+
+        img.onload = function () {
+          box.classList.add('has-photo');
+          box.classList.remove('pan-v', 'pan-h');
+          const boxRatio = box.clientWidth / box.clientHeight;
+          const imgRatio = img.naturalWidth / img.naturalHeight;
+          if (!imgRatio || !boxRatio) return;
+          // 사진이 박스보다 옆으로 넘치면 가로 훑기, 위아래로 넘치면 세로 훑기
+          if (imgRatio > boxRatio * 1.05) box.classList.add('pan-h');
+          else if (imgRatio < boxRatio * 0.95) box.classList.add('pan-v');
+          // 거의 같은 비율이면 움직이지 않음
+        };
+        img.onerror = function () {
+          // 사진 로드 실패 → 기본 아이콘으로 되돌림
+          box.classList.remove('has-photo', 'pan-v', 'pan-h');
+          img.removeAttribute('src');
+        };
+
+        img.src = url;
+        // 캐시된 이미지는 onload가 안 뜰 수 있어 보강
+        if (img.complete && img.naturalWidth) img.onload();
+      }
+
+      // ── 사진 클릭 → 원본 새 탭 (사진 있을 때만) ──
+      function openPhoto() {
+        const box = document.getElementById('panel-img');
+        if (!box.classList.contains('has-photo')) return;
+        if (currentFestival && currentFestival.image_url) {
+          window.open(currentFestival.image_url, '_blank');
+        }
+      }
+
+      // ── 설명 설정 (3줄 + 더보기) ──
+      function setupDescription(f) {
+        const wrap = document.getElementById('panel-desc');
+        const textEl = document.getElementById('panel-desc-text');
+        const moreBtn = document.getElementById('panel-desc-more');
+
+        const raw = f.description;
+        if (!raw || !String(raw).trim()) {
+          wrap.style.display = 'none';
+          return;
+        }
+
+        wrap.style.display = 'block';
+        wrap.classList.remove('expanded');
+        textEl.textContent = cleanText(raw);
+        moreBtn.textContent = '더보기';
+        moreBtn.style.display = 'none'; // 넘칠 때만 measureDesc가 표시
+      }
+
+      // ── 설명이 3줄 넘는지 확인해 '더보기' 노출 (패널이 보인 뒤 측정) ──
+      function measureDesc() {
+        const wrap = document.getElementById('panel-desc');
+        if (wrap.style.display === 'none') return;
+        const textEl = document.getElementById('panel-desc-text');
+        const moreBtn = document.getElementById('panel-desc-more');
+        wrap.classList.remove('expanded');
+        const overflowing = textEl.scrollHeight > textEl.clientHeight + 2;
+        moreBtn.style.display = overflowing ? 'inline-block' : 'none';
+        moreBtn.textContent = '더보기';
+      }
+
+      function toggleDesc() {
+        const wrap = document.getElementById('panel-desc');
+        const moreBtn = document.getElementById('panel-desc-more');
+        const expanded = wrap.classList.toggle('expanded');
+        moreBtn.textContent = expanded ? '접기' : '더보기';
+      }
+
+      // ── 프로그램 설정 ──
+      function setupProgram(f) {
+        const wrap = document.getElementById('panel-program');
+        const body = document.getElementById('panel-program-body');
+        const raw = f.program;
+        if (!raw || !String(raw).trim()) {
+          wrap.style.display = 'none';
+          return;
+        }
+        wrap.style.display = 'block';
+        body.textContent = cleanText(raw);
+      }
+
+      // ── 정보 패널 열기 ──
       function openFestivalPanel(f) {
         const panel = document.getElementById('info-panel');
 
         // 길찾기 메뉴는 매번 닫고 시작 (다른 축제 누를 때 초기화)
         document.getElementById('map-picker').classList.remove('show');
 
-        document.getElementById('panel-img').textContent = '🎪';
-        document.getElementById('panel-img').style.fontSize = '4rem';
+        currentFestival = f; // 길찾기/검색/사진용 저장
 
-        // 제목 설정 (크기 조절은 패널이 화면에 뜬 뒤에 함)
+        // 사진
+        setupPanelImage(f);
+
+        // 제목
         const titleEl = document.getElementById('panel-title');
         titleEl.textContent = f.title || '제목 없음';
 
-        document.getElementById('panel-date').textContent = f.date_start
-          ? f.date_start + (f.date_end ? ' ~ ' + f.date_end : '')
-          : '날짜 미정';
-        document.getElementById('panel-loc').textContent =
-          f.location_name || '장소 미정';
-        document.getElementById('panel-time').textContent = f.address || '';
+        // 정보 줄 (없으면 자동 숨김): 📍장소 📅날짜 🕐운영시간 💰요금
+        setMetaRow('row-place', 'panel-place', f.place_name || f.location_name);
+        setMetaRow(
+          'row-date',
+          'panel-date',
+          f.date_start
+            ? f.date_start +
+                (f.date_end && f.date_end !== f.date_start
+                  ? ' ~ ' + f.date_end
+                  : '')
+            : ''
+        );
+        setMetaRow('row-time', 'panel-time', f.play_time);
+        setMetaRow('row-price', 'panel-price', f.price);
 
-        currentFestival = f; // 길찾기/검색용 저장
+        // 설명 / 프로그램
+        setupDescription(f);
+        setupProgram(f);
 
         // 조명탄 누적 수 (지금은 임시값, 추후 Supabase 연동)
         flareCount = getInitialFlareCount(f);
@@ -2035,9 +2239,13 @@
         panel.classList.remove('show');
         void panel.offsetWidth; // 리플로우 트릭
         panel.classList.add('show');
+        panel.scrollTop = 0;
 
-        // 패널이 화면에 뜬 뒤 제목 폭을 재서 글자 크기 조절 (2줄 방지)
-        fitTitle(titleEl);
+        // 패널이 화면에 뜬 뒤: 제목 크기 맞춤 + 설명 더보기 측정
+        requestAnimationFrame(() => {
+          fitTitle(titleEl);
+          measureDesc();
+        });
       }
 
       // ── 제목 길이에 따라 글자 크기 줄여 한 줄 유지 ──
@@ -2053,7 +2261,7 @@
       function closePanel() {
         document.getElementById('info-panel').classList.remove('show');
         document.getElementById('map-picker').classList.remove('show');
-        // 노란 핀 다시 핑크로
+        // 노란 핀 다시 주황으로
         if (selectedPin) {
           selectedPin.setSelected(false);
           selectedPin = null;
@@ -2129,7 +2337,7 @@
         }
 
         // "연도 + 장소 + 행사이름" 조합 (빈 값은 자연스럽게 생략)
-        const parts = [year, f.location_name, f.title].filter(
+        const parts = [year, f.place_name || f.location_name, f.title].filter(
           (s) => s && String(s).trim()
         );
         const q = encodeURIComponent(parts.join(' '));
@@ -2150,7 +2358,8 @@
         const lat = currentFestival.latitude;
         const lng = currentFestival.longitude;
         const place = encodeURIComponent(
-          currentFestival.location_name ||
+          currentFestival.place_name ||
+            currentFestival.location_name ||
             currentFestival.address ||
             currentFestival.title ||
             '목적지'
@@ -2209,15 +2418,6 @@
 
         if (s && e) dateFilter = 'custom';
 
-        applyFilters();
-      }
-
-      // ── 미정 축제 토글 ──
-      function toggleUnknown() {
-        showUnknown = !showUnknown;
-        document
-          .getElementById('unknown-toggle')
-          .classList.toggle('active', showUnknown);
         applyFilters();
       }
 
