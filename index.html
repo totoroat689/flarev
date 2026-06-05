@@ -1,9 +1,15 @@
 <!DOCTYPE html>
 <!-- ============================================
      Flare(V) 홈페이지
-     버전: v2.1.0
+     버전: v2.1.1
      수정일: 2026-06-05
-     수정사항:
+     수정사항(v2.1.1):
+       - 설명/프로그램 모두 2줄 + 더보기/접기로 축소
+       - 첫 로딩 가속: 현재 필터(이번 주)에 맞는 핀만 생성하도록 변경
+         (필터 바꾸면 해당 핀만 다시 생성 → 전체 핀 로딩 안 함)
+       - 핀 색상 핑크로 복귀 + 오늘(진행중) 아닌 핀은 채도만 살짝 낮춤
+       - 팝업 사진에 은은한 비네팅 추가
+     수정사항(v2.1.0):
        - 팝업 개편: 공공 데이터(사진/장소/운영시간/요금/설명/프로그램) 표시
          · 없는 항목은 줄째로 자동 숨김 (빈칸/"정보없음" 표시 안 함)
        - 팝업 사진: 상단 가로 배너 + 잘리는 쪽으로 자동 훑기(세로↕/가로↔, 9초)
@@ -65,7 +71,6 @@
         --text: #f0f0f5;
         --muted: #6b6b80;
         --festival: #ff6b6b;
-        --upcoming: #ff7a1a; /* 예정 핀 주황 */
         --discount: #ffd93d;
         --live: #6bffb8;
         --festival-bg: rgba(255, 107, 107, 0.12);
@@ -442,14 +447,14 @@
         cursor: pointer;
       }
 
-      /* 기본(예정) 핀 = 주황 */
+      /* 기본 핀(예정·오늘 아님) = 핑크, 채도만 살짝 낮춤 */
       .flare-dot {
         width: 14px;
         height: 14px;
         border-radius: 50%;
-        background: radial-gradient(circle at 35% 35%, #ffc285, #ff7a1a);
-        box-shadow: 0 0 10px rgba(255, 122, 26, 0.9),
-          0 0 20px rgba(255, 122, 26, 0.5);
+        background: radial-gradient(circle at 35% 35%, #f3b8af, #e87f95);
+        box-shadow: 0 0 10px rgba(232, 127, 149, 0.8),
+          0 0 18px rgba(232, 127, 149, 0.4);
         position: relative;
         animation: dot-pulse 2.5s ease-in-out infinite;
       }
@@ -459,7 +464,7 @@
         position: absolute;
         inset: -6px;
         border-radius: 50%;
-        border: 1px solid rgba(255, 122, 26, 0.5);
+        border: 1px solid rgba(232, 127, 149, 0.45);
         animation: ring-pulse 2.5s ease-in-out infinite;
       }
 
@@ -563,9 +568,9 @@
         width: 36px;
         height: 36px;
         border-radius: 50%;
-        background: radial-gradient(circle at 35% 35%, #ffc285, #ff7a1a);
-        box-shadow: 0 0 12px rgba(255, 122, 26, 0.85),
-          0 0 22px rgba(255, 122, 26, 0.45);
+        background: radial-gradient(circle at 35% 35%, #ffb3a0, #ff6b8b);
+        box-shadow: 0 0 12px rgba(255, 107, 139, 0.85),
+          0 0 22px rgba(255, 107, 139, 0.45);
         border: 2px solid rgba(255, 255, 255, 0.3);
         color: #fff;
         font-weight: 700;
@@ -600,9 +605,9 @@
         padding: 4px 11px;
         border-radius: 20px;
         background: rgba(20, 20, 31, 0.82);
-        border: 1px solid rgba(255, 122, 26, 0.55);
+        border: 1px solid rgba(232, 127, 149, 0.5);
         box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5),
-          0 0 14px rgba(255, 122, 26, 0.25);
+          0 0 14px rgba(232, 127, 149, 0.22);
         backdrop-filter: blur(8px);
         letter-spacing: 0.3px;
         opacity: 0;
@@ -628,7 +633,7 @@
       .flare-pin:hover .flare-label {
         opacity: 1;
         transform: translateY(-50%) translateX(0) scale(1.05);
-        border-color: var(--upcoming);
+        border-color: var(--festival);
       }
 
       /* ── INFO PANEL ── */
@@ -736,6 +741,18 @@
       }
       .panel-img.has-photo .panel-img-emoji {
         display: none;
+      }
+      /* 사진 비네팅 (살짝) */
+      .panel-img.has-photo::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: radial-gradient(
+          ellipse at center,
+          transparent 60%,
+          rgba(0, 0, 0, 0.32) 100%
+        );
       }
       /* 잘리는 쪽으로 천천히 훑기 (9초, 왕복) */
       .panel-img.pan-v img {
@@ -912,7 +929,7 @@
       }
       .panel-desc .desc-text {
         display: -webkit-box;
-        -webkit-line-clamp: 3; /* 기본 3줄 */
+        -webkit-line-clamp: 2; /* 기본 2줄 */
         -webkit-box-orient: vertical;
         overflow: hidden;
         white-space: pre-line; /* 줄바꿈 반영 */
@@ -926,7 +943,7 @@
         display: none; /* 넘칠 때만 JS가 표시 */
         margin-top: 6px;
         font-size: 0.72rem;
-        color: var(--upcoming);
+        color: var(--festival);
         cursor: pointer;
         font-weight: 600;
       }
@@ -951,7 +968,27 @@
         font-size: 0.74rem;
         line-height: 1.6;
         color: #c2c2d0;
+        display: -webkit-box;
+        -webkit-line-clamp: 2; /* 기본 2줄 */
+        -webkit-box-orient: vertical;
+        overflow: hidden;
         white-space: pre-line;
+      }
+      .panel-program.expanded .program-body {
+        display: block;
+        -webkit-line-clamp: unset;
+        overflow: visible;
+      }
+      .program-more {
+        display: none; /* 넘칠 때만 JS가 표시 */
+        margin-top: 6px;
+        font-size: 0.72rem;
+        color: var(--festival);
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .program-more:hover {
+        text-decoration: underline;
       }
 
       .nav-btn {
@@ -1459,10 +1496,11 @@
             <span class="desc-more" id="panel-desc-more" onclick="toggleDesc()">더보기</span>
           </div>
 
-          <!-- 프로그램 -->
+          <!-- 프로그램 (2줄 + 더보기) -->
           <div class="panel-program" id="panel-program">
             <div class="program-head"><span class="meta-icon">📋</span><span>프로그램</span></div>
             <div class="program-body" id="panel-program-body"></div>
+            <span class="program-more" id="panel-program-more" onclick="toggleProgram()">더보기</span>
           </div>
 
           <button class="nav-btn nav-festival" id="nav-btn" onclick="toggleMapPicker()">📍 길 찾기</button>
@@ -1842,17 +1880,43 @@
         if (map) showFestivalPins();
       }
 
-      // ── 핀 표시 ──
+      // ── 핀 표시 (현재 필터에 맞는 핀만 생성 → 첫 로딩 가볍게) ──
       function showFestivalPins() {
+        buildPinsForCurrentFilter();
+      }
+
+      // 현재 필터(카테고리+날짜)를 통과하는 축제인지
+      function passesCurrentFilter(f) {
+        if (!activeCategories.festival) return false;
+        return matchesDateFilter(f);
+      }
+
+      // 필터에 맞는 핀만 새로 생성 (나머지는 아예 안 만들어 가볍게)
+      function buildPinsForCurrentFilter() {
+        // 열린 팝업/선택 핀 정리
+        closePanel();
+
+        // 기존 핀·뭉치 모두 제거
+        pinOverlays.forEach((p) => p.setMap(null));
+        pinOverlays = [];
+        clusterMarkers.forEach((c) => c.setMap(null));
+        clusterMarkers = [];
+        expandedCluster = null;
+
+        let visibleCount = 0;
         festivalData.forEach((f) => {
           if (!f.latitude || !f.longitude) return;
+          if (!passesCurrentFilter(f)) return;
           const pin = new FlarePinClass(f);
+          pin.passesFilter = true;
           pin.setMap(map);
           pinOverlays.push(pin);
+          visibleCount++;
         });
 
+        document.getElementById('cnt-festival').textContent = visibleCount;
         updatePinLabels();
-        applyFilters(); // 초기 필터(이번 주) + 뭉치 계산
+        recluster();
       }
 
       function updatePinLabels() {
@@ -2036,27 +2100,9 @@
         return start <= to && end >= from;
       }
 
-      // ── 필터 적용 (핀 보이기/숨기기 + 뭉치 재계산) ──
+      // ── 필터 적용: 필터가 바뀌면 해당하는 핀만 다시 생성 ──
       function applyFilters() {
-        let visibleCount = 0;
-
-        pinOverlays.forEach((pin) => {
-          const f = pin.festival;
-          let show = true;
-
-          // 1. 카테고리: 현재는 축제만 데이터 있음
-          if (!activeCategories.festival) show = false;
-
-          // 2. 날짜 필터
-          if (show && !matchesDateFilter(f)) show = false;
-
-          pin.passesFilter = show;
-          pin.setVisible(show);
-          if (show) visibleCount++;
-        });
-
-        document.getElementById('cnt-festival').textContent = visibleCount;
-        recluster(); // 보이는 핀들로 뭉치 다시 계산
+        buildPinsForCurrentFilter();
       }
 
       // ── HTML 태그/특수문자 정리 (설명·프로그램 등 공공 데이터용) ──
@@ -2183,17 +2229,40 @@
         moreBtn.textContent = expanded ? '접기' : '더보기';
       }
 
-      // ── 프로그램 설정 ──
+      // ── 프로그램 설정 (2줄 + 더보기) ──
       function setupProgram(f) {
         const wrap = document.getElementById('panel-program');
         const body = document.getElementById('panel-program-body');
+        const moreBtn = document.getElementById('panel-program-more');
         const raw = f.program;
         if (!raw || !String(raw).trim()) {
           wrap.style.display = 'none';
           return;
         }
         wrap.style.display = 'block';
+        wrap.classList.remove('expanded');
         body.textContent = cleanText(raw);
+        moreBtn.textContent = '더보기';
+        moreBtn.style.display = 'none'; // 넘칠 때만 measureProgram이 표시
+      }
+
+      // ── 프로그램이 2줄 넘는지 확인해 '더보기' 노출 (패널이 보인 뒤 측정) ──
+      function measureProgram() {
+        const wrap = document.getElementById('panel-program');
+        if (wrap.style.display === 'none') return;
+        const body = document.getElementById('panel-program-body');
+        const moreBtn = document.getElementById('panel-program-more');
+        wrap.classList.remove('expanded');
+        const overflowing = body.scrollHeight > body.clientHeight + 2;
+        moreBtn.style.display = overflowing ? 'inline-block' : 'none';
+        moreBtn.textContent = '더보기';
+      }
+
+      function toggleProgram() {
+        const wrap = document.getElementById('panel-program');
+        const moreBtn = document.getElementById('panel-program-more');
+        const expanded = wrap.classList.toggle('expanded');
+        moreBtn.textContent = expanded ? '접기' : '더보기';
       }
 
       // ── 정보 패널 열기 ──
@@ -2241,10 +2310,11 @@
         panel.classList.add('show');
         panel.scrollTop = 0;
 
-        // 패널이 화면에 뜬 뒤: 제목 크기 맞춤 + 설명 더보기 측정
+        // 패널이 화면에 뜬 뒤: 제목 크기 맞춤 + 설명/프로그램 더보기 측정
         requestAnimationFrame(() => {
           fitTitle(titleEl);
           measureDesc();
+          measureProgram();
         });
       }
 
@@ -2261,7 +2331,7 @@
       function closePanel() {
         document.getElementById('info-panel').classList.remove('show');
         document.getElementById('map-picker').classList.remove('show');
-        // 노란 핀 다시 주황으로
+        // 노란 핀 다시 핑크로
         if (selectedPin) {
           selectedPin.setSelected(false);
           selectedPin = null;
