@@ -1,8 +1,16 @@
 <!DOCTYPE html>
 <!-- ============================================
      Flare(V) 홈페이지
-     버전: v2.1.2
+     버전: v2.1.3
      수정일: 2026-06-05
+     수정사항(v2.1.3):
+       - 조명탄(🎆) 기능/효과 전체 제거
+       - 한줄평+별점 시스템 추가 (Supabase reviews 테이블, content_id 기준)
+         · 조명탄 자리 → 별점 평균 | N명 (없으면 "아직 평가 없음")
+         · 💬한줄평 버튼(흔들+글로우) → 사진 자리에 목록 펼침 / "한줄평 닫기" 토글
+         · 목록 최신순, 각 항목 좋아요·삭제(비밀번호 확인)
+         · 한줄평 쓰기(아이디·비번·별점·내용 필수, 별점 hover 채움)
+         · 좋아요·쓰기 10초 제한, content_id 없는 축제는 영역 숨김
      수정사항(v2.1.2):
        - 검색용 제목/설명 키워드 중심으로 교체(+카카오·트위터 공유 문구)
        - 검색엔진/스크린리더용 숨은 소개문(h1/p) 추가 (화면 비표시)
@@ -771,6 +779,7 @@
         justify-content: center;
         font-size: 3rem;
         overflow: hidden;
+        transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
       }
       .panel-img img {
         width: 100%;
@@ -778,6 +787,7 @@
         object-fit: cover;
         object-position: center;
         display: none; /* 사진 있을 때만 보임 */
+        cursor: zoom-in;
       }
       /* 사진 있을 때: 이미지 표시 + 이모지 숨김 + 클릭(돋보기) */
       .panel-img.has-photo {
@@ -906,44 +916,204 @@
         color: var(--festival);
       }
 
-      /* 조명탄 버튼 */
-      .flare-btn {
-        position: relative;
-        overflow: visible;
-      }
-      .flare-btn:hover {
-        background: rgba(255, 217, 61, 0.12);
-        border-color: rgba(255, 217, 61, 0.5);
+      /* ── 별점 합산 표시(조명탄 자리) ── */
+      .rating-box {
         color: var(--discount);
+        font-weight: 700;
+        cursor: default;
       }
-      .flare-btn .flare-icon {
-        display: inline-block;
-        font-size: 0.95rem;
-      }
-      /* 눌렀을 때 아이콘 팡 튀는 효과 */
-      .flare-btn.popping .flare-icon {
-        animation: flare-pop 0.45s ease-out;
-      }
-      @keyframes flare-pop {
-        0% { transform: scale(1) rotate(0deg); }
-        40% { transform: scale(1.6) rotate(-12deg); }
-        70% { transform: scale(0.9) rotate(8deg); }
-        100% { transform: scale(1) rotate(0deg); }
+      .rating-box.none {
+        color: var(--muted);
+        font-weight: 500;
+        font-size: 0.72rem;
       }
 
-      /* 조명탄 터질 때 사방으로 퍼지는 불꽃 입자 */
-      .flare-particle {
+      /* 한줄평 버튼: 살짝 흔들 + 은은한 글로우 */
+      .talk-btn {
+        color: var(--festival);
+        border-color: rgba(255, 107, 107, 0.35);
+      }
+      .talk-btn .ic {
+        display: inline-block;
+        animation: talk-wobble 2.4s ease-in-out infinite;
+      }
+      .talk-btn:not(.open) {
+        animation: talk-glow 2.4s ease-in-out infinite;
+      }
+      @keyframes talk-wobble {
+        0%, 92%, 100% { transform: rotate(0); }
+        94% { transform: rotate(-12deg); }
+        96% { transform: rotate(10deg); }
+        98% { transform: rotate(-6deg); }
+      }
+      @keyframes talk-glow {
+        0%, 100% { box-shadow: 0 0 4px rgba(255, 107, 107, 0.25); }
+        50% { box-shadow: 0 0 14px rgba(255, 107, 107, 0.55); }
+      }
+      /* 열린 상태(한줄평 닫기) */
+      .talk-btn.open {
+        color: var(--muted);
+        border-color: var(--border);
+        background: rgba(255, 255, 255, 0.04);
+        animation: none;
+      }
+      .talk-btn.open .ic { animation: none; }
+
+      /* ── 한줄평 목록/폼 (사진 자리에 펼침) ── */
+      .panel-img.reviews-open { height: 320px; cursor: default; }
+      .panel-img.reviews-open img,
+      .panel-img.reviews-open .panel-img-emoji { display: none; }
+      .panel-img.reviews-open::after { display: none; }
+
+      .reviews,
+      .rv-form {
         position: absolute;
-        width: 5px;
-        height: 5px;
-        border-radius: 50%;
-        pointer-events: none;
-        z-index: 10;
+        inset: 0;
+        display: none;
+        flex-direction: column;
+        background: #121220;
       }
-      @keyframes particle-fly {
-        0% { opacity: 1; transform: translate(0, 0) scale(1); }
-        100% { opacity: 0; transform: translate(var(--px), var(--py)) scale(0.3); }
+      .panel-img.reviews-open .reviews { display: flex; }
+      .panel-img.reviews-open.form-open .reviews { display: none; }
+      .panel-img.reviews-open.form-open .rv-form { display: flex; }
+
+      .reviews-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 14px 8px;
+        flex-shrink: 0;
       }
+      .reviews-head .rv-title { font-size: 0.8rem; font-weight: 700; }
+      .write-btn {
+        background: var(--festival);
+        color: #0a0a0f;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 6px 11px;
+        cursor: pointer;
+        font-family: 'Noto Sans KR', sans-serif;
+      }
+      .rv-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 4px 14px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .rv-empty {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--muted);
+        font-size: 0.84rem;
+      }
+      .review {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px 11px;
+      }
+      .review .r-top { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
+      .review .r-author { font-size: 0.74rem; font-weight: 700; }
+      .review .r-stars { font-size: 0.72rem; color: var(--discount); letter-spacing: 1px; }
+      .review .r-date { font-size: 0.62rem; color: var(--muted); margin-left: auto; }
+      .review .r-content {
+        font-size: 0.76rem;
+        line-height: 1.5;
+        color: #dcdce6;
+        margin-bottom: 8px;
+        word-break: break-word;
+      }
+      .review .r-actions { display: flex; align-items: center; gap: 8px; }
+      .like-btn, .del-btn {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 0.68rem;
+        border-radius: 7px;
+        padding: 4px 9px;
+        cursor: pointer;
+        font-family: 'Noto Sans KR', sans-serif;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        transition: all 0.15s;
+      }
+      .like-btn:hover { border-color: var(--festival); color: var(--festival); }
+      .like-btn.liked {
+        color: var(--festival);
+        border-color: rgba(255, 107, 107, 0.4);
+        background: rgba(255, 107, 107, 0.1);
+      }
+      .del-btn { margin-left: auto; }
+      .del-btn:hover { border-color: #ff5577; color: #ff5577; }
+      .del-confirm { display: none; align-items: center; gap: 6px; margin-top: 8px; }
+      .del-confirm.show { display: flex; }
+      .del-confirm input {
+        width: 100px;
+        padding: 5px 8px;
+        border-radius: 7px;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text);
+        font-size: 0.7rem;
+        font-family: 'Noto Sans KR', sans-serif;
+      }
+      .del-confirm button {
+        font-size: 0.66rem;
+        border-radius: 7px;
+        padding: 5px 9px;
+        cursor: pointer;
+        border: none;
+        font-family: 'Noto Sans KR', sans-serif;
+      }
+      .dc-ok { background: #ff5577; color: #fff; }
+      .dc-no { background: rgba(255, 255, 255, 0.08); color: var(--muted); }
+
+      /* 쓰기 폼 */
+      .rv-form { padding: 14px; }
+      .rv-form h4 { font-size: 0.82rem; margin-bottom: 10px; flex-shrink: 0; }
+      .rv-form-scroll { flex: 1; overflow-y: auto; min-height: 0; }
+      .rv-field { margin-bottom: 9px; }
+      .rv-field label { display: block; font-size: 0.64rem; color: var(--muted); margin-bottom: 4px; }
+      .rv-field input, .rv-field textarea {
+        width: 100%;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text);
+        font-size: 0.76rem;
+        font-family: 'Noto Sans KR', sans-serif;
+        resize: none;
+      }
+      .rv-field input:focus, .rv-field textarea:focus {
+        outline: none;
+        border-color: var(--festival);
+      }
+      .rv-hint { font-size: 0.6rem; color: var(--muted); margin-top: 3px; }
+      .star-pick { display: flex; gap: 3px; font-size: 1.4rem; cursor: pointer; }
+      .star-pick span { color: #3a3a48; transition: color 0.1s; }
+      .star-pick span.on { color: var(--discount); }
+      .rv-form-msg { font-size: 0.68rem; color: #ff5577; min-height: 15px; margin: 2px 0 6px; flex-shrink: 0; }
+      .rv-form-btns { display: flex; gap: 8px; flex-shrink: 0; }
+      .rv-form-btns button {
+        flex: 1;
+        padding: 9px;
+        border-radius: 8px;
+        border: none;
+        font-size: 0.78rem;
+        font-weight: 700;
+        cursor: pointer;
+        font-family: 'Noto Sans KR', sans-serif;
+      }
+      .rv-ok { background: var(--festival); color: #0a0a0f; }
+      .rv-no { background: rgba(255, 255, 255, 0.07); color: var(--text); }
 
       .panel-meta {
         display: flex;
@@ -1517,10 +1687,50 @@
           <button class="panel-close" onclick="closePanel()">✕</button>
         </div>
 
-        <!-- 사진 (있을 때만 표시 + 클릭 시 원본 새 탭) -->
-        <div class="panel-img" id="panel-img" onclick="openPhoto()">
-          <img id="panel-img-el" alt="축제 사진" />
+        <!-- 사진 ↔ 한줄평 전환 영역 -->
+        <div class="panel-img" id="panel-img">
+          <img id="panel-img-el" alt="축제 사진" onclick="openPhoto()" />
           <span class="panel-img-emoji" id="panel-img-emoji">🎪</span>
+
+          <!-- 한줄평 목록 -->
+          <div class="reviews" id="reviews-panel">
+            <div class="reviews-head">
+              <span class="rv-title">한줄평</span>
+              <button class="write-btn" onclick="openReviewForm()">✏️ 한줄평 쓰기</button>
+            </div>
+            <div class="rv-list" id="review-list"></div>
+          </div>
+
+          <!-- 한줄평 쓰기 폼 -->
+          <div class="rv-form" id="review-form">
+            <h4>한줄평 쓰기</h4>
+            <div class="rv-form-scroll">
+              <div class="rv-field">
+                <label>아이디</label>
+                <input id="rv-author" maxlength="12" placeholder="표시될 이름" />
+              </div>
+              <div class="rv-field">
+                <label>비밀번호</label>
+                <input id="rv-pw" maxlength="8" inputmode="numeric" placeholder="삭제용 숫자" />
+                <div class="rv-hint">삭제할 때 쓰는 숫자예요. 실제 비밀번호는 넣지 마세요.</div>
+              </div>
+              <div class="rv-field">
+                <label>별점</label>
+                <div class="star-pick" id="star-pick">
+                  <span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span>
+                </div>
+              </div>
+              <div class="rv-field">
+                <label>한줄평</label>
+                <textarea id="rv-content" rows="2" maxlength="60" placeholder="짧은 감상을 남겨주세요"></textarea>
+              </div>
+            </div>
+            <div class="rv-form-msg" id="rv-form-msg"></div>
+            <div class="rv-form-btns">
+              <button class="rv-no" onclick="closeReviewForm()">취소</button>
+              <button class="rv-ok" onclick="submitReview()">등록</button>
+            </div>
+          </div>
         </div>
 
         <div class="panel-body">
@@ -1530,13 +1740,11 @@
             <button class="title-link-btn" id="title-link-btn" onclick="searchFestival()" title="구글에서 검색">⌕ 검색</button>
           </div>
 
-          <!-- 조명탄 / 댓글 -->
-          <div class="reaction-row">
-            <button class="reaction-btn flare-btn" id="flare-btn" onclick="shootFlare(event)">
-              <span class="flare-icon">🎆</span><span id="flare-count">0</span>
-            </button>
-            <button class="reaction-btn" onclick="openComment()">
-              <span>💬</span><span>댓글</span>
+          <!-- 별점 합산 / 한줄평 -->
+          <div class="reaction-row" id="reaction-row">
+            <div class="reaction-btn rating-box" id="rating-box">⭐ –</div>
+            <button class="reaction-btn talk-btn" id="talk-btn" onclick="toggleReviews()">
+              <span class="ic">💬</span><span id="talk-label">한줄평</span>
             </button>
           </div>
 
@@ -1660,8 +1868,14 @@
       let festivalData = [];
       let map;
       let pinOverlays = []; // 핀 객체들 (필터링용)
-      let flareCount = 0; // 현재 팝업 축제의 조명탄 누적 수 (임시)
       let currentFestival = null; // 현재 열린 축제 (길찾기/검색/사진용)
+      // 한줄평(리뷰) 상태
+      let currentContentId = null; // 현재 축제의 content_id
+      let currentReviews = []; // 현재 축제의 한줄평 목록
+      let pickedRating = 0; // 쓰기 폼에서 고른 별점
+      let likedIds = new Set(); // 이 세션에서 좋아요한 한줄평 id
+      let lastReviewWrite = 0; // 한줄평 쓰기 10초 제한
+      let lastReviewLike = 0; // 좋아요 10초 제한
       const LABEL_ZOOM = 11;
 
       // 핀 색 변경(선택)·뭉치기용 상태
@@ -2383,9 +2597,8 @@
         setupDescription(f);
         setupProgram(f);
 
-        // 조명탄 누적 수 (지금은 임시값, 추후 Supabase 연동)
-        flareCount = getInitialFlareCount(f);
-        document.getElementById('flare-count').textContent = flareCount;
+        // 한줄평 영역 초기화 (펼침/폼 닫고, content_id 있으면 불러오기)
+        setupReviews(f);
 
         // 애니메이션 재생을 위해 클래스 재적용
         panel.classList.remove('show');
@@ -2428,52 +2641,314 @@
         pin.setSelected(true);
       }
 
-      // ── 조명탄 쏘기 (여러 번 가능, 팡 효과 + 카운트 +1) ──
-      function shootFlare(e) {
-        flareCount += 1;
-        document.getElementById('flare-count').textContent = flareCount;
+      // ====================================================
+      //  한줄평(리뷰) + 별점 시스템
+      // ====================================================
 
-        const btn = document.getElementById('flare-btn');
-        // 아이콘 팡 튀기기
-        btn.classList.remove('popping');
-        void btn.offsetWidth; // 리플로우로 애니메이션 재시작
-        btn.classList.add('popping');
+      // ── 팝업 열 때 한줄평 영역 초기화 ──
+      function setupReviews(f) {
+        const area = document.getElementById('panel-img');
+        const talkBtn = document.getElementById('talk-btn');
+        const row = document.getElementById('reaction-row');
 
-        // 사방으로 퍼지는 불꽃 입자
-        spawnFlareParticles(btn);
+        // 펼침/폼 상태 초기화
+        area.classList.remove('reviews-open', 'form-open');
+        talkBtn.classList.remove('open');
+        document.getElementById('talk-label').textContent = '한줄평';
 
-        // TODO: 추후 Supabase에 조명탄 수 저장/집계 연동
-      }
+        const cid = f.content_id && String(f.content_id).trim();
+        currentContentId = cid || null;
+        currentReviews = [];
 
-      // ── 불꽃 입자 생성 (버튼 중심에서 사방으로) ──
-      function spawnFlareParticles(btn) {
-        const colors = ['#ff6b6b', '#ffd93d', '#ffb3a0', '#ff8fa0', '#fff'];
-        const count = 10;
-        const rect = btn.getBoundingClientRect();
-        for (let i = 0; i < count; i++) {
-          const p = document.createElement('span');
-          p.className = 'flare-particle';
-          p.style.background = colors[i % colors.length];
-          p.style.boxShadow = '0 0 6px ' + colors[i % colors.length];
-          // 버튼 중앙에 배치
-          p.style.left = rect.width / 2 + 'px';
-          p.style.top = rect.height / 2 + 'px';
-          // 원형으로 고르게 퍼지는 방향
-          const angle = (2 * Math.PI * i) / count;
-          const dist = 26 + Math.random() * 12;
-          p.style.setProperty('--px', Math.cos(angle) * dist + 'px');
-          p.style.setProperty('--py', Math.sin(angle) * dist + 'px');
-          p.style.animation = 'particle-fly 0.55s ease-out forwards';
-          btn.appendChild(p);
-          setTimeout(() => p.remove(), 600);
+        if (!cid) {
+          // content_id 없는 축제: 한줄평 영역 숨김
+          row.style.display = 'none';
+          return;
         }
+        row.style.display = 'flex';
+
+        // 로딩 표시 후 비동기로 불러오기
+        const box = document.getElementById('rating-box');
+        box.textContent = '평가 불러오는 중…';
+        box.classList.add('none');
+
+        loadReviews(cid).then(() => {
+          // 그 사이 다른 축제로 바뀌었으면 무시
+          if (currentContentId !== cid) return;
+          renderRatingBox();
+          renderReviewList();
+        });
       }
 
-      // ── DB 연동 전 임시 조명탄 시작값 ──
-      // (제목 길이 기반으로 그럴듯한 숫자 — 추후 실제 집계로 교체)
-      function getInitialFlareCount(f) {
-        const base = (f.title || '').length * 3 + 7;
-        return base % 90; // 0~89 사이 적당한 값
+      // ── Supabase에서 한줄평 불러오기 (최신순) ──
+      async function loadReviews(contentId) {
+        const { data, error } = await supabaseClient
+          .from('reviews')
+          .select('*')
+          .eq('content_id', contentId)
+          .order('created_at', { ascending: false });
+        if (error) {
+          console.log('한줄평 로드 에러:', error.message);
+          currentReviews = [];
+          return;
+        }
+        currentReviews = data || [];
+      }
+
+      // ── 별점 합산 표시 (조명탄 자리) ──
+      function renderRatingBox() {
+        const box = document.getElementById('rating-box');
+        if (currentReviews.length === 0) {
+          box.textContent = '아직 평가 없음';
+          box.classList.add('none');
+          return;
+        }
+        box.classList.remove('none');
+        const avg =
+          currentReviews.reduce((s, r) => s + r.rating, 0) /
+          currentReviews.length;
+        box.textContent =
+          '⭐ ' + avg.toFixed(1) + ' | ' + currentReviews.length + '명';
+      }
+
+      // ── 한줄평 목록 그리기 ──
+      function renderReviewList() {
+        const list = document.getElementById('review-list');
+        if (currentReviews.length === 0) {
+          list.innerHTML = '<div class="rv-empty">한줄평이 없어요!</div>';
+          return;
+        }
+        list.innerHTML = currentReviews
+          .map((r) => {
+            const stars =
+              '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
+            const liked = likedIds.has(r.id) ? ' liked' : '';
+            return (
+              '<div class="review">' +
+              '<div class="r-top">' +
+              '<span class="r-author">' +
+              escapeHtml(r.author) +
+              '</span>' +
+              '<span class="r-stars">' +
+              stars +
+              '</span>' +
+              '<span class="r-date">' +
+              formatReviewDate(r.created_at) +
+              '</span>' +
+              '</div>' +
+              '<div class="r-content">' +
+              escapeHtml(r.content) +
+              '</div>' +
+              '<div class="r-actions">' +
+              '<button class="like-btn' +
+              liked +
+              '" onclick="likeReview(' +
+              r.id +
+              ')">♥ <span>' +
+              r.likes +
+              '</span></button>' +
+              '<button class="del-btn" onclick="askDeleteReview(' +
+              r.id +
+              ')">🗑 삭제</button>' +
+              '</div>' +
+              '<div class="del-confirm" id="dc-' +
+              r.id +
+              '">' +
+              '<input type="text" inputmode="numeric" placeholder="비밀번호" id="dcpw-' +
+              r.id +
+              '" />' +
+              '<button class="dc-ok" onclick="doDeleteReview(' +
+              r.id +
+              ')">삭제</button>' +
+              '<button class="dc-no" onclick="cancelDeleteReview(' +
+              r.id +
+              ')">취소</button>' +
+              '</div>' +
+              '</div>'
+            );
+          })
+          .join('');
+      }
+
+      // 날짜 표시: 'YYYY-MM-DD...' → 'MM/DD'
+      function formatReviewDate(iso) {
+        if (!iso) return '';
+        const d = new Date(iso);
+        if (isNaN(d)) return '';
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return m + '/' + day;
+      }
+
+      // ── 한줄평 펼치기/닫기 ──
+      function toggleReviews() {
+        const area = document.getElementById('panel-img');
+        const btn = document.getElementById('talk-btn');
+        const label = document.getElementById('talk-label');
+        const open = !area.classList.contains('reviews-open');
+        closeReviewForm();
+        area.classList.toggle('reviews-open', open);
+        btn.classList.toggle('open', open);
+        label.textContent = open ? '한줄평 닫기' : '한줄평';
+        if (open) renderReviewList();
+      }
+
+      // ── 좋아요 (세션 중복 방지 + 10초 제한) ──
+      async function likeReview(id) {
+        if (likedIds.has(id)) {
+          toast('이미 좋아요한 한줄평이에요');
+          return;
+        }
+        const now = Date.now();
+        if (now - lastReviewLike < 10000) {
+          toast('좋아요는 10초에 한 번만 가능해요');
+          return;
+        }
+        const r = currentReviews.find((x) => x.id === id);
+        if (!r) return;
+        const newLikes = (r.likes || 0) + 1;
+        const { error } = await supabaseClient
+          .from('reviews')
+          .update({ likes: newLikes })
+          .eq('id', id);
+        if (error) {
+          toast('잠시 후 다시 시도해주세요');
+          return;
+        }
+        r.likes = newLikes;
+        likedIds.add(id);
+        lastReviewLike = now;
+        renderReviewList();
+      }
+
+      // ── 삭제: 비밀번호 입력 칸 펼치기 ──
+      function askDeleteReview(id) {
+        document
+          .querySelectorAll('.del-confirm')
+          .forEach((e) => e.classList.remove('show'));
+        const el = document.getElementById('dc-' + id);
+        if (el) el.classList.add('show');
+      }
+      function cancelDeleteReview(id) {
+        const el = document.getElementById('dc-' + id);
+        if (el) el.classList.remove('show');
+      }
+
+      // ── 삭제 실행 (비밀번호 일치 시에만) ──
+      async function doDeleteReview(id) {
+        const input = document.getElementById('dcpw-' + id);
+        const pw = input ? input.value.trim() : '';
+        if (!pw) {
+          toast('비밀번호를 입력해주세요');
+          return;
+        }
+        // 비밀번호 일치하는 행만 삭제 → 삭제된 행이 0이면 비번 불일치
+        const { data, error } = await supabaseClient
+          .from('reviews')
+          .delete()
+          .eq('id', id)
+          .eq('password', pw)
+          .select();
+        if (error) {
+          toast('잠시 후 다시 시도해주세요');
+          return;
+        }
+        if (!data || data.length === 0) {
+          toast('비밀번호가 달라요');
+          return;
+        }
+        currentReviews = currentReviews.filter((x) => x.id !== id);
+        renderReviewList();
+        renderRatingBox();
+      }
+
+      // ── 쓰기 폼 ──
+      function openReviewForm() {
+        document.getElementById('panel-img').classList.add('form-open');
+        document.getElementById('rv-author').value = '';
+        document.getElementById('rv-pw').value = '';
+        document.getElementById('rv-content').value = '';
+        document.getElementById('rv-form-msg').textContent = '';
+        pickedRating = 0;
+        paintStars(0);
+      }
+      function closeReviewForm() {
+        document.getElementById('panel-img').classList.remove('form-open');
+      }
+
+      function paintStars(n) {
+        document.querySelectorAll('#star-pick span').forEach((s) => {
+          s.classList.toggle('on', Number(s.dataset.v) <= n);
+        });
+      }
+
+      // ── 한줄평 등록 ──
+      async function submitReview() {
+        const author = document.getElementById('rv-author').value.trim();
+        const pw = document.getElementById('rv-pw').value.trim();
+        const content = document.getElementById('rv-content').value.trim();
+        const msg = document.getElementById('rv-form-msg');
+
+        if (!currentContentId) return;
+        if (!author) {
+          msg.textContent = '아이디를 입력해주세요';
+          return;
+        }
+        if (!pw) {
+          msg.textContent = '비밀번호를 입력해주세요';
+          return;
+        }
+        if (pickedRating === 0) {
+          msg.textContent = '별점을 선택해주세요';
+          return;
+        }
+        if (!content) {
+          msg.textContent = '한줄평을 입력해주세요';
+          return;
+        }
+
+        const now = Date.now();
+        if (now - lastReviewWrite < 10000) {
+          msg.textContent = '10초 후에 다시 작성할 수 있어요';
+          return;
+        }
+
+        const { data, error } = await supabaseClient
+          .from('reviews')
+          .insert([
+            {
+              content_id: currentContentId,
+              author: author,
+              password: pw,
+              content: content,
+              rating: pickedRating,
+            },
+          ])
+          .select();
+
+        if (error) {
+          console.log('한줄평 등록 에러:', error.message);
+          msg.textContent = '등록에 실패했어요. 잠시 후 다시 시도해주세요.';
+          return;
+        }
+
+        lastReviewWrite = now;
+        if (data && data[0]) currentReviews.unshift(data[0]);
+        closeReviewForm();
+        renderReviewList();
+        renderRatingBox();
+      }
+
+      // ── 작은 알림 토스트 ──
+      function toast(text) {
+        const el = document.createElement('div');
+        el.textContent = text;
+        el.style.cssText =
+          'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
+          'background:#222;color:#fff;padding:8px 14px;border-radius:20px;' +
+          'font-size:0.74rem;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.4);';
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 1500);
       }
 
       // ── 제목 옆 링크: 구글에 축제명 검색 ──
@@ -2495,10 +2970,6 @@
         );
         const q = encodeURIComponent(parts.join(' '));
         window.open('https://www.google.com/search?q=' + q, '_blank');
-      }
-
-      function openComment() {
-        alert('댓글 기능은 곧 추가될 예정이에요! 😊');
       }
 
       // ── 길찾기 지도 선택 ──
@@ -2775,6 +3246,22 @@
           document.getElementById('contact-overlay').classList.remove('show');
         }, 1500);
       }
+
+      // ── 별점 입력: 마우스 올리면 채워짐, 클릭하면 고정 ──
+      (function initStarPicker() {
+        const pick = document.getElementById('star-pick');
+        if (!pick) return;
+        pick.querySelectorAll('span').forEach((s) => {
+          s.addEventListener('mouseover', () =>
+            paintStars(Number(s.dataset.v))
+          );
+          s.addEventListener('click', () => {
+            pickedRating = Number(s.dataset.v);
+            paintStars(pickedRating);
+          });
+        });
+        pick.addEventListener('mouseleave', () => paintStars(pickedRating));
+      })();
 
       // ── 시작 ──
       loadFestivals();
