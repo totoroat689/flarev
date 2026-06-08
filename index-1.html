@@ -1,0 +1,3999 @@
+<!DOCTYPE html>
+<!-- ============================================
+     Flare(V) 홈페이지
+     버전: v2.1.4
+     수정일: 2026-06-05
+     수정사항(v2.1.4):
+       - 스팟(사용자 명소) 기능 1단계 추가
+         · 카테고리: 🎪 축제 / 📍 스팟 (할인·실시간현장 카테고리 삭제)
+         · 지도 우클릭(PC)/길게누르기(모바일) → "📍 스팟 남기기"
+         · 저장 모달: 사진(압축 업로드)·닉네임·제목·설명·태그(1개↑)·비번
+         · Supabase places/posts + spot-photos 보관함에 저장, 민트 핀 표시
+         · 스팟 팝업: 사진·제목·설명·태그·길찾기·신고(개발자 메시지)
+         · 실시간 현장 태그=24시간만 노출(현재는 숨김 방식), 저장 10초 제한
+     수정사항(v2.1.3):
+       - 조명탄(🎆) 기능/효과 전체 제거
+       - 한줄평+별점 시스템 추가 (Supabase reviews 테이블, content_id 기준)
+         · 조명탄 자리 → 별점 평균 | N명 (없으면 "아직 평가 없음")
+         · 💬한줄평 버튼(흔들+글로우) → 사진 자리에 목록 펼침 / "한줄평 닫기" 토글
+         · 목록 최신순, 각 항목 좋아요·삭제(비밀번호 확인)
+         · 한줄평 쓰기(아이디·비번·별점·내용 필수, 별점 hover 채움)
+         · 좋아요·쓰기 10초 제한, content_id 없는 축제는 영역 숨김
+     수정사항(v2.1.2):
+       - 검색용 제목/설명 키워드 중심으로 교체(+카카오·트위터 공유 문구)
+       - 검색엔진/스크린리더용 숨은 소개문(h1/p) 추가 (화면 비표시)
+       - 파비콘 등록 태그 추가(최상위 경로) — V 모노그램
+       - Vercel 방문자 집계 코드 추가 (대시보드에서 Analytics Enable 필요)
+       - 클러스터(숫자 뭉친 핀) 채도 낮춰 다른 핀과 통일
+       - NOW 뱃지: 화이트 배경 + 핑크 글자
+       - '상시' 뱃지 신규(밝은초록 #22C55E + 검정 글자)
+       - 장기 축제 자동 분류: 진행중이며 기간 14일 이상이면 '상시', 미만이면 'NOW'
+     수정사항(v2.1.1):
+       - 설명/프로그램 모두 2줄 + 더보기/접기로 축소
+       - 첫 로딩 가속: 현재 필터(이번 주)에 맞는 핀만 생성하도록 변경
+         (필터 바꾸면 해당 핀만 다시 생성 → 전체 핀 로딩 안 함)
+       - 핀 색상 핑크로 복귀 + 오늘(진행중) 아닌 핀은 채도만 살짝 낮춤
+       - 팝업 사진에 은은한 비네팅 추가
+     수정사항(v2.1.0):
+       - 팝업 개편: 공공 데이터(사진/장소/운영시간/요금/설명/프로그램) 표시
+         · 없는 항목은 줄째로 자동 숨김 (빈칸/"정보없음" 표시 안 함)
+       - 팝업 사진: 상단 가로 배너 + 잘리는 쪽으로 자동 훑기(세로↕/가로↔, 9초)
+         · 사진 클릭 시 원본 이미지 새 탭으로 열기 (사진 있을 때만)
+       - 팝업 장소는 place_name(없으면 location_name)만 표시, 주소 줄 제거
+       - 설명 3줄 + 더보기/접기 토글
+       - 예정 핀 색상 핑크 → 주황(#FF7A1A) (진행중 NOW와 구분 강화)
+       - '날짜 미정 축제 보기' 토글 + 회색 핀 관련 코드 전체 제거
+       - 첫 진입 기본 날짜 필터를 '이번 주'로 설정 (사이드바 메뉴도 활성 표시)
+     ============================================ -->
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- 구글 서치 콘솔 소유권 확인 -->
+    <meta name="google-site-verification" content="x6ngt2g2QAOkM5Q0AUwu26mnfngRjdcUBSwXFMrhMA4" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- 파비콘 (최상위 경로) -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!-- ── 기본 SEO 정보 ── -->
+    <title>Flare(V) — 전국 축제 지도 | 지도로 빠르게 발견하는 신나는 축제!</title>
+    <meta
+      name="description"
+      content="전국 축제 지도 — 무료로 축제를 지도로 빠르게 발견하세요! 계획 없는 사람들을 위한 Flare(V)."
+    />
+    <link rel="canonical" href="https://flarev.co/" />
+
+    <!-- ── 소셜 공유 (Open Graph: 카카오톡·페이스북 등) ── -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Flare(V)" />
+    <meta property="og:title" content="Flare(V) — 전국 축제 지도 | 지도로 빠르게 발견하는 신나는 축제!" />
+    <meta
+      property="og:description"
+      content="전국 축제 지도 — 무료로 축제를 지도로 빠르게 발견하세요! 계획 없는 사람들을 위한 Flare(V)."
+    />
+    <meta property="og:url" content="https://flarev.co/" />
+    <meta property="og:image" content="https://flarev.co/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="ko_KR" />
+
+    <!-- ── 트위터(X) 카드 ── -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Flare(V) — 전국 축제 지도 | 지도로 빠르게 발견하는 신나는 축제!" />
+    <meta
+      name="twitter:description"
+      content="전국 축제 지도 — 무료로 축제를 지도로 빠르게 발견하세요! 계획 없는 사람들을 위한 Flare(V)."
+    />
+    <meta name="twitter:image" content="https://flarev.co/og-image.png" />
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+KR:wght@300;400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0a0a0f;
+        --sidebar: #10101a;
+        --panel: #14141f;
+        --border: rgba(255, 255, 255, 0.07);
+        --text: #f0f0f5;
+        --muted: #6b6b80;
+        --festival: #ff6b6b;
+        --discount: #ffd93d;
+        --live: #6bffb8;
+        --festival-bg: rgba(255, 107, 107, 0.12);
+        --discount-bg: rgba(255, 217, 61, 0.12);
+        --live-bg: rgba(107, 255, 184, 0.12);
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      /* 검색엔진/스크린리더용 (화면엔 안 보임) */
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      body {
+        font-family: 'Noto Sans KR', sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        height: 100vh;
+        overflow: hidden;
+        display: flex;
+      }
+
+      /* ── SIDEBAR ── */
+      #sidebar {
+        width: 280px;
+        min-width: 280px;
+        background: var(--sidebar);
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        z-index: 100;
+        position: relative;
+        overflow-y: auto;
+        transition: transform 0.3s ease;
+      }
+
+      .logo-wrap {
+        padding: 28px 24px 20px;
+        border-bottom: 1px solid var(--border);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .logo {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 2rem;
+        letter-spacing: 3px;
+        line-height: 1;
+        position: relative;
+        display: inline-block;
+        z-index: 2;
+      }
+
+      /* (V) 은은한 호흡 글로우 */
+      .logo span {
+        color: var(--festival);
+        animation: logo-breath 3.5s ease-in-out infinite;
+      }
+      @keyframes logo-breath {
+        0%, 100% {
+          text-shadow: 0 0 10px rgba(255, 107, 107, 0.55);
+        }
+        50% {
+          text-shadow: 0 0 22px rgba(255, 107, 107, 1),
+            0 0 38px rgba(255, 107, 107, 0.6);
+        }
+      }
+
+      /* 조명탄: (V) 오른쪽에서 수직으로 발사 → 정점에서 사라짐 (15초마다) */
+      .logo-flare {
+        position: absolute;
+        left: 96px;
+        top: 46px;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: #ffb3a0;
+        box-shadow: 0 0 10px #ff6b6b, 0 0 18px #ff6b6b;
+        opacity: 0;
+        z-index: 1;
+        animation: logo-launch 15s ease-out infinite;
+      }
+      @keyframes logo-launch {
+        0% { transform: translateY(0) scale(1); opacity: 0; }
+        2% { opacity: 1; }
+        7% { transform: translateY(-32px) scale(0.7); opacity: 1; }
+        9% { transform: translateY(-38px) scale(1.6); opacity: 0.5; }
+        10% { transform: translateY(-40px) scale(0.2); opacity: 0; }
+        100% { transform: translateY(-40px) scale(0.2); opacity: 0; }
+      }
+
+      /* 터진 뒤 노란 불빛 하나가 곧게 천천히 낙하 */
+      .logo-light {
+        position: absolute;
+        left: 98px;
+        top: 6px;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #ffe88a;
+        box-shadow: 0 0 14px #ffd93d, 0 0 26px rgba(255, 217, 61, 0.7);
+        opacity: 0;
+        z-index: 1;
+        animation: logo-fall 15s ease-in infinite;
+      }
+      @keyframes logo-fall {
+        0%, 9% { opacity: 0; transform: translateY(0) scale(0.4); }
+        11% { opacity: 1; transform: translateY(0) scale(1.3); }
+        14% { opacity: 1; transform: translateY(4px) scale(1); }
+        30% { opacity: 0.85; transform: translateY(40px) scale(0.85); }
+        34% { opacity: 0; transform: translateY(48px) scale(0.5); }
+        100% { opacity: 0; transform: translateY(48px) scale(0.5); }
+      }
+
+      .logo-sub {
+        font-size: 0.68rem;
+        color: var(--muted);
+        letter-spacing: 1.5px;
+        margin-top: 4px;
+        text-transform: uppercase;
+        position: relative;
+        z-index: 2;
+      }
+
+      .section {
+        padding: 20px 24px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .section-label {
+        font-size: 0.65rem;
+        letter-spacing: 2px;
+        color: var(--muted);
+        text-transform: uppercase;
+        margin-bottom: 10px;
+      }
+
+      /* 날짜 버튼 (4개: 오늘/이번주/이번달/직접입력) - 한 줄 배치 */
+      .date-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 5px;
+      }
+
+      .date-btn {
+        padding: 8px 2px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: transparent;
+        color: var(--muted);
+        font-size: 0.66rem;
+        font-family: 'Noto Sans KR', sans-serif;
+        cursor: pointer;
+        transition: all 0.2s;
+        white-space: nowrap;
+        word-break: keep-all;
+      }
+
+      .date-btn.active {
+        background: var(--festival-bg);
+        border-color: var(--festival);
+        color: var(--festival);
+      }
+
+      .date-btn:hover:not(.active) {
+        border-color: rgba(255, 255, 255, 0.2);
+        color: var(--text);
+      }
+
+      /* 기간 설정 (달력) - 평소엔 숨김, '직접 입력' 누르면 뿅 / 좌우 2칸 */
+      .date-range {
+        margin-top: 10px;
+        display: none;
+        gap: 8px;
+      }
+
+      .date-range.show {
+        display: flex;
+        animation: range-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+
+      .range-col {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+      }
+
+      @keyframes range-pop {
+        0% {
+          opacity: 0;
+          transform: translateY(-8px) scale(0.97);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      .date-range .range-label {
+        font-size: 0.62rem;
+        color: var(--muted);
+      }
+
+      .date-range input[type='date'] {
+        width: 100%;
+        padding: 7px 8px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.03);
+        color: var(--text);
+        font-size: 0.66rem;
+        font-family: 'Noto Sans KR', sans-serif;
+        color-scheme: dark; /* 달력 팝업도 다크로 */
+        min-width: 0;
+      }
+
+      .date-range input[type='date']:focus {
+        outline: none;
+        border-color: var(--festival);
+      }
+
+      /* 카테고리 필터 */
+      .filter-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .filter-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 14px;
+        border-radius: 10px;
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition: all 0.2s;
+        user-select: none;
+      }
+
+      .filter-item.active-festival {
+        background: var(--festival-bg);
+        border-color: rgba(255, 107, 107, 0.3);
+      }
+
+      .filter-item.active-spot {
+        background: var(--live-bg);
+        border-color: rgba(107, 255, 184, 0.3);
+      }
+
+      .filter-item:not(.active-festival):not(.active-spot):hover {
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      .filter-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .dot-festival {
+        background: var(--festival);
+        box-shadow: 0 0 8px rgba(255, 107, 107, 0.8);
+      }
+      .dot-spot {
+        background: var(--live);
+        box-shadow: 0 0 8px rgba(107, 255, 184, 0.8);
+      }
+
+      .filter-text {
+        flex: 1;
+        font-size: 0.82rem;
+        font-weight: 500;
+      }
+      .filter-count {
+        font-size: 0.7rem;
+        color: var(--muted);
+        background: rgba(255, 255, 255, 0.06);
+        padding: 2px 8px;
+        border-radius: 20px;
+      }
+
+      .login-wrap {
+        margin-top: auto;
+        padding: 20px 24px;
+        border-top: 1px solid var(--border);
+      }
+
+      .login-btn {
+        width: 100%;
+        padding: 12px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: transparent;
+        color: var(--text);
+        font-size: 0.82rem;
+        font-family: 'Noto Sans KR', sans-serif;
+        cursor: pointer;
+        transition: all 0.25s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      .login-btn:hover {
+        background: rgba(255, 107, 107, 0.1);
+        border-color: var(--festival);
+        color: var(--festival);
+      }
+
+      /* ── 햄버거 메뉴 버튼 (모바일 전용) ── */
+      #menu-toggle {
+        position: absolute;
+        top: 16px;
+        left: 16px;
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: rgba(20, 20, 31, 0.85);
+        backdrop-filter: blur(10px);
+        color: var(--text);
+        font-size: 1.2rem;
+        cursor: pointer;
+        z-index: 400;
+        display: none; /* PC에선 숨김 */
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.3s ease; /* 메뉴 따라 부드럽게 이동 */
+      }
+
+      /* 사이드바 바깥 어두운 배경 (모바일에서 열렸을 때) */
+      #sidebar-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 90;
+        display: none;
+      }
+      #sidebar-overlay.show {
+        display: block;
+      }
+
+      /* ── MAP AREA ── */
+      #map-container {
+        flex: 1;
+        position: relative;
+      }
+
+      #map {
+        width: 100%;
+        height: 100%;
+        background: #0d1117;
+      }
+
+      /* ── 커스텀 축제 핀 ── */
+      .flare-pin {
+        position: relative;
+        cursor: pointer;
+      }
+
+      /* 기본 핀(예정·오늘 아님) = 핑크, 채도만 살짝 낮춤 */
+      .flare-dot {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 35% 35%, #f3b8af, #e87f95);
+        box-shadow: 0 0 10px rgba(232, 127, 149, 0.8),
+          0 0 18px rgba(232, 127, 149, 0.4);
+        position: relative;
+        animation: dot-pulse 2.5s ease-in-out infinite;
+      }
+
+      .flare-dot::after {
+        content: '';
+        position: absolute;
+        inset: -6px;
+        border-radius: 50%;
+        border: 1px solid rgba(232, 127, 149, 0.45);
+        animation: ring-pulse 2.5s ease-in-out infinite;
+      }
+
+      /* 지난 축제 핀 (종료일이 어제 이하): 어두운 회보라 + 퍼짐 효과 제거 */
+      .flare-pin.past .flare-dot {
+        background: radial-gradient(circle at 35% 35%, #6a5a7e, #3e3450);
+        box-shadow: 0 0 6px rgba(90, 75, 110, 0.5);
+        animation: none; /* 두근거림(pulse) 제거 */
+      }
+      .flare-pin.past .flare-dot::after {
+        display: none; /* 퍼지는 링 제거 */
+      }
+      .flare-pin.past .flare-label {
+        border-color: rgba(120, 105, 140, 0.5);
+        color: #d8d0e0;
+      }
+
+      /* 진행 중 축제 핀 (빛 강하게 + 크게, 빨강) */
+      .flare-pin.ongoing .flare-dot {
+        width: 18px;
+        height: 18px;
+        margin: -2px; /* 14→18px 커진 만큼 중심 보정 */
+        background: radial-gradient(circle at 35% 35%, #ffd9cc, #ff5577);
+        box-shadow: 0 0 16px rgba(255, 90, 120, 1),
+          0 0 30px rgba(255, 90, 120, 0.7),
+          0 0 44px rgba(255, 90, 120, 0.4);
+      }
+      .flare-pin.ongoing .flare-dot::after {
+        inset: -8px;
+        border-color: rgba(255, 90, 120, 0.7);
+      }
+      .flare-pin.ongoing .flare-label {
+        border-color: rgba(255, 90, 120, 0.6);
+      }
+      .flare-pin.ongoing {
+        z-index: 996;
+      }
+
+      /* NOW 뱃지 (진행 중·단기): 화이트 배경 + 핑크 글자 */
+      .now-badge {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #fff;
+        color: #ff5577;
+        font-size: 0.56rem;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        padding: 2px 7px;
+        border-radius: 20px;
+        white-space: nowrap;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+        pointer-events: none;
+      }
+
+      /* 상시 뱃지 (진행 중·장기): 밝은초록 배경 + 검정 글자 */
+      .sangsi-badge {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #22c55e;
+        color: #0a2a16;
+        font-size: 0.56rem;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        padding: 2px 7px;
+        border-radius: 20px;
+        white-space: nowrap;
+        box-shadow: 0 2px 8px rgba(34, 197, 94, 0.5);
+        pointer-events: none;
+      }
+
+      /* 이름표를 왼쪽으로 빼는 경우 (흩어질 때 왼쪽 핀) */
+      .flare-pin.label-left .flare-label {
+        left: auto;
+        right: 20px;
+        transform: translateY(-50%) translateX(6px) scale(0.9);
+      }
+      .flare-pin.label-left.spider .flare-label,
+      .flare-pin.label-left.zoomed .flare-label,
+      .flare-pin.label-left:hover .flare-label {
+        transform: translateY(-50%) translateX(0) scale(1);
+      }
+
+      /* 선택된(팝업 열린) 핀 → 노란색 */
+      .flare-pin.selected .flare-dot {
+        background: radial-gradient(circle at 35% 35%, #fff4b0, #ffd93d);
+        box-shadow: 0 0 12px rgba(255, 217, 61, 0.95),
+          0 0 22px rgba(255, 217, 61, 0.5);
+      }
+      .flare-pin.selected .flare-dot::after {
+        border-color: rgba(255, 217, 61, 0.6);
+      }
+      .flare-pin.selected .flare-label {
+        border-color: rgba(255, 217, 61, 0.7);
+      }
+      .flare-pin.selected {
+        z-index: 998 !important;
+      }
+
+      /* 흩어진(스파이더) 핀: 이름표 항상 보이기 + 살짝 밝아짐 */
+      .flare-pin.spider {
+        z-index: 997 !important;
+      }
+      .flare-pin.spider .flare-label {
+        opacity: 1;
+        transform: translateY(-50%) translateX(0) scale(1);
+      }
+      /* 흩어졌을 때 일반 핀들과 구분되게 살짝 밝게 */
+      .flare-pin.spider .flare-dot {
+        filter: brightness(1.35) saturate(1.15);
+      }
+
+      /* 숫자 뭉치 마커 */
+      .flare-cluster {
+        position: absolute;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 35% 35%, #f3b8af, #e87f95);
+        box-shadow: 0 0 12px rgba(232, 127, 149, 0.7),
+          0 0 22px rgba(232, 127, 149, 0.38);
+        border: 2px solid rgba(255, 255, 255, 0.28);
+        color: #fff;
+        font-weight: 700;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        will-change: transform;
+      }
+
+      @keyframes dot-pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.15); }
+      }
+
+      @keyframes ring-pulse {
+        0% { transform: scale(0.8); opacity: 0.8; }
+        70% { transform: scale(1.8); opacity: 0; }
+        100% { opacity: 0; }
+      }
+
+      .flare-label {
+        position: absolute;
+        left: 20px;
+        top: 50%;
+        transform: translateY(-50%) translateX(-6px) scale(0.9);
+        font-size: 0.74rem;
+        font-weight: 700;
+        color: #fff;
+        white-space: nowrap;
+        padding: 4px 11px;
+        border-radius: 20px;
+        background: rgba(20, 20, 31, 0.82);
+        border: 1px solid rgba(232, 127, 149, 0.5);
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5),
+          0 0 14px rgba(232, 127, 149, 0.22);
+        backdrop-filter: blur(8px);
+        letter-spacing: 0.3px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s ease,
+          transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        max-width: 220px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .flare-pin.zoomed .flare-label {
+        opacity: 1;
+        transform: translateY(-50%) translateX(0) scale(1);
+      }
+
+      .flare-pin:hover {
+        z-index: 999 !important;
+      }
+      .flare-pin:hover .flare-dot {
+        transform: scale(1.3);
+      }
+      .flare-pin:hover .flare-label {
+        opacity: 1;
+        transform: translateY(-50%) translateX(0) scale(1.05);
+        border-color: var(--festival);
+      }
+
+      /* ── INFO PANEL ── */
+      #info-panel {
+        position: absolute;
+        right: 24px;
+        top: 24px;
+        width: 320px;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        overflow: hidden auto; /* 내용 길면 안에서 스크롤 */
+        max-height: calc(100vh - 48px);
+        z-index: 200;
+        display: none;
+        backdrop-filter: blur(20px);
+        transform-origin: top right;
+      }
+
+      /* 팝업 등장 애니메이션 (슉 튀어나오기) */
+      #info-panel.show {
+        display: block;
+        animation: panel-pop 0.4s cubic-bezier(0.34, 1.8, 0.5, 1);
+      }
+
+      @keyframes panel-pop {
+        0% {
+          transform: scale(0.5) translate(40px, -30px);
+          opacity: 0;
+        }
+        60% {
+          transform: scale(1.04) translate(0, 0);
+          opacity: 1;
+        }
+        100% {
+          transform: scale(1) translate(0, 0);
+        }
+      }
+
+      .panel-header {
+        padding: 16px 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .panel-badge {
+        font-size: 0.65rem;
+        font-weight: 700;
+        letter-spacing: 1.5px;
+        padding: 4px 10px;
+        border-radius: 20px;
+        text-transform: uppercase;
+      }
+
+      .badge-festival {
+        background: var(--festival-bg);
+        color: var(--festival);
+        border: 1px solid rgba(255, 107, 107, 0.3);
+      }
+
+      .panel-close {
+        background: none;
+        border: none;
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 1.2rem;
+        line-height: 1;
+        padding: 2px 6px;
+        border-radius: 6px;
+        transition: all 0.2s;
+      }
+
+      .panel-close:hover {
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text);
+      }
+
+      /* ── 팝업 사진 영역 ── */
+      .panel-img {
+        position: relative;
+        width: 100%;
+        height: 160px;
+        background: linear-gradient(135deg, #1a1a2e, #16213e);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 3rem;
+        overflow: hidden;
+        transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .panel-img img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        display: none; /* 사진 있을 때만 보임 */
+        cursor: zoom-in;
+      }
+      /* 사진 있을 때: 이미지 표시 + 이모지 숨김 + 클릭(돋보기) */
+      .panel-img.has-photo {
+        cursor: zoom-in;
+      }
+      .panel-img.has-photo img {
+        display: block;
+      }
+      .panel-img.has-photo .panel-img-emoji {
+        display: none;
+      }
+      /* 사진 비네팅 (살짝) */
+      .panel-img.has-photo::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: radial-gradient(
+          ellipse at center,
+          transparent 60%,
+          rgba(0, 0, 0, 0.32) 100%
+        );
+      }
+      /* 잘리는 쪽으로 천천히 훑기 (9초, 왕복) */
+      .panel-img.pan-v img {
+        animation: img-pan-v 9s ease-in-out infinite alternate;
+      }
+      .panel-img.pan-h img {
+        animation: img-pan-h 9s ease-in-out infinite alternate;
+      }
+      @keyframes img-pan-v {
+        from { object-position: 50% 0%; }
+        to   { object-position: 50% 100%; }
+      }
+      @keyframes img-pan-h {
+        from { object-position: 0% 50%; }
+        to   { object-position: 100% 50%; }
+      }
+
+      .panel-body {
+        padding: 16px 18px;
+      }
+
+      /* 제목 + 링크 아이콘 한 줄 */
+      .panel-title-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+
+      .panel-title {
+        font-size: 1rem;
+        font-weight: 700;
+        line-height: 1.3;
+        color: #fff;
+        /* 2줄 방지: 한 줄로 유지하고 넘치면 ... (JS가 글자크기 먼저 줄임) */
+        flex: 1;
+        min-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      /* 제목 옆 구글 검색 링크 버튼 */
+      .title-link-btn {
+        flex-shrink: 0;
+        background: rgba(255, 217, 61, 0.14);
+        border: 1px solid rgba(255, 217, 61, 0.4);
+        cursor: pointer;
+        font-size: 0.8rem;
+        padding: 3px 7px;
+        border-radius: 8px;
+        color: var(--discount);
+        line-height: 1;
+        font-weight: 600;
+        font-family: 'Noto Sans KR', sans-serif;
+        white-space: nowrap;
+        transition: all 0.25s;
+        /* 은은한 노란 빛 */
+        box-shadow: 0 0 8px rgba(255, 217, 61, 0.35);
+        animation: link-glow 2.8s ease-in-out infinite;
+      }
+      @keyframes link-glow {
+        0%, 100% {
+          box-shadow: 0 0 7px rgba(255, 217, 61, 0.3);
+        }
+        50% {
+          box-shadow: 0 0 14px rgba(255, 217, 61, 0.6),
+            0 0 22px rgba(255, 217, 61, 0.3);
+        }
+      }
+      .title-link-btn:hover {
+        background: rgba(255, 217, 61, 0.25);
+        border-color: var(--discount);
+        transform: scale(1.12);
+        box-shadow: 0 0 16px rgba(255, 217, 61, 0.7);
+      }
+
+      .reaction-row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+
+      .reaction-btn {
+        flex: 1;
+        padding: 9px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: transparent;
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-family: 'Noto Sans KR', sans-serif;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+
+      .reaction-btn:hover {
+        background: rgba(255, 107, 107, 0.1);
+        border-color: rgba(255, 107, 107, 0.4);
+        color: var(--festival);
+      }
+
+      /* ── 별점 합산 표시(조명탄 자리) ── */
+      .rating-box {
+        color: var(--discount);
+        font-weight: 700;
+        cursor: default;
+      }
+      .rating-box.none {
+        color: var(--muted);
+        font-weight: 500;
+        font-size: 0.72rem;
+      }
+
+      /* 한줄평 버튼: 살짝 흔들 + 은은한 글로우 */
+      .talk-btn {
+        color: var(--festival);
+        border-color: rgba(255, 107, 107, 0.35);
+      }
+      .talk-btn .ic {
+        display: inline-block;
+        animation: talk-wobble 2.4s ease-in-out infinite;
+      }
+      .talk-btn:not(.open) {
+        animation: talk-glow 2.4s ease-in-out infinite;
+      }
+      @keyframes talk-wobble {
+        0%, 92%, 100% { transform: rotate(0); }
+        94% { transform: rotate(-12deg); }
+        96% { transform: rotate(10deg); }
+        98% { transform: rotate(-6deg); }
+      }
+      @keyframes talk-glow {
+        0%, 100% { box-shadow: 0 0 4px rgba(255, 107, 107, 0.25); }
+        50% { box-shadow: 0 0 14px rgba(255, 107, 107, 0.55); }
+      }
+      /* 열린 상태(한줄평 닫기) */
+      .talk-btn.open {
+        color: var(--muted);
+        border-color: var(--border);
+        background: rgba(255, 255, 255, 0.04);
+        animation: none;
+      }
+      .talk-btn.open .ic { animation: none; }
+
+      /* ── 한줄평 목록/폼 (사진 자리에 펼침) ── */
+      .panel-img.reviews-open { height: 320px; cursor: default; }
+      .panel-img.reviews-open img,
+      .panel-img.reviews-open .panel-img-emoji { display: none; }
+      .panel-img.reviews-open::after { display: none; }
+
+      .reviews,
+      .rv-form {
+        position: absolute;
+        inset: 0;
+        display: none;
+        flex-direction: column;
+        background: #121220;
+      }
+      .panel-img.reviews-open .reviews { display: flex; }
+      .panel-img.reviews-open.form-open .reviews { display: none; }
+      .panel-img.reviews-open.form-open .rv-form { display: flex; }
+
+      .reviews-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 14px 8px;
+        flex-shrink: 0;
+      }
+      .reviews-head .rv-title { font-size: 0.8rem; font-weight: 700; }
+      .write-btn {
+        background: var(--festival);
+        color: #0a0a0f;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 6px 11px;
+        cursor: pointer;
+        font-family: 'Noto Sans KR', sans-serif;
+      }
+      .rv-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 4px 14px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .rv-empty {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--muted);
+        font-size: 0.84rem;
+      }
+      .review {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px 11px;
+      }
+      .review .r-top { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
+      .review .r-author { font-size: 0.74rem; font-weight: 700; }
+      .review .r-stars { font-size: 0.72rem; color: var(--discount); letter-spacing: 1px; }
+      .review .r-date { font-size: 0.62rem; color: var(--muted); margin-left: auto; }
+      .review .r-content {
+        font-size: 0.76rem;
+        line-height: 1.5;
+        color: #dcdce6;
+        margin-bottom: 8px;
+        word-break: break-word;
+      }
+      .review .r-actions { display: flex; align-items: center; gap: 8px; }
+      .like-btn, .del-btn {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 0.68rem;
+        border-radius: 7px;
+        padding: 4px 9px;
+        cursor: pointer;
+        font-family: 'Noto Sans KR', sans-serif;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        transition: all 0.15s;
+      }
+      .like-btn:hover { border-color: var(--festival); color: var(--festival); }
+      .like-btn.liked {
+        color: var(--festival);
+        border-color: rgba(255, 107, 107, 0.4);
+        background: rgba(255, 107, 107, 0.1);
+      }
+      .del-btn { margin-left: auto; }
+      .del-btn:hover { border-color: #ff5577; color: #ff5577; }
+      .del-confirm { display: none; align-items: center; gap: 6px; margin-top: 8px; }
+      .del-confirm.show { display: flex; }
+      .del-confirm input {
+        width: 100px;
+        padding: 5px 8px;
+        border-radius: 7px;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text);
+        font-size: 0.7rem;
+        font-family: 'Noto Sans KR', sans-serif;
+      }
+      .del-confirm button {
+        font-size: 0.66rem;
+        border-radius: 7px;
+        padding: 5px 9px;
+        cursor: pointer;
+        border: none;
+        font-family: 'Noto Sans KR', sans-serif;
+      }
+      .dc-ok { background: #ff5577; color: #fff; }
+      .dc-no { background: rgba(255, 255, 255, 0.08); color: var(--muted); }
+
+      /* 쓰기 폼 */
+      .rv-form { padding: 14px; }
+      .rv-form h4 { font-size: 0.82rem; margin-bottom: 10px; flex-shrink: 0; }
+      .rv-form-scroll { flex: 1; overflow-y: auto; min-height: 0; }
+      .rv-field { margin-bottom: 9px; }
+      .rv-field label { display: block; font-size: 0.64rem; color: var(--muted); margin-bottom: 4px; }
+      .rv-field input, .rv-field textarea {
+        width: 100%;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text);
+        font-size: 0.76rem;
+        font-family: 'Noto Sans KR', sans-serif;
+        resize: none;
+      }
+      .rv-field input:focus, .rv-field textarea:focus {
+        outline: none;
+        border-color: var(--festival);
+      }
+      .rv-hint { font-size: 0.6rem; color: var(--muted); margin-top: 3px; }
+      .star-pick { display: flex; gap: 3px; font-size: 1.4rem; cursor: pointer; }
+      .star-pick span { color: #3a3a48; transition: color 0.1s; }
+      .star-pick span.on { color: var(--discount); }
+      .rv-form-msg { font-size: 0.68rem; color: #ff5577; min-height: 15px; margin: 2px 0 6px; flex-shrink: 0; }
+      .rv-form-btns { display: flex; gap: 8px; flex-shrink: 0; }
+      .rv-form-btns button {
+        flex: 1;
+        padding: 9px;
+        border-radius: 8px;
+        border: none;
+        font-size: 0.78rem;
+        font-weight: 700;
+        cursor: pointer;
+        font-family: 'Noto Sans KR', sans-serif;
+      }
+      .rv-ok { background: var(--festival); color: #0a0a0f; }
+      .rv-no { background: rgba(255, 255, 255, 0.07); color: var(--text); }
+
+      .panel-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 14px;
+      }
+
+      /* 팝업 정보 글자 흰색으로 */
+      .meta-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        font-size: 0.75rem;
+        color: #e8e8f0;
+        line-height: 1.45;
+      }
+
+      .meta-icon {
+        font-size: 0.85rem;
+        flex-shrink: 0;
+      }
+
+      /* 설명 */
+      .panel-desc {
+        font-size: 0.78rem;
+        line-height: 1.65;
+        color: #d2d2de;
+        margin-bottom: 14px;
+      }
+      .panel-desc .desc-text {
+        display: -webkit-box;
+        -webkit-line-clamp: 2; /* 기본 2줄 */
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        white-space: pre-line; /* 줄바꿈 반영 */
+      }
+      .panel-desc.expanded .desc-text {
+        display: block;
+        -webkit-line-clamp: unset;
+        overflow: visible;
+      }
+      .desc-more {
+        display: none; /* 넘칠 때만 JS가 표시 */
+        margin-top: 6px;
+        font-size: 0.72rem;
+        color: var(--festival);
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .desc-more:hover {
+        text-decoration: underline;
+      }
+
+      /* 프로그램 */
+      .panel-program {
+        margin-bottom: 14px;
+      }
+      .program-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.75rem;
+        color: #e8e8f0;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+      .program-body {
+        font-size: 0.74rem;
+        line-height: 1.6;
+        color: #c2c2d0;
+        display: -webkit-box;
+        -webkit-line-clamp: 2; /* 기본 2줄 */
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        white-space: pre-line;
+      }
+      .panel-program.expanded .program-body {
+        display: block;
+        -webkit-line-clamp: unset;
+        overflow: visible;
+      }
+      .program-more {
+        display: none; /* 넘칠 때만 JS가 표시 */
+        margin-top: 6px;
+        font-size: 0.72rem;
+        color: var(--festival);
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .program-more:hover {
+        text-decoration: underline;
+      }
+
+      .nav-btn {
+        width: 100%;
+        padding: 11px;
+        border-radius: 10px;
+        border: none;
+        font-size: 0.82rem;
+        font-family: 'Noto Sans KR', sans-serif;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+        letter-spacing: 0.5px;
+      }
+
+      .nav-festival {
+        background: var(--festival);
+        color: #0a0a0f;
+      }
+
+      .nav-btn:hover {
+        opacity: 0.85;
+        transform: translateY(-1px);
+      }
+
+      #upload-btn {
+        position: absolute;
+        bottom: 32px;
+        right: 32px;
+        padding: 14px 24px;
+        border-radius: 50px;
+        border: none;
+        background: var(--festival);
+        color: #0a0a0f;
+        font-size: 0.85rem;
+        font-family: 'Noto Sans KR', sans-serif;
+        font-weight: 700;
+        cursor: pointer;
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 0 24px rgba(255, 107, 107, 0.5);
+        transition: all 0.25s;
+        letter-spacing: 0.5px;
+      }
+
+      #loading {
+        position: absolute;
+        top: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 10px 20px;
+        font-size: 0.8rem;
+        color: var(--muted);
+        z-index: 300;
+        display: none;
+      }
+
+      /* 내 위치 버튼 (나침반) - 우측 상단 */
+      #locate-btn {
+        position: absolute;
+        top: 24px;
+        right: 24px;
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: rgba(20, 20, 31, 0.85);
+        backdrop-filter: blur(10px);
+        color: var(--text);
+        font-size: 1.2rem;
+        cursor: pointer;
+        z-index: 150;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+      }
+      #locate-btn:hover {
+        background: rgba(255, 107, 107, 0.15);
+        border-color: var(--festival);
+        color: var(--festival);
+      }
+      #locate-btn.locating {
+        animation: locate-spin 1s linear infinite;
+      }
+      @keyframes locate-spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+
+      /* 내 위치 표시 점 (파란 점) */
+      .my-location-dot {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #4285f4;
+        border: 2px solid #fff;
+        box-shadow: 0 0 0 6px rgba(66, 133, 244, 0.25),
+          0 0 12px rgba(66, 133, 244, 0.6);
+      }
+
+      /* 길찾기 지도 선택 팝업 */
+      .map-picker {
+        display: none;
+        margin-top: 10px;
+        padding: 14px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        gap: 10px;
+        justify-content: space-around;
+      }
+      .map-picker.show {
+        display: flex;
+      }
+      .map-app-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: var(--text);
+        font-size: 0.7rem;
+        font-family: 'Noto Sans KR', sans-serif;
+        padding: 8px 12px;
+        border-radius: 10px;
+        transition: background 0.2s;
+      }
+      .map-app-btn:hover {
+        background: rgba(255, 255, 255, 0.08);
+      }
+      .map-app-btn img {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+      }
+      #modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(4px);
+        z-index: 999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #modal-overlay.show {
+        display: flex;
+      }
+
+      .modal {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 36px;
+        width: 340px;
+        text-align: center;
+      }
+
+      .modal-logo {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 2.2rem;
+        letter-spacing: 3px;
+        margin-bottom: 6px;
+      }
+
+      .modal-logo span {
+        color: var(--festival);
+        text-shadow: 0 0 18px rgba(255, 107, 107, 0.7);
+      }
+
+      .modal h3 {
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: var(--muted);
+        margin-bottom: 28px;
+      }
+
+      .modal-btn {
+        width: 100%;
+        padding: 13px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text);
+        font-size: 0.85rem;
+        font-family: 'Noto Sans KR', sans-serif;
+        cursor: pointer;
+        margin-bottom: 10px;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+      }
+
+      .modal-btn:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(255, 255, 255, 0.2);
+      }
+
+      .modal-cancel {
+        background: none;
+        border: none;
+        color: var(--muted);
+        font-size: 0.8rem;
+        font-family: 'Noto Sans KR', sans-serif;
+        cursor: pointer;
+        margin-top: 8px;
+        padding: 8px;
+      }
+
+      .modal-cancel:hover {
+        color: var(--text);
+      }
+
+      /* 개발자에게 메시지 보내기 버튼 (사이드바) */
+      .contact-btn {
+        width: 100%;
+        padding: 11px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: transparent;
+        color: var(--muted);
+        font-size: 0.8rem;
+        font-family: 'Noto Sans KR', sans-serif;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+      .contact-btn:hover {
+        background: rgba(255, 107, 107, 0.1);
+        border-color: var(--festival);
+        color: var(--festival);
+      }
+
+      /* 메시지 모달 오버레이 (로그인 모달과 동일 스타일) */
+      #contact-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(4px);
+        z-index: 999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+      }
+      #contact-overlay.show {
+        display: flex;
+      }
+
+      /* 입력 필드 */
+      .contact-field {
+        text-align: left;
+        margin-bottom: 14px;
+      }
+      .contact-field label {
+        display: block;
+        font-size: 0.7rem;
+        color: var(--muted);
+        margin-bottom: 6px;
+        letter-spacing: 0.5px;
+      }
+      .contact-field input,
+      .contact-field textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text);
+        font-size: 0.82rem;
+        font-family: 'Noto Sans KR', sans-serif;
+        resize: vertical;
+      }
+      .contact-field input:focus,
+      .contact-field textarea:focus {
+        outline: none;
+        border-color: var(--festival);
+      }
+
+      .contact-send {
+        background: var(--festival);
+        color: #0a0a0f;
+        font-weight: 700;
+        border: none;
+      }
+      .contact-send:hover {
+        opacity: 0.88;
+      }
+      .contact-send:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      /* 전송 상태 메시지 */
+      .contact-status {
+        font-size: 0.74rem;
+        min-height: 18px;
+        margin-bottom: 10px;
+        text-align: center;
+      }
+      .contact-status.ok {
+        color: var(--live);
+      }
+      .contact-status.err {
+        color: var(--festival);
+      }
+
+      /* ── 모바일 대응 ── */
+      @media (max-width: 768px) {
+        #menu-toggle {
+          display: flex;
+        }
+
+        #sidebar {
+          position: fixed;
+          top: 0;
+          left: 0;
+          height: 100%;
+          transform: translateX(-100%); /* 평소엔 숨김 */
+          box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+        }
+
+        #sidebar.open {
+          transform: translateX(0); /* 햄버거 누르면 나옴 */
+        }
+
+        /* 메뉴가 열리면 버튼도 메뉴 폭만큼 같이 오른쪽으로 밀려나감 */
+        #menu-toggle.menu-open {
+          transform: translateX(280px);
+        }
+
+        #info-panel {
+          right: 12px;
+          left: 12px;
+          width: auto;
+          top: 70px;
+          max-height: calc(100vh - 88px);
+        }
+
+        #upload-btn {
+          bottom: 20px;
+          right: 20px;
+          padding: 12px 18px;
+          font-size: 0.78rem;
+        }
+      }
+      /* ========== 스팟(사용자 명소) ========== */
+      /* 지도 우클릭/롱프레스 메뉴 */
+      #spot-ctx {
+        position: absolute;
+        background: #1a1a26;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 5px;
+        display: none;
+        z-index: 250;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+      }
+      #spot-ctx.show { display: block; }
+      #spot-ctx button {
+        background: none;
+        border: none;
+        color: var(--text);
+        font-family: 'Noto Sans KR', sans-serif;
+        font-size: 0.82rem;
+        padding: 9px 14px;
+        cursor: pointer;
+        border-radius: 7px;
+        white-space: nowrap;
+      }
+      #spot-ctx button:hover { background: rgba(255, 255, 255, 0.08); }
+
+      /* 스팟 핀 (민트 물방울) */
+      .spot-pin { position: relative; cursor: pointer; }
+      .spot-pin .spot-drop {
+        width: 16px;
+        height: 16px;
+        background: radial-gradient(circle at 35% 35%, #b6ffe0, #6bffb8);
+        border-radius: 50% 50% 50% 0;
+        transform: rotate(-45deg);
+        border: 2px solid rgba(255, 255, 255, 0.55);
+        box-shadow: 0 0 10px rgba(107, 255, 184, 0.8),
+          0 0 18px rgba(107, 255, 184, 0.4);
+      }
+      .spot-pin:hover .spot-drop { filter: brightness(1.15); }
+      .spot-pin .spot-label {
+        position: absolute;
+        left: 20px;
+        top: 0;
+        transform: translateY(-2px);
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: #fff;
+        white-space: nowrap;
+        padding: 3px 9px;
+        border-radius: 16px;
+        background: rgba(20, 20, 31, 0.82);
+        border: 1px solid rgba(107, 255, 184, 0.5);
+        backdrop-filter: blur(8px);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s;
+        max-width: 160px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .spot-pin:hover .spot-label { opacity: 1; }
+
+      /* 스팟 저장 모달 */
+      #spot-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.65);
+        backdrop-filter: blur(3px);
+        z-index: 999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+      }
+      #spot-overlay.show { display: flex; }
+      .spot-sheet {
+        width: 360px;
+        max-width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 18px;
+      }
+      .spot-sheet h3 { font-size: 0.95rem; margin-bottom: 4px; }
+      .spot-sheet .sheet-sub { font-size: 0.68rem; color: var(--muted); margin-bottom: 14px; }
+      .spot-field { margin-bottom: 12px; }
+      .spot-field label { display: block; font-size: 0.66rem; color: var(--muted); margin-bottom: 5px; }
+      .spot-field input, .spot-field textarea {
+        width: 100%;
+        padding: 9px 11px;
+        border-radius: 9px;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text);
+        font-size: 0.8rem;
+        font-family: 'Noto Sans KR', sans-serif;
+        resize: none;
+      }
+      .spot-field input:focus, .spot-field textarea:focus { outline: none; border-color: var(--live); }
+      .spot-field .hint { font-size: 0.6rem; color: var(--muted); margin-top: 4px; }
+      .spot-photo-add {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        height: 110px;
+        border: 1.5px dashed var(--border);
+        border-radius: 10px;
+        color: var(--muted);
+        font-size: 0.8rem;
+        cursor: pointer;
+      }
+      .spot-photo-prev { height: 130px; width: 100%; border-radius: 10px; object-fit: cover; display: none; }
+      .spot-tags { display: flex; flex-wrap: wrap; gap: 7px; }
+      .spot-tag {
+        font-size: 0.74rem;
+        padding: 6px 12px;
+        border-radius: 20px;
+        border: 1px solid var(--border);
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+        font-family: 'Noto Sans KR', sans-serif;
+        transition: all 0.15s;
+      }
+      .spot-tag.on { background: var(--live-bg); border-color: var(--live); color: var(--live); }
+      .spot-tag.live-tag.on { background: var(--live-bg); border-color: var(--live); color: var(--live); }
+      .live-note {
+        display: none;
+        font-size: 0.68rem;
+        color: var(--live);
+        margin-top: 8px;
+        background: rgba(107, 255, 184, 0.08);
+        border: 1px solid rgba(107, 255, 184, 0.25);
+        padding: 8px 10px;
+        border-radius: 8px;
+      }
+      .live-note.show { display: block; }
+      .spot-msg { font-size: 0.68rem; color: #ff5577; min-height: 15px; margin: 2px 0 8px; }
+      .spot-btns { display: flex; gap: 8px; }
+      .spot-btns button {
+        flex: 1;
+        padding: 10px;
+        border-radius: 9px;
+        border: none;
+        font-size: 0.82rem;
+        font-weight: 700;
+        cursor: pointer;
+        font-family: 'Noto Sans KR', sans-serif;
+      }
+      .spot-ok { background: var(--live); color: #07251a; }
+      .spot-no { background: rgba(255, 255, 255, 0.07); color: var(--text); }
+
+      /* 스팟 상세 팝업 */
+      #spot-panel {
+        position: absolute;
+        right: 24px;
+        top: 24px;
+        width: 320px;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        overflow: hidden auto;
+        max-height: calc(100vh - 48px);
+        z-index: 200;
+        display: none;
+        backdrop-filter: blur(20px);
+      }
+      #spot-panel.show { display: block; animation: panel-pop 0.4s cubic-bezier(0.34, 1.8, 0.5, 1); }
+      .sp-img { width: 100%; height: 180px; object-fit: cover; background: #16213e; display: block; cursor: zoom-in; }
+      .sp-body { padding: 16px 18px; }
+      .sp-title { font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: 6px; }
+      .sp-author { font-size: 0.7rem; color: var(--muted); margin-bottom: 10px; }
+      .sp-desc { font-size: 0.8rem; line-height: 1.6; color: #d2d2de; margin-bottom: 10px; white-space: pre-line; }
+      .sp-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+      .sp-tag { font-size: 0.66rem; padding: 3px 9px; border-radius: 14px; background: var(--live-bg); color: var(--live); border: 1px solid rgba(107, 255, 184, 0.3); }
+      .sp-report { background: none; border: none; color: var(--muted); font-size: 0.68rem; cursor: pointer; text-decoration: underline; padding: 4px; margin-top: 4px; font-family: 'Noto Sans KR', sans-serif; }
+      .sp-report:hover { color: #ff5577; }
+
+    </style>
+
+    <!-- Vercel 방문자 집계 (Vercel 대시보드 → Analytics → Enable 필요) -->
+    <script>
+      window.va =
+        window.va ||
+        function () {
+          (window.vaq = window.vaq || []).push(arguments);
+        };
+    </script>
+    <script defer src="/_vercel/insights/script.js"></script>
+  </head>
+  <body>
+    <!-- 검색엔진/스크린리더용 소개 (화면 비표시) -->
+    <h1 class="sr-only">전국 축제 지도 Flare(V) — 오늘과 이번 주 전국에서 열리는 축제를 지도에서 한눈에</h1>
+    <p class="sr-only">
+      Flare(V)는 전국의 축제를 지도 위 핀으로 보여주는 무료 서비스입니다. 오늘·이번
+      주·이번 달 열리는 축제의 날짜, 장소, 요금, 프로그램을 지도에서 빠르게 확인하고,
+      내 주변에서 지금 열리는 축제와 상시 운영 축제를 발견할 수 있습니다. 계획 없이도
+      떠나는 축제 여행, 기쁨을 발견하고 순간을 공유하세요.
+    </p>
+
+    <!-- 햄버거 메뉴 버튼 (모바일) -->
+    <button id="menu-toggle" onclick="toggleSidebar()">☰</button>
+    <!-- 사이드바 바깥 배경 (모바일) -->
+    <div id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+    <!-- ── SIDEBAR ── -->
+    <nav id="sidebar">
+      <div class="logo-wrap">
+        <div class="logo" onclick="location.reload()" style="cursor: pointer;" title="처음 화면으로">FLARE<span>(V)</span></div>
+        <div class="logo-sub">기쁨을 발견하고 순간을 공유하다</div>
+        <span class="logo-flare"></span>
+        <span class="logo-light"></span>
+      </div>
+
+      <!-- 개발자에게 메시지 보내기 -->
+      <div class="section">
+        <button class="contact-btn" onclick="openContact()">
+          <span>✉️</span> 개발자에게 메시지 보내기
+        </button>
+      </div>
+
+      <!-- 날짜 필터 (기본 '이번 주' 활성) -->
+      <div class="section">
+        <div class="section-label">날짜</div>
+        <div class="date-row">
+          <button class="date-btn" onclick="setDate(this,'today')">
+            오늘
+          </button>
+          <button class="date-btn active" onclick="setDate(this,'week')">
+            이번 주
+          </button>
+          <button class="date-btn" onclick="setDate(this,'month')">
+            이번 달
+          </button>
+          <button class="date-btn" onclick="setDate(this,'custom')">
+            직접 입력
+          </button>
+        </div>
+
+        <!-- 기간 직접 설정 (직접 입력 버튼 누르면 뿅) -->
+        <div class="date-range" id="date-range">
+          <div class="range-col">
+            <span class="range-label">시작일</span>
+            <input type="date" id="range-start" onchange="setCustomRange()" />
+          </div>
+          <div class="range-col">
+            <span class="range-label">종료일</span>
+            <input type="date" id="range-end" onchange="setCustomRange()" />
+          </div>
+        </div>
+      </div>
+
+      <!-- 카테고리 필터 -->
+      <div class="section">
+        <div class="section-label">카테고리</div>
+        <div class="filter-list">
+          <div
+            class="filter-item active-festival"
+            onclick="toggleFilter(this,'festival')"
+          >
+            <div class="filter-dot dot-festival"></div>
+            <span class="filter-text">🎪 축제</span>
+            <span class="filter-count" id="cnt-festival">0</span>
+          </div>
+          <div
+            class="filter-item active-spot"
+            onclick="toggleFilter(this,'spot')"
+          >
+            <div class="filter-dot dot-spot"></div>
+            <span class="filter-text">📍 스팟</span>
+            <span class="filter-count" id="cnt-spot">0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="login-wrap">
+        <button class="login-btn" onclick="openModal()">
+          <span>🔐</span> 로그인 / 회원가입
+        </button>
+      </div>
+    </nav>
+
+    <!-- ── MAP ── -->
+    <div id="map-container">
+      <div id="map"></div>
+
+      <!-- 스팟: 우클릭/롱프레스 메뉴 -->
+      <div id="spot-ctx"><button onclick="openSpotForm()">📍 스팟 남기기</button></div>
+
+      <!-- 내 위치 버튼 (나침반) -->
+      <button id="locate-btn" onclick="goToMyLocation()" title="내 위치로 이동">🧭</button>
+
+      <div id="loading">🔄 축제 정보를 불러오는 중...</div>
+
+      <!-- 정보 패널 -->
+      <div id="info-panel">
+        <div class="panel-header">
+          <span class="panel-badge badge-festival" id="panel-badge">축제</span>
+          <button class="panel-close" onclick="closePanel()">✕</button>
+        </div>
+
+        <!-- 사진 ↔ 한줄평 전환 영역 -->
+        <div class="panel-img" id="panel-img">
+          <img id="panel-img-el" alt="축제 사진" onclick="openPhoto()" />
+          <span class="panel-img-emoji" id="panel-img-emoji">🎪</span>
+
+          <!-- 한줄평 목록 -->
+          <div class="reviews" id="reviews-panel">
+            <div class="reviews-head">
+              <span class="rv-title">한줄평</span>
+              <button class="write-btn" onclick="openReviewForm()">✏️ 한줄평 쓰기</button>
+            </div>
+            <div class="rv-list" id="review-list"></div>
+          </div>
+
+          <!-- 한줄평 쓰기 폼 -->
+          <div class="rv-form" id="review-form">
+            <h4>한줄평 쓰기</h4>
+            <div class="rv-form-scroll">
+              <div class="rv-field">
+                <label>아이디</label>
+                <input id="rv-author" maxlength="12" placeholder="표시될 이름" />
+              </div>
+              <div class="rv-field">
+                <label>비밀번호</label>
+                <input id="rv-pw" maxlength="8" inputmode="numeric" placeholder="삭제용 숫자" />
+                <div class="rv-hint">삭제할 때 쓰는 숫자예요. 실제 비밀번호는 넣지 마세요.</div>
+              </div>
+              <div class="rv-field">
+                <label>별점</label>
+                <div class="star-pick" id="star-pick">
+                  <span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span>
+                </div>
+              </div>
+              <div class="rv-field">
+                <label>한줄평</label>
+                <textarea id="rv-content" rows="2" maxlength="60" placeholder="짧은 감상을 남겨주세요"></textarea>
+              </div>
+            </div>
+            <div class="rv-form-msg" id="rv-form-msg"></div>
+            <div class="rv-form-btns">
+              <button class="rv-no" onclick="closeReviewForm()">취소</button>
+              <button class="rv-ok" onclick="submitReview()">등록</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-body">
+          <!-- 제목 + 검색 -->
+          <div class="panel-title-row">
+            <span class="panel-title" id="panel-title">축제명</span>
+            <button class="title-link-btn" id="title-link-btn" onclick="searchFestival()" title="구글에서 검색">⌕ 검색</button>
+          </div>
+
+          <!-- 별점 합산 / 한줄평 -->
+          <div class="reaction-row" id="reaction-row">
+            <div class="reaction-btn rating-box" id="rating-box">⭐ –</div>
+            <button class="reaction-btn talk-btn" id="talk-btn" onclick="toggleReviews()">
+              <span class="ic">💬</span><span id="talk-label">한줄평</span>
+            </button>
+          </div>
+
+          <!-- 정보 (없는 줄은 자동 숨김): 📍장소 📅날짜 🕐운영시간 💰요금 -->
+          <div class="panel-meta">
+            <div class="meta-row" id="row-place">
+              <span class="meta-icon">📍</span><span id="panel-place"></span>
+            </div>
+            <div class="meta-row" id="row-date">
+              <span class="meta-icon">📅</span><span id="panel-date"></span>
+            </div>
+            <div class="meta-row" id="row-time">
+              <span class="meta-icon">🕐</span><span id="panel-time"></span>
+            </div>
+            <div class="meta-row" id="row-price">
+              <span class="meta-icon">💰</span><span id="panel-price"></span>
+            </div>
+          </div>
+
+          <!-- 설명 (3줄 + 더보기) -->
+          <div class="panel-desc" id="panel-desc">
+            <div class="desc-text" id="panel-desc-text"></div>
+            <span class="desc-more" id="panel-desc-more" onclick="toggleDesc()">더보기</span>
+          </div>
+
+          <!-- 프로그램 (2줄 + 더보기) -->
+          <div class="panel-program" id="panel-program">
+            <div class="program-head"><span class="meta-icon">📋</span><span>프로그램</span></div>
+            <div class="program-body" id="panel-program-body"></div>
+            <span class="program-more" id="panel-program-more" onclick="toggleProgram()">더보기</span>
+          </div>
+
+          <button class="nav-btn nav-festival" id="nav-btn" onclick="toggleMapPicker()">📍 길 찾기</button>
+
+          <!-- 지도 앱 선택 -->
+          <div class="map-picker" id="map-picker">
+            <button class="map-app-btn" onclick="openMap('kakao')">
+              <img src="https://t1.kakaocdn.net/kakaocorp/kakaocorp/admin/5f6c93f6017800001bce0024.png" alt="카카오맵" onerror="this.style.background='#FFE000';this.style.borderRadius='10px'"/>
+              카카오맵
+            </button>
+            <button class="map-app-btn" onclick="openMap('naver')">
+              <img src="https://ssl.pstatic.net/static/maps/mantle/map-icon/2x/ico_naver_map_logo.png" alt="네이버지도" onerror="this.style.background='#03C75A';this.style.borderRadius='10px'"/>
+              네이버지도
+            </button>
+            <button class="map-app-btn" onclick="openMap('google')">
+              <img src="https://www.google.com/images/branding/googleg/1x/googleg_standard_color_128dp.png" alt="구글지도" onerror="this.style.background='#4285F4';this.style.borderRadius='10px'"/>
+              구글지도
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 스팟 상세 팝업 -->
+      <div id="spot-panel">
+        <div class="panel-header">
+          <span class="panel-badge" style="background: var(--live-bg); color: var(--live); border: 1px solid rgba(107,255,184,0.3);">스팟</span>
+          <button class="panel-close" onclick="closeSpotPanel()">✕</button>
+        </div>
+        <img class="sp-img" id="sp-img" alt="스팟 사진" onclick="openSpotPhoto()" />
+        <div class="sp-body">
+          <div class="sp-title" id="sp-title"></div>
+          <div class="sp-author" id="sp-author"></div>
+          <div class="sp-desc" id="sp-desc"></div>
+          <div class="sp-tags" id="sp-tags"></div>
+          <button class="nav-btn nav-festival" id="sp-nav" onclick="toggleSpotMapPicker()">📍 길 찾기</button>
+          <div class="map-picker" id="sp-map-picker">
+            <button class="map-app-btn" onclick="openSpotMap('kakao')">
+              <img src="https://t1.kakaocdn.net/kakaocorp/kakaocorp/admin/5f6c93f6017800001bce0024.png" alt="카카오맵" onerror="this.style.background='#FFE000';this.style.borderRadius='10px'"/>
+              카카오맵
+            </button>
+            <button class="map-app-btn" onclick="openSpotMap('naver')">
+              <img src="https://ssl.pstatic.net/static/maps/mantle/map-icon/2x/ico_naver_map_logo.png" alt="네이버지도" onerror="this.style.background='#03C75A';this.style.borderRadius='10px'"/>
+              네이버지도
+            </button>
+            <button class="map-app-btn" onclick="openSpotMap('google')">
+              <img src="https://www.google.com/images/branding/googleg/1x/googleg_standard_color_128dp.png" alt="구글지도" onerror="this.style.background='#4285F4';this.style.borderRadius='10px'"/>
+              구글지도
+            </button>
+          </div>
+          <button class="sp-report" onclick="reportSpot()">🚩 신고하기</button>
+        </div>
+      </div>
+      <button
+        id="upload-btn"
+        disabled
+        style="opacity: 0.45; cursor: not-allowed; box-shadow: none"
+      >
+        <span>📸</span> 준비 중이에요
+      </button>
+    </div>
+
+    <!-- 로그인 모달 -->
+    <div id="modal-overlay" onclick="closeModal(event)">
+      <div class="modal">
+        <div class="modal-logo">FLARE<span>(V)</span></div>
+        <h3>사진 공유를 위해 로그인이 필요해요</h3>
+        <button class="modal-btn">
+          <img src="https://www.google.com/favicon.ico" width="18" /> 구글로
+          계속하기
+        </button>
+        <button class="modal-btn"><span>🍎</span> 애플로 계속하기</button>
+        <button class="modal-btn"><span>📧</span> 이메일로 계속하기</button>
+        <button class="modal-cancel" onclick="closeModal()">취소</button>
+      </div>
+    </div>
+
+    <!-- 개발자에게 메시지 보내기 모달 -->
+    <div id="contact-overlay" onclick="closeContact(event)">
+      <div class="modal">
+        <div class="modal-logo">FLARE<span>(V)</span></div>
+        <h3 style="margin-bottom: 20px">개발자에게 메시지 보내기</h3>
+        <div class="contact-field">
+          <label>회신받을 이메일</label>
+          <input
+            type="email"
+            id="contact-email"
+            placeholder="example@email.com"
+          />
+        </div>
+        <div class="contact-field">
+          <label>내용</label>
+          <textarea
+            id="contact-content"
+            rows="4"
+            placeholder="의견이나 문의를 남겨주세요"
+          ></textarea>
+        </div>
+        <div id="contact-status" class="contact-status"></div>
+        <button class="modal-btn contact-send" id="contact-send-btn" onclick="sendContact()">
+          보내기
+        </button>
+        <button class="modal-cancel" onclick="closeContact()">취소</button>
+      </div>
+    </div>
+
+    <!-- 스팟 저장 모달 -->
+    <input type="file" id="spot-file" accept="image/*" style="display: none" />
+    <div id="spot-overlay" onclick="closeSpotForm(event)">
+      <div class="spot-sheet">
+        <h3>📍 스팟 남기기</h3>
+        <div class="sheet-sub">이 위치에 명소·풍경·맛집을 공유해요</div>
+
+        <div class="spot-field">
+          <label>사진 (필수)</label>
+          <div class="spot-photo-add" id="spot-photo-add" onclick="pickSpotPhoto()">＋ 사진 추가</div>
+          <img class="spot-photo-prev" id="spot-photo-prev" alt="" />
+        </div>
+        <div class="spot-field">
+          <label>닉네임</label>
+          <input id="spot-author" maxlength="12" placeholder="표시될 이름" />
+        </div>
+        <div class="spot-field">
+          <label>제목</label>
+          <input id="spot-title" maxlength="30" placeholder="예: 노을 맛집 옥상" />
+        </div>
+        <div class="spot-field">
+          <label>설명</label>
+          <textarea id="spot-desc" rows="2" maxlength="120" placeholder="어떤 곳인지 소개해주세요"></textarea>
+        </div>
+        <div class="spot-field">
+          <label>태그 (1개 이상 필수)</label>
+          <div class="spot-tags" id="spot-tags">
+            <button class="spot-tag" data-t="풍경">풍경</button>
+            <button class="spot-tag" data-t="맛집">맛집</button>
+            <button class="spot-tag" data-t="이색">이색</button>
+            <button class="spot-tag" data-t="힐링">힐링</button>
+            <button class="spot-tag" data-t="놀라운">놀라운</button>
+            <button class="spot-tag live-tag" data-t="실시간 현장">실시간 현장</button>
+          </div>
+          <div class="live-note" id="spot-live-note">⏱ 실시간 스팟은 24시간 동안만 지도에 보여요</div>
+        </div>
+        <div class="spot-field">
+          <label>비밀번호</label>
+          <input id="spot-pw" maxlength="8" inputmode="numeric" placeholder="삭제용 숫자" />
+          <div class="hint">나중에 수정·삭제할 때 쓰는 숫자예요. 실제 비밀번호는 넣지 마세요.</div>
+        </div>
+
+        <div class="spot-msg" id="spot-msg"></div>
+        <div class="spot-btns">
+          <button class="spot-no" onclick="closeSpotForm()">취소</button>
+          <button class="spot-ok" id="spot-save-btn" onclick="saveSpot()">저장</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Supabase 라이브러리 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+      // ============================================
+      // Supabase 연결 설정
+      // ============================================
+      const SUPABASE_URL = 'https://pbrbzjxdjqqmhvhzhwlp.supabase.co';
+      const SUPABASE_KEY =
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicmJ6anhkanFxbWh2aHpod2xwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjc3NTcsImV4cCI6MjA5NTMwMzc1N30.E6-GthxwIFN2-jy4ojf5ZxR7YcdPJULG6Mxj9LvkI1c';
+
+      const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+      // ── 상태 변수 ──
+      let festivalData = [];
+      let map;
+      let pinOverlays = []; // 핀 객체들 (필터링용)
+      let currentFestival = null; // 현재 열린 축제 (길찾기/검색/사진용)
+      // 한줄평(리뷰) 상태
+      let currentContentId = null; // 현재 축제의 content_id
+      let currentReviews = []; // 현재 축제의 한줄평 목록
+      let pickedRating = 0; // 쓰기 폼에서 고른 별점
+      let likedIds = new Set(); // 이 세션에서 좋아요한 한줄평 id
+      let lastReviewWrite = 0; // 한줄평 쓰기 10초 제한
+      let lastReviewLike = 0; // 좋아요 10초 제한
+      const LABEL_ZOOM = 11;
+
+      // 핀 색 변경(선택)·뭉치기용 상태
+      let selectedPin = null; // 현재 팝업 열린(노란) 핀
+      let clusterMarkers = []; // 숫자 뭉치 마커들
+      let expandedCluster = null; // 펼쳐진(흩어진) 뭉치
+      let projectionHelper = null; // 화면 좌표 계산 도우미
+      let FlarePinClass = null; // 핀 클래스 (지도 로드 후 정의)
+      let ClusterMarkerClass = null; // 뭉치 클래스 (지도 로드 후 정의)
+      let myLocationMarker = null; // 내 위치 파란 점
+      const CLUSTER_RADIUS = 48; // 이 픽셀 거리 안에 있으면 한 뭉치로 묶음
+      const LONG_RUNNING_DAYS = 14; // 진행중이며 기간이 이 일수 이상이면 '상시'
+
+      // 필터 상태
+      let activeCategories = { festival: true, spot: true };
+
+      // 스팟(사용자 명소) 상태
+      let spotOverlays = []; // 지도에 뜬 스팟 핀들
+      let spotData = []; // 불러온 스팟(게시물) 목록
+      let pendingLatLng = null; // 우클릭/롱프레스로 찍은 위치
+      let spotPhotoFile = null; // 저장 대기 사진 파일
+      let currentSpot = null; // 현재 열린 스팟 팝업
+      const chosenSpotTags = new Set();
+      let lastSpotWrite = 0; // 스팟 저장 10초 제한
+      let SpotPinClass = null;
+      let dateFilter = 'week'; // 기본: 이번 주
+      let customRange = { start: null, end: null };
+
+      // ── 구글 지도 다크 스타일 ──
+      const darkStyle = [
+        { elementType: 'geometry', stylers: [{ color: '#0d0d14' }] },
+        { elementType: 'labels.text.fill', stylers: [{ color: '#6b6b80' }] },
+        { elementType: 'labels.text.stroke', stylers: [{ color: '#0a0a0f' }] },
+        {
+          featureType: 'road',
+          elementType: 'geometry',
+          stylers: [{ color: '#1a1a2e' }],
+        },
+        {
+          featureType: 'road',
+          elementType: 'labels',
+          stylers: [{ visibility: 'off' }], // 국도/도로 라벨 숨김
+        },
+        {
+          featureType: 'road',
+          elementType: 'geometry.stroke',
+          stylers: [{ color: '#212135' }],
+        },
+        {
+          featureType: 'road.highway',
+          elementType: 'geometry',
+          stylers: [{ color: '#22223a' }],
+        },
+        {
+          featureType: 'water',
+          elementType: 'geometry',
+          stylers: [{ color: '#070710' }],
+        },
+        {
+          featureType: 'poi',
+          elementType: 'labels',
+          stylers: [{ visibility: 'off' }],
+        },
+        {
+          featureType: 'poi',
+          elementType: 'geometry',
+          stylers: [{ color: '#111120' }],
+        },
+        {
+          featureType: 'poi.park',
+          elementType: 'geometry',
+          stylers: [{ color: '#0e1a0e' }],
+        },
+        {
+          featureType: 'transit',
+          elementType: 'geometry',
+          stylers: [{ color: '#141425' }],
+        },
+      ];
+
+      // ── 지도 초기화 ──
+      function initMap() {
+        map = new google.maps.Map(document.getElementById('map'), {
+          center: { lat: 36.5, lng: 127.8 },
+          zoom: 7,
+          styles: darkStyle,
+          disableDefaultUI: true,
+          gestureHandling: 'greedy', // 한 손가락 이동
+          zoomControl: true,
+          zoomControlOptions: {
+            position: google.maps.ControlPosition.RIGHT_CENTER,
+          },
+        });
+
+        defineOverlayClasses(); // 핀·뭉치 클래스 정의 (지도 로드 후)
+
+        // 빈 지도 클릭 → 흩어진 이름 다시 합치기 + 메뉴/팝업 닫기
+        map.addListener('click', () => {
+          collapseSpider();
+          hideSpotContextMenu();
+        });
+        // 지도 이동/줌이 끝나면 뭉치 다시 계산
+        map.addListener('idle', recluster);
+        map.addListener('zoom_changed', updatePinLabels);
+
+        // 스팟: 지도 우클릭(PC) → 메뉴
+        map.addListener('contextmenu', (e) => {
+          if (!e.latLng) return;
+          const de = e.domEvent;
+          const rect = document
+            .getElementById('map-container')
+            .getBoundingClientRect();
+          showSpotContextMenu(
+            de.clientX - rect.left,
+            de.clientY - rect.top,
+            e.latLng
+          );
+        });
+        // 스팟: 모바일 길게 누르기 → 메뉴
+        setupLongPress();
+
+        if (festivalData.length > 0) showFestivalPins();
+        loadSpots(); // 스팟 불러오기
+      }
+
+      // ── 핀·뭉치 클래스 정의 (google.maps 로드된 뒤 실행) ──
+      function defineOverlayClasses() {
+        // 화면 픽셀 좌표 계산용 도우미 (뭉치 거리 계산에 사용)
+        class ProjectionHelper extends google.maps.OverlayView {
+          onAdd() {}
+          draw() {}
+          onRemove() {}
+          px(latLng) {
+            const proj = this.getProjection();
+            return proj ? proj.fromLatLngToContainerPixel(latLng) : null;
+          }
+          latLngAt(x, y) {
+            const proj = this.getProjection();
+            return proj
+              ? proj.fromContainerPixelToLatLng(new google.maps.Point(x, y))
+              : null;
+          }
+        }
+        projectionHelper = new ProjectionHelper();
+        projectionHelper.setMap(map);
+
+        // 축제 핀
+        FlarePinClass = class extends google.maps.OverlayView {
+          constructor(festival) {
+            super();
+            this.festival = festival;
+            this.position = new google.maps.LatLng(
+              festival.latitude,
+              festival.longitude
+            );
+            this.div = null;
+            this.isOngoing = isOngoingFestival(festival); // 진행 중 여부
+            this.isLong =
+              this.isOngoing &&
+              festivalDurationDays(festival) >= LONG_RUNNING_DAYS; // 진행중·장기(상시)
+            this.isPast = isPastFestival(festival); // 지난 축제 여부
+            this.passesFilter = true; // 필터 통과 여부
+            this.spiderOffset = null; // 흩어질 때 위치 보정값
+          }
+
+          onAdd() {
+            const div = document.createElement('div');
+            div.className =
+              'flare-pin' +
+              (this.isOngoing ? ' ongoing' : '') +
+              (this.isPast ? ' past' : '');
+            div.style.position = 'absolute';
+            div.style.willChange = 'transform';
+            const badgeHtml = this.isOngoing
+              ? this.isLong
+                ? '<div class="sangsi-badge">상시</div>'
+                : '<div class="now-badge">NOW</div>'
+              : '';
+            div.innerHTML =
+              '<div class="flare-dot"></div>' +
+              badgeHtml +
+              '<div class="flare-label">' +
+              escapeHtml(this.festival.title || '축제') +
+              '</div>';
+
+            const self = this;
+            div.addEventListener('click', (e) => {
+              e.stopPropagation();
+              selectPin(self); // 노란색으로 표시
+              openFestivalPanel(self.festival);
+            });
+
+            this.div = div;
+            this.getPanes().overlayMouseTarget.appendChild(div);
+          }
+
+          draw() {
+            if (!this.div) return;
+            const point = this.getProjection().fromLatLngToDivPixel(
+              this.position
+            );
+            if (point) {
+              let x = point.x - 7;
+              let y = point.y - 7;
+              if (this.spiderOffset) {
+                x += this.spiderOffset.dx;
+                y += this.spiderOffset.dy;
+              }
+              this.div.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+            }
+          }
+
+          setZoomed(isZoomed) {
+            if (!this.div) return;
+            this.div.classList.toggle('zoomed', isZoomed);
+          }
+
+          // 화면에 보일지 숨길지
+          setVisible(visible) {
+            if (!this.div) return;
+            this.div.style.display = visible ? 'block' : 'none';
+          }
+
+          // 선택(팝업 열림) → 노란색
+          setSelected(isSel) {
+            if (!this.div) return;
+            this.div.classList.toggle('selected', isSel);
+          }
+
+          // 흩어지기: offset 있으면 펼침, null이면 제자리
+          // offset.labelLeft 가 true면 이름표를 왼쪽으로 뺌
+          // animate=true 면 흩어짐/합쳐짐 순간에만 0.2초 미끄러지는 효과
+          setSpider(offset, animate) {
+            this.spiderOffset = offset;
+            if (this.div) {
+              this.div.classList.toggle('spider', !!offset);
+              this.div.classList.toggle(
+                'label-left',
+                !!(offset && offset.labelLeft)
+              );
+
+              if (animate) {
+                // 이 순간에만 부드럽게 미끄러지도록 transition 켬
+                this.div.style.transition =
+                  'transform 0.2s cubic-bezier(0.34, 1.4, 0.6, 1)';
+                // 0.2초 뒤 transition 제거 → 지도 이동 시 출렁임 방지
+                clearTimeout(this._spiderTimer);
+                this._spiderTimer = setTimeout(() => {
+                  if (this.div) this.div.style.transition = '';
+                }, 220);
+              }
+            }
+            this.draw();
+          }
+
+          onRemove() {
+            if (this.div) {
+              this.div.parentNode.removeChild(this.div);
+              this.div = null;
+            }
+          }
+        };
+
+        // 숫자 뭉치 마커
+        ClusterMarkerClass = class extends google.maps.OverlayView {
+          constructor(position, members) {
+            super();
+            this.position = position; // 뭉치 중심 좌표
+            this.members = members; // 이 뭉치에 속한 핀들
+            this.div = null;
+          }
+          onAdd() {
+            const div = document.createElement('div');
+            div.className = 'flare-cluster';
+            div.style.willChange = 'transform';
+            div.textContent = this.members.length;
+            const self = this;
+            div.addEventListener('click', (e) => {
+              e.stopPropagation();
+              expandCluster(self); // 누르면 이름 흩뿌리기
+            });
+            this.div = div;
+            this.getPanes().overlayMouseTarget.appendChild(div);
+          }
+          draw() {
+            if (!this.div) return;
+            const p = this.getProjection().fromLatLngToDivPixel(this.position);
+            if (p) {
+              this.div.style.transform =
+                'translate(' + (p.x - 18) + 'px,' + (p.y - 18) + 'px)';
+            }
+          }
+          hide() {
+            if (this.div) this.div.style.display = 'none';
+          }
+          show() {
+            if (this.div) this.div.style.display = 'flex';
+          }
+          onRemove() {
+            if (this.div) {
+              this.div.parentNode.removeChild(this.div);
+              this.div = null;
+            }
+          }
+        };
+
+        // 스팟 핀 (민트 물방울)
+        SpotPinClass = class extends google.maps.OverlayView {
+          constructor(post) {
+            super();
+            this.post = post;
+            const p = post.places;
+            this.position = new google.maps.LatLng(p.latitude, p.longitude);
+            this.div = null;
+          }
+          onAdd() {
+            const div = document.createElement('div');
+            div.className = 'spot-pin';
+            div.style.position = 'absolute';
+            div.style.willChange = 'transform';
+            div.innerHTML =
+              '<div class="spot-drop"></div>' +
+              '<div class="spot-label">' +
+              escapeHtml(this.post.title || '스팟') +
+              '</div>';
+            const self = this;
+            div.addEventListener('click', (e) => {
+              e.stopPropagation();
+              openSpotPanel(self.post);
+            });
+            this.div = div;
+            this.getPanes().overlayMouseTarget.appendChild(div);
+          }
+          draw() {
+            if (!this.div) return;
+            const pt = this.getProjection().fromLatLngToDivPixel(this.position);
+            if (pt) {
+              this.div.style.transform =
+                'translate(' + (pt.x - 8) + 'px,' + (pt.y - 16) + 'px)';
+            }
+          }
+          setVisible(v) {
+            if (this.div) this.div.style.display = v ? 'block' : 'none';
+          }
+          onRemove() {
+            if (this.div) {
+              this.div.parentNode.removeChild(this.div);
+              this.div = null;
+            }
+          }
+        };
+      }
+      async function loadFestivals() {
+        document.getElementById('loading').style.display = 'block';
+
+        const { data, error } = await supabaseClient
+          .from('festivals')
+          .select('*')
+          .eq('is_active', true);
+
+        document.getElementById('loading').style.display = 'none';
+
+        if (error) {
+          console.log('❌ 에러:', error.message);
+          return;
+        }
+
+        festivalData = data;
+        console.log('✅ 축제', data.length, '개 불러옴');
+
+        if (map) showFestivalPins();
+      }
+
+      // ── 핀 표시 (현재 필터에 맞는 핀만 생성 → 첫 로딩 가볍게) ──
+      function showFestivalPins() {
+        buildPinsForCurrentFilter();
+      }
+
+      // 현재 필터(카테고리+날짜)를 통과하는 축제인지
+      function passesCurrentFilter(f) {
+        if (!activeCategories.festival) return false;
+        return matchesDateFilter(f);
+      }
+
+      // 필터에 맞는 핀만 새로 생성 (나머지는 아예 안 만들어 가볍게)
+      function buildPinsForCurrentFilter() {
+        if (!map || !FlarePinClass) return; // 지도 로드 전이면 건너뜀
+        // 열린 팝업/선택 핀 정리
+        closePanel();
+
+        // 기존 핀·뭉치 모두 제거
+        pinOverlays.forEach((p) => p.setMap(null));
+        pinOverlays = [];
+        clusterMarkers.forEach((c) => c.setMap(null));
+        clusterMarkers = [];
+        expandedCluster = null;
+
+        let visibleCount = 0;
+        festivalData.forEach((f) => {
+          if (!f.latitude || !f.longitude) return;
+          if (!passesCurrentFilter(f)) return;
+          const pin = new FlarePinClass(f);
+          pin.passesFilter = true;
+          pin.setMap(map);
+          pinOverlays.push(pin);
+          visibleCount++;
+        });
+
+        document.getElementById('cnt-festival').textContent = visibleCount;
+        updatePinLabels();
+        recluster();
+      }
+
+      function updatePinLabels() {
+        if (!map || typeof map.getZoom !== 'function') return; // 지도 로드 전 방어
+        const zoomedIn = map.getZoom() >= LABEL_ZOOM;
+        pinOverlays.forEach((pin) => pin.setZoomed(zoomedIn));
+      }
+
+      // ── 뭉치 계산: 가까운 핀끼리 묶어서 숫자로 ──
+      function recluster() {
+        if (!projectionHelper || !projectionHelper.getProjection()) return;
+
+        // 흩어진 상태가 있으면 먼저 제자리로
+        if (expandedCluster) {
+          expandedCluster.members.forEach((p) => p.setSpider(null));
+          expandedCluster = null;
+        }
+        // 기존 숫자 뭉치 제거
+        clusterMarkers.forEach((c) => c.setMap(null));
+        clusterMarkers = [];
+
+        // 필터 통과한 핀들의 화면 좌표 모으기
+        const pts = [];
+        pinOverlays.forEach((pin) => {
+          if (!pin.passesFilter) return;
+          const px = projectionHelper.px(pin.position);
+          if (px) pts.push({ pin: pin, px: px });
+        });
+
+        // 가까운 것끼리 그룹화
+        const used = new Set();
+        for (let i = 0; i < pts.length; i++) {
+          if (used.has(i)) continue;
+          const group = [pts[i]];
+          used.add(i);
+          for (let j = i + 1; j < pts.length; j++) {
+            if (used.has(j)) continue;
+            const dx = pts[i].px.x - pts[j].px.x;
+            const dy = pts[i].px.y - pts[j].px.y;
+            if (Math.hypot(dx, dy) < CLUSTER_RADIUS) {
+              group.push(pts[j]);
+              used.add(j);
+            }
+          }
+
+          if (group.length === 1) {
+            // 혼자면 그냥 핀 표시
+            group[0].pin.setVisible(true);
+          } else {
+            // 여러 개면 핀 숨기고 숫자 뭉치 생성
+            let latSum = 0;
+            let lngSum = 0;
+            group.forEach((o) => {
+              o.pin.setVisible(false);
+              latSum += o.pin.position.lat();
+              lngSum += o.pin.position.lng();
+            });
+            const center = new google.maps.LatLng(
+              latSum / group.length,
+              lngSum / group.length
+            );
+            const cm = new ClusterMarkerClass(
+              center,
+              group.map((o) => o.pin)
+            );
+            cm.setMap(map);
+            clusterMarkers.push(cm);
+          }
+        }
+      }
+
+      // ── 뭉치 펼치기: 이름을 겹치지 않게 흩뿌리기 ──
+      // 2개=좌우, 3개=삼각형, 그 이상=다각형(골고루)
+      function expandCluster(cm) {
+        // 다른 뭉치가 펼쳐져 있으면 즉시(애니메이션 없이) 접고 새로 펼침
+        if (expandedCluster && expandedCluster !== cm) {
+          const prev = expandedCluster;
+          prev.members.forEach((p) => {
+            p.setSpider(null);
+            p.setVisible(false);
+          });
+          prev.show();
+          expandedCluster = null;
+        }
+
+        expandedCluster = cm;
+        cm.hide(); // 숫자 숨김
+
+        const n = cm.members.length;
+        // 흩어지는 거리 (이전의 절반)
+        const radius = 23 + n * 5;
+
+        // 시작 각도: 2개는 좌우(수평), 그 외는 위에서 시작
+        // 수평선에 정확히 겹치지 않도록 살짝 기울임
+        let startAngle;
+        if (n === 2) {
+          startAngle = 0; // 0도(오른쪽) / 180도(왼쪽) → 좌우 배치
+        } else if (n === 3) {
+          startAngle = -Math.PI / 2; // 위 꼭짓점부터 → 삼각형
+        } else {
+          startAngle = -Math.PI / 2 + Math.PI / n; // 다각형, 살짝 회전
+        }
+
+        // 1단계: 모든 핀을 숫자 자리(중심)에서 시작 (애니메이션 출발점)
+        cm.members.forEach((pin) => {
+          pin.setVisible(true);
+          pin.setSpider({ dx: 0, dy: 0, labelLeft: false });
+        });
+
+        // 2단계: 다음 프레임에 각자 방향으로 퍼지기 (0.2초 애니메이션)
+        requestAnimationFrame(() => {
+          cm.members.forEach((pin, idx) => {
+            const angle = startAngle + (2 * Math.PI * idx) / n;
+            const dx = Math.cos(angle) * radius;
+            const dy = Math.sin(angle) * radius;
+            const labelLeft = dx < -2; // 왼쪽 핀은 이름표도 왼쪽으로
+            pin.setSpider({ dx: dx, dy: dy, labelLeft: labelLeft }, true);
+          });
+        });
+      }
+
+      // ── 흩어진 이름 다시 합치기 (애니메이션) ──
+      function collapseSpider() {
+        if (!expandedCluster) return;
+        const cm = expandedCluster;
+        expandedCluster = null; // 즉시 비워서 중복 호출 방지
+
+        // 1단계: 핀들을 숫자 자리(중심)로 0.2초 모으기
+        cm.members.forEach((pin) => {
+          pin.setSpider({ dx: 0, dy: 0, labelLeft: false }, true);
+        });
+
+        // 2단계: 다 모인 뒤(0.2초) 핀 숨기고 숫자 다시 표시
+        setTimeout(() => {
+          cm.members.forEach((pin) => {
+            pin.setSpider(null);
+            pin.setVisible(false);
+          });
+          cm.show();
+        }, 200);
+      }
+
+      // ── 날짜 비교 도우미 ──
+      function toDate(str) {
+        if (!str) return null;
+        return new Date(str + 'T00:00:00');
+      }
+
+      // 축제 총 기간(일수). 시작=종료면 1일. 종료일 없으면 1일로 봄.
+      function festivalDurationDays(f) {
+        if (!f.date_start) return 0;
+        const start = toDate(f.date_start);
+        const end = toDate(f.date_end) || start;
+        return Math.round((end - start) / 86400000) + 1;
+      }
+
+      // 축제가 현재 날짜 필터에 맞는지
+      function matchesDateFilter(f) {
+        // 날짜 없는 축제는 표시하지 않음
+        if (!f.date_start) return false;
+
+        const start = toDate(f.date_start);
+        const end = toDate(f.date_end) || start;
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        let from, to;
+
+        if (dateFilter === 'today') {
+          from = new Date(today);
+          to = new Date(today);
+        } else if (dateFilter === 'week') {
+          from = new Date(today);
+          to = new Date(today);
+          to.setDate(to.getDate() + 7);
+        } else if (dateFilter === 'month') {
+          from = new Date(today);
+          to = new Date(today);
+          to.setMonth(to.getMonth() + 1);
+        } else if (dateFilter === 'custom') {
+          if (!customRange.start || !customRange.end) return true;
+          from = toDate(customRange.start);
+          to = toDate(customRange.end);
+        } else {
+          return true; // 필터 없음 = 전체
+        }
+
+        // 축제 기간이 [from, to]와 겹치면 표시
+        return start <= to && end >= from;
+      }
+
+      // ── 필터 적용: 필터가 바뀌면 해당하는 핀만 다시 생성 ──
+      function applyFilters() {
+        buildPinsForCurrentFilter();
+      }
+
+      // ── HTML 태그/특수문자 정리 (설명·프로그램 등 공공 데이터용) ──
+      function cleanText(s) {
+        return String(s)
+          .replace(/<br\s*\/?>/gi, '\n') // 줄바꿈 태그 → 실제 줄바꿈
+          .replace(/<[^>]+>/g, '') // 그 외 태그 제거
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/[ \t]+\n/g, '\n')
+          .replace(/\n{3,}/g, '\n\n')
+          .trim();
+      }
+      // 한 줄짜리 정보용(줄바꿈을 공백으로)
+      function cleanInline(s) {
+        return cleanText(s).replace(/\s*\n\s*/g, ' ').trim();
+      }
+      // 이름표 등에 넣을 때 태그 깨짐 방지용 escape
+      function escapeHtml(s) {
+        return String(s)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      // ── 메타 한 줄 채우기 (값 없으면 줄 숨김) ──
+      function setMetaRow(rowId, textId, value) {
+        const row = document.getElementById(rowId);
+        const txt = document.getElementById(textId);
+        const v = value && String(value).trim();
+        if (v) {
+          txt.textContent = cleanInline(v);
+          row.style.display = 'flex';
+        } else {
+          row.style.display = 'none';
+        }
+      }
+
+      // ── 팝업 사진 설정 (있을 때만 표시 + 잘리는 쪽 자동 훑기) ──
+      function setupPanelImage(f) {
+        const box = document.getElementById('panel-img');
+        const img = document.getElementById('panel-img-el');
+
+        box.classList.remove('has-photo', 'pan-v', 'pan-h');
+        img.onload = null;
+        img.onerror = null;
+
+        const url = f.image_url && String(f.image_url).trim();
+        if (!url) {
+          img.removeAttribute('src'); // 사진 없음 → 기본 아이콘
+          return;
+        }
+
+        img.onload = function () {
+          box.classList.add('has-photo');
+          box.classList.remove('pan-v', 'pan-h');
+          const boxRatio = box.clientWidth / box.clientHeight;
+          const imgRatio = img.naturalWidth / img.naturalHeight;
+          if (!imgRatio || !boxRatio) return;
+          // 사진이 박스보다 옆으로 넘치면 가로 훑기, 위아래로 넘치면 세로 훑기
+          if (imgRatio > boxRatio * 1.05) box.classList.add('pan-h');
+          else if (imgRatio < boxRatio * 0.95) box.classList.add('pan-v');
+          // 거의 같은 비율이면 움직이지 않음
+        };
+        img.onerror = function () {
+          // 사진 로드 실패 → 기본 아이콘으로 되돌림
+          box.classList.remove('has-photo', 'pan-v', 'pan-h');
+          img.removeAttribute('src');
+        };
+
+        img.src = url;
+        // 캐시된 이미지는 onload가 안 뜰 수 있어 보강
+        if (img.complete && img.naturalWidth) img.onload();
+      }
+
+      // ── 사진 클릭 → 원본 새 탭 (사진 있을 때만) ──
+      function openPhoto() {
+        const box = document.getElementById('panel-img');
+        if (!box.classList.contains('has-photo')) return;
+        if (currentFestival && currentFestival.image_url) {
+          window.open(currentFestival.image_url, '_blank');
+        }
+      }
+
+      // ── 설명 설정 (3줄 + 더보기) ──
+      function setupDescription(f) {
+        const wrap = document.getElementById('panel-desc');
+        const textEl = document.getElementById('panel-desc-text');
+        const moreBtn = document.getElementById('panel-desc-more');
+
+        const raw = f.description;
+        if (!raw || !String(raw).trim()) {
+          wrap.style.display = 'none';
+          return;
+        }
+
+        wrap.style.display = 'block';
+        wrap.classList.remove('expanded');
+        textEl.textContent = cleanText(raw);
+        moreBtn.textContent = '더보기';
+        moreBtn.style.display = 'none'; // 넘칠 때만 measureDesc가 표시
+      }
+
+      // ── 설명이 3줄 넘는지 확인해 '더보기' 노출 (패널이 보인 뒤 측정) ──
+      function measureDesc() {
+        const wrap = document.getElementById('panel-desc');
+        if (wrap.style.display === 'none') return;
+        const textEl = document.getElementById('panel-desc-text');
+        const moreBtn = document.getElementById('panel-desc-more');
+        wrap.classList.remove('expanded');
+        const overflowing = textEl.scrollHeight > textEl.clientHeight + 2;
+        moreBtn.style.display = overflowing ? 'inline-block' : 'none';
+        moreBtn.textContent = '더보기';
+      }
+
+      function toggleDesc() {
+        const wrap = document.getElementById('panel-desc');
+        const moreBtn = document.getElementById('panel-desc-more');
+        const expanded = wrap.classList.toggle('expanded');
+        moreBtn.textContent = expanded ? '접기' : '더보기';
+      }
+
+      // ── 프로그램 설정 (2줄 + 더보기) ──
+      function setupProgram(f) {
+        const wrap = document.getElementById('panel-program');
+        const body = document.getElementById('panel-program-body');
+        const moreBtn = document.getElementById('panel-program-more');
+        const raw = f.program;
+        if (!raw || !String(raw).trim()) {
+          wrap.style.display = 'none';
+          return;
+        }
+        wrap.style.display = 'block';
+        wrap.classList.remove('expanded');
+        body.textContent = cleanText(raw);
+        moreBtn.textContent = '더보기';
+        moreBtn.style.display = 'none'; // 넘칠 때만 measureProgram이 표시
+      }
+
+      // ── 프로그램이 2줄 넘는지 확인해 '더보기' 노출 (패널이 보인 뒤 측정) ──
+      function measureProgram() {
+        const wrap = document.getElementById('panel-program');
+        if (wrap.style.display === 'none') return;
+        const body = document.getElementById('panel-program-body');
+        const moreBtn = document.getElementById('panel-program-more');
+        wrap.classList.remove('expanded');
+        const overflowing = body.scrollHeight > body.clientHeight + 2;
+        moreBtn.style.display = overflowing ? 'inline-block' : 'none';
+        moreBtn.textContent = '더보기';
+      }
+
+      function toggleProgram() {
+        const wrap = document.getElementById('panel-program');
+        const moreBtn = document.getElementById('panel-program-more');
+        const expanded = wrap.classList.toggle('expanded');
+        moreBtn.textContent = expanded ? '접기' : '더보기';
+      }
+
+      // ── 정보 패널 열기 ──
+      function openFestivalPanel(f) {
+        const panel = document.getElementById('info-panel');
+        closeSpotPanel(); // 스팟 팝업 닫기
+
+        // 길찾기 메뉴는 매번 닫고 시작 (다른 축제 누를 때 초기화)
+        document.getElementById('map-picker').classList.remove('show');
+
+        currentFestival = f; // 길찾기/검색/사진용 저장
+
+        // 사진
+        setupPanelImage(f);
+
+        // 제목
+        const titleEl = document.getElementById('panel-title');
+        titleEl.textContent = f.title || '제목 없음';
+
+        // 정보 줄 (없으면 자동 숨김): 📍장소 📅날짜 🕐운영시간 💰요금
+        setMetaRow('row-place', 'panel-place', f.place_name || f.location_name);
+        setMetaRow(
+          'row-date',
+          'panel-date',
+          f.date_start
+            ? f.date_start +
+                (f.date_end && f.date_end !== f.date_start
+                  ? ' ~ ' + f.date_end
+                  : '')
+            : ''
+        );
+        setMetaRow('row-time', 'panel-time', f.play_time);
+        setMetaRow('row-price', 'panel-price', f.price);
+
+        // 설명 / 프로그램
+        setupDescription(f);
+        setupProgram(f);
+
+        // 한줄평 영역 초기화 (펼침/폼 닫고, content_id 있으면 불러오기)
+        setupReviews(f);
+
+        // 애니메이션 재생을 위해 클래스 재적용
+        panel.classList.remove('show');
+        void panel.offsetWidth; // 리플로우 트릭
+        panel.classList.add('show');
+        panel.scrollTop = 0;
+
+        // 패널이 화면에 뜬 뒤: 제목 크기 맞춤 + 설명/프로그램 더보기 측정
+        requestAnimationFrame(() => {
+          fitTitle(titleEl);
+          measureDesc();
+          measureProgram();
+        });
+      }
+
+      // ── 제목 길이에 따라 글자 크기 줄여 한 줄 유지 ──
+      function fitTitle(el) {
+        const sizes = [1, 0.92, 0.85, 0.78]; // rem 단계
+        // 넘치면 한 단계씩 줄임 (마지막 단계까지 넘치면 ...으로 잘림)
+        for (let i = 0; i < sizes.length; i++) {
+          el.style.fontSize = sizes[i] + 'rem';
+          if (el.scrollWidth <= el.clientWidth) break;
+        }
+      }
+
+      function closePanel() {
+        document.getElementById('info-panel').classList.remove('show');
+        document.getElementById('map-picker').classList.remove('show');
+        // 노란 핀 다시 핑크로
+        if (selectedPin) {
+          selectedPin.setSelected(false);
+          selectedPin = null;
+        }
+      }
+
+      // ── 핀 선택(노란색) 처리 ──
+      function selectPin(pin) {
+        if (selectedPin && selectedPin !== pin) selectedPin.setSelected(false);
+        selectedPin = pin;
+        pin.setSelected(true);
+      }
+
+      // ====================================================
+      //  한줄평(리뷰) + 별점 시스템
+      // ====================================================
+
+      // ── 팝업 열 때 한줄평 영역 초기화 ──
+      function setupReviews(f) {
+        const area = document.getElementById('panel-img');
+        const talkBtn = document.getElementById('talk-btn');
+        const row = document.getElementById('reaction-row');
+
+        // 펼침/폼 상태 초기화
+        area.classList.remove('reviews-open', 'form-open');
+        talkBtn.classList.remove('open');
+        document.getElementById('talk-label').textContent = '한줄평';
+
+        const cid = f.content_id && String(f.content_id).trim();
+        currentContentId = cid || null;
+        currentReviews = [];
+
+        if (!cid) {
+          // content_id 없는 축제: 한줄평 영역 숨김
+          row.style.display = 'none';
+          return;
+        }
+        row.style.display = 'flex';
+
+        // 로딩 표시 후 비동기로 불러오기
+        const box = document.getElementById('rating-box');
+        box.textContent = '평가 불러오는 중…';
+        box.classList.add('none');
+
+        loadReviews(cid).then(() => {
+          // 그 사이 다른 축제로 바뀌었으면 무시
+          if (currentContentId !== cid) return;
+          renderRatingBox();
+          renderReviewList();
+        });
+      }
+
+      // ── Supabase에서 한줄평 불러오기 (최신순) ──
+      async function loadReviews(contentId) {
+        const { data, error } = await supabaseClient
+          .from('reviews')
+          .select('*')
+          .eq('content_id', contentId)
+          .order('created_at', { ascending: false });
+        if (error) {
+          console.log('한줄평 로드 에러:', error.message);
+          currentReviews = [];
+          return;
+        }
+        currentReviews = data || [];
+      }
+
+      // ── 별점 합산 표시 (조명탄 자리) ──
+      function renderRatingBox() {
+        const box = document.getElementById('rating-box');
+        if (currentReviews.length === 0) {
+          box.textContent = '아직 평가 없음';
+          box.classList.add('none');
+          return;
+        }
+        box.classList.remove('none');
+        const avg =
+          currentReviews.reduce((s, r) => s + r.rating, 0) /
+          currentReviews.length;
+        box.textContent =
+          '⭐ ' + avg.toFixed(1) + ' | ' + currentReviews.length + '명';
+      }
+
+      // ── 한줄평 목록 그리기 ──
+      function renderReviewList() {
+        const list = document.getElementById('review-list');
+        if (currentReviews.length === 0) {
+          list.innerHTML = '<div class="rv-empty">한줄평이 없어요!</div>';
+          return;
+        }
+        list.innerHTML = currentReviews
+          .map((r) => {
+            const stars =
+              '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
+            const liked = likedIds.has(r.id) ? ' liked' : '';
+            return (
+              '<div class="review">' +
+              '<div class="r-top">' +
+              '<span class="r-author">' +
+              escapeHtml(r.author) +
+              '</span>' +
+              '<span class="r-stars">' +
+              stars +
+              '</span>' +
+              '<span class="r-date">' +
+              formatReviewDate(r.created_at) +
+              '</span>' +
+              '</div>' +
+              '<div class="r-content">' +
+              escapeHtml(r.content) +
+              '</div>' +
+              '<div class="r-actions">' +
+              '<button class="like-btn' +
+              liked +
+              '" onclick="likeReview(' +
+              r.id +
+              ')">♥ <span>' +
+              r.likes +
+              '</span></button>' +
+              '<button class="del-btn" onclick="askDeleteReview(' +
+              r.id +
+              ')">🗑 삭제</button>' +
+              '</div>' +
+              '<div class="del-confirm" id="dc-' +
+              r.id +
+              '">' +
+              '<input type="text" inputmode="numeric" placeholder="비밀번호" id="dcpw-' +
+              r.id +
+              '" />' +
+              '<button class="dc-ok" onclick="doDeleteReview(' +
+              r.id +
+              ')">삭제</button>' +
+              '<button class="dc-no" onclick="cancelDeleteReview(' +
+              r.id +
+              ')">취소</button>' +
+              '</div>' +
+              '</div>'
+            );
+          })
+          .join('');
+      }
+
+      // 날짜 표시: 'YYYY-MM-DD...' → 'MM/DD'
+      function formatReviewDate(iso) {
+        if (!iso) return '';
+        const d = new Date(iso);
+        if (isNaN(d)) return '';
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return m + '/' + day;
+      }
+
+      // ── 한줄평 펼치기/닫기 ──
+      function toggleReviews() {
+        const area = document.getElementById('panel-img');
+        const btn = document.getElementById('talk-btn');
+        const label = document.getElementById('talk-label');
+        const open = !area.classList.contains('reviews-open');
+        closeReviewForm();
+        area.classList.toggle('reviews-open', open);
+        btn.classList.toggle('open', open);
+        label.textContent = open ? '한줄평 닫기' : '한줄평';
+        if (open) renderReviewList();
+      }
+
+      // ── 좋아요 (세션 중복 방지 + 10초 제한) ──
+      async function likeReview(id) {
+        if (likedIds.has(id)) {
+          toast('이미 좋아요한 한줄평이에요');
+          return;
+        }
+        const now = Date.now();
+        if (now - lastReviewLike < 10000) {
+          toast('좋아요는 10초에 한 번만 가능해요');
+          return;
+        }
+        const r = currentReviews.find((x) => x.id === id);
+        if (!r) return;
+        const newLikes = (r.likes || 0) + 1;
+        const { error } = await supabaseClient
+          .from('reviews')
+          .update({ likes: newLikes })
+          .eq('id', id);
+        if (error) {
+          toast('잠시 후 다시 시도해주세요');
+          return;
+        }
+        r.likes = newLikes;
+        likedIds.add(id);
+        lastReviewLike = now;
+        renderReviewList();
+      }
+
+      // ── 삭제: 비밀번호 입력 칸 펼치기 ──
+      function askDeleteReview(id) {
+        document
+          .querySelectorAll('.del-confirm')
+          .forEach((e) => e.classList.remove('show'));
+        const el = document.getElementById('dc-' + id);
+        if (el) el.classList.add('show');
+      }
+      function cancelDeleteReview(id) {
+        const el = document.getElementById('dc-' + id);
+        if (el) el.classList.remove('show');
+      }
+
+      // ── 삭제 실행 (비밀번호 일치 시에만) ──
+      async function doDeleteReview(id) {
+        const input = document.getElementById('dcpw-' + id);
+        const pw = input ? input.value.trim() : '';
+        if (!pw) {
+          toast('비밀번호를 입력해주세요');
+          return;
+        }
+        // 비밀번호 일치하는 행만 삭제 → 삭제된 행이 0이면 비번 불일치
+        const { data, error } = await supabaseClient
+          .from('reviews')
+          .delete()
+          .eq('id', id)
+          .eq('password', pw)
+          .select();
+        if (error) {
+          toast('잠시 후 다시 시도해주세요');
+          return;
+        }
+        if (!data || data.length === 0) {
+          toast('비밀번호가 달라요');
+          return;
+        }
+        currentReviews = currentReviews.filter((x) => x.id !== id);
+        renderReviewList();
+        renderRatingBox();
+      }
+
+      // ── 쓰기 폼 ──
+      function openReviewForm() {
+        document.getElementById('panel-img').classList.add('form-open');
+        document.getElementById('rv-author').value = '';
+        document.getElementById('rv-pw').value = '';
+        document.getElementById('rv-content').value = '';
+        document.getElementById('rv-form-msg').textContent = '';
+        pickedRating = 0;
+        paintStars(0);
+      }
+      function closeReviewForm() {
+        document.getElementById('panel-img').classList.remove('form-open');
+      }
+
+      function paintStars(n) {
+        document.querySelectorAll('#star-pick span').forEach((s) => {
+          s.classList.toggle('on', Number(s.dataset.v) <= n);
+        });
+      }
+
+      // ── 한줄평 등록 ──
+      async function submitReview() {
+        const author = document.getElementById('rv-author').value.trim();
+        const pw = document.getElementById('rv-pw').value.trim();
+        const content = document.getElementById('rv-content').value.trim();
+        const msg = document.getElementById('rv-form-msg');
+
+        if (!currentContentId) return;
+        if (!author) {
+          msg.textContent = '아이디를 입력해주세요';
+          return;
+        }
+        if (!pw) {
+          msg.textContent = '비밀번호를 입력해주세요';
+          return;
+        }
+        if (pickedRating === 0) {
+          msg.textContent = '별점을 선택해주세요';
+          return;
+        }
+        if (!content) {
+          msg.textContent = '한줄평을 입력해주세요';
+          return;
+        }
+
+        const now = Date.now();
+        if (now - lastReviewWrite < 10000) {
+          msg.textContent = '10초 후에 다시 작성할 수 있어요';
+          return;
+        }
+
+        const { data, error } = await supabaseClient
+          .from('reviews')
+          .insert([
+            {
+              content_id: currentContentId,
+              author: author,
+              password: pw,
+              content: content,
+              rating: pickedRating,
+            },
+          ])
+          .select();
+
+        if (error) {
+          console.log('한줄평 등록 에러:', error.message);
+          msg.textContent = '등록에 실패했어요. 잠시 후 다시 시도해주세요.';
+          return;
+        }
+
+        lastReviewWrite = now;
+        if (data && data[0]) currentReviews.unshift(data[0]);
+        closeReviewForm();
+        renderReviewList();
+        renderRatingBox();
+      }
+
+      // ── 작은 알림 토스트 ──
+      function toast(text) {
+        const el = document.createElement('div');
+        el.textContent = text;
+        el.style.cssText =
+          'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
+          'background:#222;color:#fff;padding:8px 14px;border-radius:20px;' +
+          'font-size:0.74rem;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.4);';
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 1500);
+      }
+
+      // ── 제목 옆 링크: 구글에 축제명 검색 ──
+      function searchFestival() {
+        if (!currentFestival) return;
+        const f = currentFestival;
+
+        // 연도: 축제 시작일의 연도가 있으면 그걸, 없으면 올해
+        let year;
+        if (f.date_start) {
+          year = f.date_start.slice(0, 4); // 'YYYY-MM-DD' → 'YYYY'
+        } else {
+          year = String(new Date().getFullYear()); // 올해
+        }
+
+        // "연도 + 장소 + 행사이름" 조합 (빈 값은 자연스럽게 생략)
+        const parts = [year, f.place_name || f.location_name, f.title].filter(
+          (s) => s && String(s).trim()
+        );
+        const q = encodeURIComponent(parts.join(' '));
+        window.open('https://www.google.com/search?q=' + q, '_blank');
+      }
+
+      // ── 길찾기 지도 선택 ──
+      function toggleMapPicker() {
+        document.getElementById('map-picker').classList.toggle('show');
+      }
+
+      function openMap(type) {
+        if (!currentFestival) return;
+        const lat = currentFestival.latitude;
+        const lng = currentFestival.longitude;
+        const place = encodeURIComponent(
+          currentFestival.place_name ||
+            currentFestival.location_name ||
+            currentFestival.address ||
+            currentFestival.title ||
+            '목적지'
+        );
+        let url = '';
+
+        if (type === 'kakao') {
+          url = `https://map.kakao.com/?q=${place}`;
+        } else if (type === 'naver') {
+          url = `https://map.naver.com/v5/search/${place}`;
+        } else if (type === 'google') {
+          // 좌표가 있으면 정확한 좌표로, 없으면 장소명으로
+          url =
+            lat && lng
+              ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
+              : `https://www.google.com/maps/search/?api=1&query=${place}`;
+        }
+
+        if (url) window.open(url, '_blank');
+      }
+
+      // ── 날짜 버튼 ──
+      function setDate(el, type) {
+        document
+          .querySelectorAll('.date-btn')
+          .forEach((b) => b.classList.remove('active'));
+        el.classList.add('active');
+
+        const rangeBox = document.getElementById('date-range');
+
+        if (type === 'custom') {
+          // 직접 입력: 날짜 칸 뿅
+          rangeBox.classList.add('show');
+          const s = document.getElementById('range-start').value;
+          const e = document.getElementById('range-end').value;
+          // 아직 둘 다 안 골랐으면 전체 표시, 다 골랐으면 기간 필터
+          dateFilter = s && e ? 'custom' : 'none';
+        } else {
+          // 다른 버튼: 날짜 칸 숨기고 입력값 초기화
+          rangeBox.classList.remove('show');
+          document.getElementById('range-start').value = '';
+          document.getElementById('range-end').value = '';
+          customRange = { start: null, end: null };
+          dateFilter = type;
+        }
+
+        applyFilters();
+      }
+
+      // ── 기간 직접 설정 ──
+      function setCustomRange() {
+        const s = document.getElementById('range-start').value;
+        const e = document.getElementById('range-end').value;
+        customRange.start = s || null;
+        customRange.end = e || null;
+
+        if (s && e) dateFilter = 'custom';
+
+        applyFilters();
+      }
+
+      // ── 카테고리 토글 ──
+      function toggleFilter(el, type) {
+        const activeClass = 'active-' + type;
+        if (el.classList.contains(activeClass)) {
+          el.classList.remove(activeClass);
+          activeCategories[type] = false;
+        } else {
+          el.classList.add(activeClass);
+          activeCategories[type] = true;
+        }
+        if (type === 'spot') {
+          renderSpotPins(); // 스팟만 다시 표시/숨김
+        } else {
+          applyFilters(); // 축제 핀 갱신
+        }
+      }
+
+      // ── 진행 중 축제인지 판단 (오늘이 시작~종료 사이) ──
+      function isOngoingFestival(f) {
+        if (!f.date_start) return false; // 날짜 미정은 제외
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const start = toDate(f.date_start);
+        const end = toDate(f.date_end) || start;
+        return start <= today && today <= end;
+      }
+
+      // ── 지난 축제인지 판단 (종료일이 어제 이하 = 오늘보다 이전) ──
+      function isPastFestival(f) {
+        if (!f.date_start) return false; // 날짜 미정은 제외
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const end = toDate(f.date_end) || toDate(f.date_start);
+        return end < today; // 종료일이 오늘보다 앞 → 지난 축제
+      }
+
+      // ── 내 위치로 이동 ──
+      function goToMyLocation() {
+        const btn = document.getElementById('locate-btn');
+
+        if (!navigator.geolocation) {
+          alert('이 브라우저에서는 위치 기능을 쓸 수 없어요 😢');
+          return;
+        }
+
+        btn.classList.add('locating'); // 빙글빙글 표시
+
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            btn.classList.remove('locating');
+            const latLng = new google.maps.LatLng(
+              pos.coords.latitude,
+              pos.coords.longitude
+            );
+            map.panTo(latLng);
+            map.setZoom(13);
+            showMyLocationDot(latLng);
+          },
+          (err) => {
+            btn.classList.remove('locating');
+            if (err.code === err.PERMISSION_DENIED) {
+              alert(
+                '위치 권한이 거부되어 있어요.\n브라우저 주소창 옆 자물쇠 아이콘에서 위치를 "허용"으로 바꿔주세요 📍'
+              );
+            } else {
+              alert('위치를 찾지 못했어요. 잠시 후 다시 시도해주세요.');
+            }
+          },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+      }
+
+      // ── 내 위치 파란 점 표시 ──
+      function showMyLocationDot(latLng) {
+        if (myLocationMarker) {
+          myLocationMarker.setMap(null);
+          myLocationMarker = null;
+        }
+
+        class MyDot extends google.maps.OverlayView {
+          constructor(position) {
+            super();
+            this.position = position;
+            this.div = null;
+          }
+          onAdd() {
+            const div = document.createElement('div');
+            div.className = 'my-location-dot';
+            div.style.position = 'absolute';
+            div.style.willChange = 'transform';
+            this.div = div;
+            this.getPanes().overlayLayer.appendChild(div);
+          }
+          draw() {
+            if (!this.div) return;
+            const p = this.getProjection().fromLatLngToDivPixel(this.position);
+            if (p) {
+              this.div.style.transform =
+                'translate(' + (p.x - 8) + 'px,' + (p.y - 8) + 'px)';
+            }
+          }
+          onRemove() {
+            if (this.div) {
+              this.div.parentNode.removeChild(this.div);
+              this.div = null;
+            }
+          }
+        }
+
+        myLocationMarker = new MyDot(latLng);
+        myLocationMarker.setMap(map);
+      }
+
+      // ── 모바일 사이드바 ──
+      function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const btn = document.getElementById('menu-toggle');
+        const isOpen = sidebar.classList.toggle('open');
+        document.getElementById('sidebar-overlay').classList.toggle('show');
+        // 버튼도 메뉴 따라 이동 + 아이콘 전환 (☰ ↔ ✕)
+        btn.classList.toggle('menu-open', isOpen);
+        btn.textContent = isOpen ? '✕' : '☰';
+      }
+      function closeSidebar() {
+        const btn = document.getElementById('menu-toggle');
+        document.getElementById('sidebar').classList.remove('open');
+        document.getElementById('sidebar-overlay').classList.remove('show');
+        btn.classList.remove('menu-open');
+        btn.textContent = '☰';
+      }
+
+      // ── 모달 ──
+      function openModal() {
+        document.getElementById('modal-overlay').classList.add('show');
+      }
+      function closeModal(e) {
+        if (!e || e.target === document.getElementById('modal-overlay')) {
+          document.getElementById('modal-overlay').classList.remove('show');
+        }
+      }
+
+      // ── 개발자에게 메시지 보내기 ──
+      function openContact() {
+        // 모바일에서 메뉴 열린 상태면 닫기
+        closeSidebar();
+        document.getElementById('contact-status').textContent = '';
+        document.getElementById('contact-status').className = 'contact-status';
+        document.getElementById('contact-overlay').classList.add('show');
+      }
+
+      function closeContact(e) {
+        if (!e || e.target === document.getElementById('contact-overlay')) {
+          document.getElementById('contact-overlay').classList.remove('show');
+        }
+      }
+
+      async function sendContact() {
+        const emailEl = document.getElementById('contact-email');
+        const contentEl = document.getElementById('contact-content');
+        const statusEl = document.getElementById('contact-status');
+        const sendBtn = document.getElementById('contact-send-btn');
+
+        const email = emailEl.value.trim();
+        const content = contentEl.value.trim();
+
+        // 간단한 입력 검증
+        if (!content) {
+          statusEl.textContent = '내용을 입력해주세요.';
+          statusEl.className = 'contact-status err';
+          return;
+        }
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          statusEl.textContent = '이메일 형식을 확인해주세요.';
+          statusEl.className = 'contact-status err';
+          return;
+        }
+
+        // 전송 중 표시
+        sendBtn.disabled = true;
+        statusEl.textContent = '보내는 중...';
+        statusEl.className = 'contact-status';
+
+        const { error } = await supabaseClient
+          .from('messages')
+          .insert([{ email: email || null, content: content }]);
+
+        sendBtn.disabled = false;
+
+        if (error) {
+          console.log('메시지 전송 에러:', error.message);
+          statusEl.textContent = '전송에 실패했어요. 잠시 후 다시 시도해주세요.';
+          statusEl.className = 'contact-status err';
+          return;
+        }
+
+        // 성공
+        statusEl.textContent = '메시지가 전달되었어요. 감사합니다! 🎆';
+        statusEl.className = 'contact-status ok';
+        emailEl.value = '';
+        contentEl.value = '';
+        // 1.5초 뒤 자동으로 닫기
+        setTimeout(() => {
+          document.getElementById('contact-overlay').classList.remove('show');
+        }, 1500);
+      }
+
+      // ====================================================
+      //  스팟(사용자 명소) 만들기·표시
+      // ====================================================
+
+      // ── 모바일 길게 누르기 → 메뉴 ──
+      function setupLongPress() {
+        const el = document.getElementById('map');
+        let timer = null;
+        let sx = 0,
+          sy = 0;
+        el.addEventListener(
+          'touchstart',
+          (e) => {
+            if (e.touches.length !== 1) return;
+            const t = e.touches[0];
+            sx = t.clientX;
+            sy = t.clientY;
+            timer = setTimeout(() => {
+              const rect = document
+                .getElementById('map-container')
+                .getBoundingClientRect();
+              const x = sx - rect.left;
+              const y = sy - rect.top;
+              const ll = projectionHelper && projectionHelper.latLngAt(x, y);
+              if (ll) showSpotContextMenu(x, y, ll);
+            }, 480);
+          },
+          { passive: true }
+        );
+        const cancel = (e) => {
+          if (e && e.touches && e.touches[0]) {
+            const t = e.touches[0];
+            if (Math.abs(t.clientX - sx) < 10 && Math.abs(t.clientY - sy) < 10)
+              return; // 거의 안 움직였으면 유지
+          }
+          clearTimeout(timer);
+        };
+        el.addEventListener('touchend', () => clearTimeout(timer));
+        el.addEventListener('touchmove', cancel);
+      }
+
+      // ── 우클릭/롱프레스 메뉴 ──
+      function showSpotContextMenu(x, y, latLng) {
+        pendingLatLng = latLng;
+        const menu = document.getElementById('spot-ctx');
+        const cont = document.getElementById('map-container');
+        menu.style.left = Math.min(x, cont.clientWidth - 160) + 'px';
+        menu.style.top = Math.min(y, cont.clientHeight - 60) + 'px';
+        menu.classList.add('show');
+      }
+      function hideSpotContextMenu() {
+        document.getElementById('spot-ctx').classList.remove('show');
+      }
+
+      // ── 저장 모달 열기/닫기 ──
+      function openSpotForm() {
+        hideSpotContextMenu();
+        if (!pendingLatLng) return;
+        // 초기화
+        spotPhotoFile = null;
+        chosenSpotTags.clear();
+        document.getElementById('spot-photo-prev').style.display = 'none';
+        document.getElementById('spot-photo-add').style.display = 'flex';
+        document.getElementById('spot-author').value = '';
+        document.getElementById('spot-title').value = '';
+        document.getElementById('spot-desc').value = '';
+        document.getElementById('spot-pw').value = '';
+        document.getElementById('spot-msg').textContent = '';
+        document
+          .querySelectorAll('#spot-tags .spot-tag')
+          .forEach((t) => t.classList.remove('on'));
+        document.getElementById('spot-live-note').classList.remove('show');
+        document.getElementById('spot-overlay').classList.add('show');
+      }
+      function closeSpotForm(e) {
+        if (!e || e.target === document.getElementById('spot-overlay')) {
+          document.getElementById('spot-overlay').classList.remove('show');
+        }
+      }
+
+      // ── 사진 고르기 + 미리보기 ──
+      function pickSpotPhoto() {
+        document.getElementById('spot-file').click();
+      }
+      document
+        .getElementById('spot-file')
+        .addEventListener('change', function () {
+          const file = this.files && this.files[0];
+          if (!file) return;
+          spotPhotoFile = file;
+          const prev = document.getElementById('spot-photo-prev');
+          prev.src = URL.createObjectURL(file);
+          prev.style.display = 'block';
+          document.getElementById('spot-photo-add').style.display = 'none';
+        });
+
+      // ── 사진 압축(가로 1600px 이하 JPEG) ──
+      function compressImage(file) {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => {
+            const MAX = 1600;
+            let { width, height } = img;
+            if (width > MAX) {
+              height = Math.round((height * MAX) / width);
+              width = MAX;
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+            canvas.toBlob(
+              (blob) => (blob ? resolve(blob) : reject(new Error('압축 실패'))),
+              'image/jpeg',
+              0.8
+            );
+          };
+          img.onerror = () => reject(new Error('이미지 읽기 실패'));
+          img.src = URL.createObjectURL(file);
+        });
+      }
+
+      // ── 태그 토글 ──
+      (function initSpotTags() {
+        const wrap = document.getElementById('spot-tags');
+        if (!wrap) return;
+        wrap.querySelectorAll('.spot-tag').forEach((t) => {
+          t.addEventListener('click', () => {
+            const name = t.dataset.t;
+            if (t.classList.toggle('on')) chosenSpotTags.add(name);
+            else chosenSpotTags.delete(name);
+            document
+              .getElementById('spot-live-note')
+              .classList.toggle('show', chosenSpotTags.has('실시간 현장'));
+          });
+        });
+      })();
+
+      // ── 스팟 저장 (사진 업로드 → places/posts 기록) ──
+      async function saveSpot() {
+        const author = document.getElementById('spot-author').value.trim();
+        const title = document.getElementById('spot-title').value.trim();
+        const desc = document.getElementById('spot-desc').value.trim();
+        const pw = document.getElementById('spot-pw').value.trim();
+        const msg = document.getElementById('spot-msg');
+        const btn = document.getElementById('spot-save-btn');
+
+        if (!spotPhotoFile) {
+          msg.textContent = '사진을 추가해주세요';
+          return;
+        }
+        if (!author) {
+          msg.textContent = '닉네임을 입력해주세요';
+          return;
+        }
+        if (!title) {
+          msg.textContent = '제목을 입력해주세요';
+          return;
+        }
+        if (chosenSpotTags.size === 0) {
+          msg.textContent = '태그를 1개 이상 골라주세요';
+          return;
+        }
+        if (!pw) {
+          msg.textContent = '비밀번호를 입력해주세요';
+          return;
+        }
+        const now = Date.now();
+        if (now - lastSpotWrite < 10000) {
+          msg.textContent = '10초 후에 다시 저장할 수 있어요';
+          return;
+        }
+        if (!pendingLatLng) {
+          msg.textContent = '위치 정보가 없어요. 지도를 다시 눌러주세요.';
+          return;
+        }
+
+        btn.disabled = true;
+        msg.style.color = 'var(--muted)';
+        msg.textContent = '저장하는 중…';
+
+        try {
+          // 1) 사진 압축 + 업로드
+          const blob = await compressImage(spotPhotoFile);
+          const path =
+            'spots/' +
+            Date.now() +
+            '_' +
+            Math.random().toString(36).slice(2, 8) +
+            '.jpg';
+          const up = await supabaseClient.storage
+            .from('spot-photos')
+            .upload(path, blob, { contentType: 'image/jpeg' });
+          if (up.error) throw up.error;
+          const pub = supabaseClient.storage
+            .from('spot-photos')
+            .getPublicUrl(path);
+          const photoUrl = pub.data.publicUrl;
+
+          // 2) 장소 만들기 (직접 찍기 → 새 장소)
+          const lat = pendingLatLng.lat();
+          const lng = pendingLatLng.lng();
+          const placeRes = await supabaseClient
+            .from('places')
+            .insert([{ name: title, latitude: lat, longitude: lng }])
+            .select();
+          if (placeRes.error) throw placeRes.error;
+          const placeId = placeRes.data[0].id;
+
+          // 3) 게시물 기록
+          const isLive = chosenSpotTags.has('실시간 현장');
+          const postRes = await supabaseClient
+            .from('posts')
+            .insert([
+              {
+                place_id_fk: placeId,
+                author: author,
+                password: pw,
+                title: title,
+                description: desc,
+                photos: [photoUrl],
+                tags: Array.from(chosenSpotTags),
+                is_live: isLive,
+              },
+            ])
+            .select('*, places(*)');
+          if (postRes.error) throw postRes.error;
+
+          lastSpotWrite = now;
+          // 지도에 바로 추가
+          const post = postRes.data[0];
+          spotData.unshift(post);
+          if (activeCategories.spot) addSpotPin(post);
+          updateSpotCount();
+
+          msg.style.color = 'var(--live)';
+          msg.textContent = '스팟이 등록됐어요! 🎉';
+          setTimeout(() => {
+            document.getElementById('spot-overlay').classList.remove('show');
+            msg.style.color = '#ff5577';
+          }, 900);
+        } catch (err) {
+          console.log('스팟 저장 에러:', err.message || err);
+          msg.style.color = '#ff5577';
+          msg.textContent = '저장에 실패했어요. 잠시 후 다시 시도해주세요.';
+        } finally {
+          btn.disabled = false;
+        }
+      }
+
+      // ── 스팟 불러오기 ──
+      async function loadSpots() {
+        const { data, error } = await supabaseClient
+          .from('posts')
+          .select('*, places(*)')
+          .order('created_at', { ascending: false });
+        if (error) {
+          console.log('스팟 로드 에러:', error.message);
+          return;
+        }
+        // 실시간(24시간) 지난 것 숨김 + 좌표 있는 것만
+        const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+        spotData = (data || []).filter((p) => {
+          if (!p.places || !p.places.latitude) return false;
+          if (p.is_live && new Date(p.created_at).getTime() < cutoff)
+            return false;
+          return true;
+        });
+        renderSpotPins();
+      }
+
+      // ── 스팟 핀 다시 그리기 (카테고리 on/off 반영) ──
+      function renderSpotPins() {
+        spotOverlays.forEach((s) => s.setMap(null));
+        spotOverlays = [];
+        if (activeCategories.spot) {
+          spotData.forEach((post) => addSpotPin(post));
+        }
+        updateSpotCount();
+      }
+      function addSpotPin(post) {
+        if (!SpotPinClass || !map) return;
+        const pin = new SpotPinClass(post);
+        pin.setMap(map);
+        spotOverlays.push(pin);
+      }
+      function updateSpotCount() {
+        document.getElementById('cnt-spot').textContent = activeCategories.spot
+          ? spotData.length
+          : 0;
+      }
+
+      // ── 스팟 상세 팝업 ──
+      function openSpotPanel(post) {
+        currentSpot = post;
+        closePanel(); // 축제 팝업 닫기
+        document.getElementById('sp-map-picker').classList.remove('show');
+
+        const photo = post.photos && post.photos[0];
+        const imgEl = document.getElementById('sp-img');
+        if (photo) {
+          imgEl.src = photo;
+          imgEl.style.display = 'block';
+        } else {
+          imgEl.style.display = 'none';
+        }
+        document.getElementById('sp-title').textContent = post.title || '';
+        document.getElementById('sp-author').textContent = post.author
+          ? '올린 사람: ' + post.author
+          : '';
+        const descEl = document.getElementById('sp-desc');
+        descEl.textContent = post.description || '';
+        descEl.style.display = post.description ? 'block' : 'none';
+
+        const tagsEl = document.getElementById('sp-tags');
+        tagsEl.innerHTML = (post.tags || [])
+          .map((t) => '<span class="sp-tag">' + escapeHtml(t) + '</span>')
+          .join('');
+
+        const panel = document.getElementById('spot-panel');
+        panel.classList.remove('show');
+        void panel.offsetWidth;
+        panel.classList.add('show');
+        panel.scrollTop = 0;
+      }
+      function closeSpotPanel() {
+        document.getElementById('spot-panel').classList.remove('show');
+        document.getElementById('sp-map-picker').classList.remove('show');
+      }
+      function openSpotPhoto() {
+        if (currentSpot && currentSpot.photos && currentSpot.photos[0]) {
+          window.open(currentSpot.photos[0], '_blank');
+        }
+      }
+
+      // ── 스팟 길찾기 ──
+      function toggleSpotMapPicker() {
+        document.getElementById('sp-map-picker').classList.toggle('show');
+      }
+      function openSpotMap(type) {
+        if (!currentSpot || !currentSpot.places) return;
+        const lat = currentSpot.places.latitude;
+        const lng = currentSpot.places.longitude;
+        const place = encodeURIComponent(currentSpot.title || '목적지');
+        let url = '';
+        if (type === 'kakao') {
+          url = 'https://map.kakao.com/?q=' + place;
+        } else if (type === 'naver') {
+          url = 'https://map.naver.com/v5/search/' + place;
+        } else if (type === 'google') {
+          url =
+            'https://www.google.com/maps/search/?api=1&query=' + lat + ',' + lng;
+        }
+        if (url) window.open(url, '_blank');
+      }
+
+      // ── 신고하기 (개발자 메시지로 전송) ──
+      async function reportSpot() {
+        if (!currentSpot) return;
+        if (!confirm('이 스팟을 신고할까요? 개발자에게 전달돼요.')) return;
+        const text =
+          '[스팟 신고] post id=' +
+          currentSpot.id +
+          ' / 제목: ' +
+          (currentSpot.title || '') +
+          ' / 작성자: ' +
+          (currentSpot.author || '');
+        const { error } = await supabaseClient
+          .from('messages')
+          .insert([{ email: null, content: text }]);
+        if (error) {
+          toast('신고 전송에 실패했어요');
+          return;
+        }
+        toast('신고가 접수됐어요. 감사합니다.');
+      }
+
+      // ── 별점 입력: 마우스 올리면 채워짐, 클릭하면 고정 ──
+      (function initStarPicker() {
+        const pick = document.getElementById('star-pick');
+        if (!pick) return;
+        pick.querySelectorAll('span').forEach((s) => {
+          s.addEventListener('mouseover', () =>
+            paintStars(Number(s.dataset.v))
+          );
+          s.addEventListener('click', () => {
+            pickedRating = Number(s.dataset.v);
+            paintStars(pickedRating);
+          });
+        });
+        pick.addEventListener('mouseleave', () => paintStars(pickedRating));
+      })();
+
+      // ── 시작 ──
+      loadFestivals();
+    </script>
+
+    <!-- 구글 지도 API -->
+    <script
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB00WMTxhIKSr_rRXGjnK-wCABbvbkilPU&callback=initMap"
+      async
+      defer
+    ></script>
+  </body>
+</html>
