@@ -2520,6 +2520,7 @@
 
       // 필터에 맞는 핀만 새로 생성 (나머지는 아예 안 만들어 가볍게)
       function buildPinsForCurrentFilter() {
+        if (!map || !FlarePinClass) return; // 지도 로드 전이면 건너뜀
         // 열린 팝업/선택 핀 정리
         closePanel();
 
@@ -2547,6 +2548,7 @@
       }
 
       function updatePinLabels() {
+        if (!map || typeof map.getZoom !== 'function') return; // 지도 로드 전 방어
         const zoomedIn = map.getZoom() >= LABEL_ZOOM;
         pinOverlays.forEach((pin) => pin.setZoomed(zoomedIn));
       }
@@ -3170,9 +3172,4 @@
       }
       function cancelDeleteReview(id) {
         const el = document.getElementById('dc-' + id);
-        if (el) el.classList.remove('show');
-      }
-
-      // ── 삭제 실행 (비밀번호 일치 시에만) ──
-      async function doDeleteReview(id) {
-        const input = docu
+        if (el) el.
