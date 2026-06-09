@@ -1466,6 +1466,81 @@ body {
   }
 }
 /* ========== 스팟(사용자 명소) ========== */
+/* 장소 검색창 (지도 상단) */
+#spot-search {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(440px, calc(100% - 90px));
+  z-index: 240;
+}
+.ss-bar {
+  display: flex;
+  gap: 6px;
+  background: rgba(20, 20, 31, 0.92);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 6px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+.ss-bar input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.85rem;
+  padding: 7px 10px;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+.ss-bar input:focus { outline: none; }
+.ss-bar input::placeholder { color: var(--muted); }
+.ss-go {
+  border: none;
+  background: var(--live);
+  color: #07251a;
+  font-weight: 700;
+  font-size: 0.82rem;
+  padding: 0 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+#spot-search-results {
+  display: none;
+  margin-top: 6px;
+  background: rgba(20, 20, 31, 0.96);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+#spot-search-results.show { display: block; }
+.sr-item {
+  padding: 10px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.sr-item:last-child { border-bottom: none; }
+.sr-item:hover { background: rgba(107, 255, 184, 0.08); }
+.sr-nm { font-size: 0.85rem; font-weight: 700; color: #fff; }
+.sr-ad { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
+.sr-empty { padding: 12px 14px; font-size: 0.76rem; color: var(--muted); }
+
+/* 저장 모달: 저장 위치 라벨 */
+.spot-place-label {
+  font-size: 0.74rem;
+  color: var(--live);
+  background: rgba(107, 255, 184, 0.08);
+  border: 1px solid rgba(107, 255, 184, 0.25);
+  padding: 7px 10px;
+  border-radius: 8px;
+  margin-bottom: 14px;
+  word-break: keep-all;
+}
+
 /* 지도 우클릭/롱프레스 메뉴 */
 #spot-ctx {
   position: absolute;

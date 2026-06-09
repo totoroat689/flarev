@@ -38,7 +38,12 @@ let activeCategories = { festival: true, spot: true };
 // 스팟(사용자 명소) 상태
 let spotOverlays = []; // 지도에 뜬 스팟 핀들
 let spotData = []; // 불러온 스팟(게시물) 목록
-let pendingLatLng = null; // 우클릭/롱프레스로 찍은 위치
+let pendingLatLng = null; // 우클릭/롱프레스/검색/지명으로 찍은 위치
+let pendingPlace = null; // 검색·지명에서 온 구글 장소 {place_id, name} (직접 찍기면 null)
+let pendingExistingPlaceId = null; // 같은 장소가 이미 있으면 그 DB place id
+let placesService = null; // 구글 장소 검색 서비스
+let searchResults = []; // 최근 검색 결과 목록
+let spotPlaces = []; // 장소 단위로 묶은 목록(핀 1개=장소 1개)
 let spotPhotoFiles = []; // 저장 대기 사진들 (최대 5장)
 let spotMenuOpenedAt = 0; // 스팟 메뉴 연 시각(직후 클릭으로 닫힘 방지)
 let currentSpot = null; // 현재 열린 스팟 팝업
@@ -105,7 +110,8 @@ function initMap() {
   map = new google.maps.Map(document.getElementById('map'), {
     center: { lat: 36.5, lng: 127.8 },
     zoom: 7,
-    styles: darkStyle,
+    styles: [], // 구글 순정 지도 + 지명(POI) 표시
+    clickableIcons: true, // 지명 클릭 허용(우리 스팟 흐름으로 가로챔)
     disableDefaultUI: true,
     gestureHandling: 'greedy', // 한 손가락 이동
     zoomControl: true,
@@ -117,11 +123,22 @@ function initMap() {
   defineOverlayClasses(); // 핀·뭉치 클래스 정의 (지도 로드 후)
 
   // 빈 지도 클릭 → 흩어진 이름 다시 합치기 + 메뉴/팝업 닫기
-  map.addListener('click', () => {
+  // 지명(POI)을 누르면 구글 기본창 대신 우리 "스팟 남기기"로 연결
+  map.addListener('click', (e) => {
+    if (e && e.placeId) {
+      e.stop(); // 구글 기본 정보창 막기
+      handlePoiClick(e.placeId, e.latLng);
+      return;
+    }
     collapseSpider();
     // 메뉴를 막 연 직후(롱프레스 직후 자동 클릭)엔 닫지 않음 → 다른 곳 누를 때 닫힘
     if (Date.now() - spotMenuOpenedAt > 500) hideSpotContextMenu();
   });
+
+  // 장소 검색 서비스 준비
+  if (google.maps.places) {
+    placesService = new google.maps.places.PlacesService(map);
+  }
   // 지도 이동/줌이 끝나면 뭉치 다시 계산
   map.addListener('idle', recluster);
   map.addListener('zoom_changed', updatePinLabels);
@@ -1523,6 +1540,8 @@ function setupLongPress() {
 // ── 우클릭/롱프레스 메뉴 ──
 function showSpotContextMenu(x, y, latLng) {
   pendingLatLng = latLng;
+  pendingPlace = null; // 직접 찍기 → 구글 장소 없음
+  pendingExistingPlaceId = null;
   spotMenuOpenedAt = Date.now();
   const menu = document.getElementById('spot-ctx');
   const cont = document.getElementById('map-container');
@@ -1538,12 +1557,39 @@ function hideSpotContextMenu() {
 function openSpotForm() {
   hideSpotContextMenu();
   if (!pendingLatLng) return;
+
+  // 직접 찍기(구글 장소 아님)일 때만 50m 내 기존 장소 확인 → 추가할지 물어보기
+  if (!pendingPlace) {
+    const near = findNearbyPlace(pendingLatLng, 50);
+    if (near) {
+      const ok = confirm(
+        '근처에 이미 "' +
+          (near.name || '등록된 스팟') +
+          '"이(가) 있어요.\n그 장소에 사진·글을 추가할까요?\n(취소하면 새 장소로 만들어요)'
+      );
+      pendingExistingPlaceId = ok ? near.id : null;
+    }
+  }
+
+  // 어디에 저장되는지 팝업 상단에 표시
+  const label = document.getElementById('spot-place-label');
+  if (pendingExistingPlaceId) {
+    const ex = spotPlaces.find((p) => p.id === pendingExistingPlaceId);
+    label.textContent = '📍 ' + (ex ? ex.name : '기존 장소') + ' (여기에 추가)';
+  } else if (pendingPlace && pendingPlace.name) {
+    label.textContent = '📍 ' + pendingPlace.name;
+  } else {
+    label.textContent = '📍 지도에서 찍은 위치';
+  }
+
   // 초기화
   spotPhotoFiles = [];
   chosenSpotTags.clear();
   renderSpotThumbs();
   document.getElementById('spot-author').value = '';
-  document.getElementById('spot-title').value = '';
+  // 검색·지명에서 왔으면 장소 이름을 제목 기본값으로
+  document.getElementById('spot-title').value =
+    pendingPlace && pendingPlace.name ? pendingPlace.name : '';
   document.getElementById('spot-desc').value = '';
   document.getElementById('spot-pw').value = '';
   document.getElementById('spot-msg').textContent = '';
@@ -1556,6 +1602,103 @@ function openSpotForm() {
 function closeSpotForm(e) {
   if (!e || e.target === document.getElementById('spot-overlay')) {
     document.getElementById('spot-overlay').classList.remove('show');
+  }
+}
+
+// ── 장소 검색 (버튼/엔터 시 1회, 결과 3~5개) ──
+function runSpotSearch() {
+  const q = document.getElementById('spot-search-input').value.trim();
+  if (!q) return;
+  const listEl = document.getElementById('spot-search-results');
+  if (!placesService) {
+    listEl.innerHTML = '<div class="sr-empty">검색 준비 중이에요. 잠시 후 다시 시도해주세요.</div>';
+    listEl.classList.add('show');
+    return;
+  }
+  listEl.innerHTML = '<div class="sr-empty">검색 중…</div>';
+  listEl.classList.add('show');
+  // 주변(현재 지도 중심) 우선, 없으면 전국 결과까지 포함됨
+  placesService.textSearch(
+    { query: q, location: map.getCenter(), radius: 30000 },
+    (results, status) => {
+      if (
+        status !== google.maps.places.PlacesServiceStatus.OK ||
+        !results ||
+        !results.length
+      ) {
+        searchResults = [];
+        listEl.innerHTML =
+          '<div class="sr-empty">결과가 없어요. 다른 이름으로 검색해보세요.</div>';
+        return;
+      }
+      searchResults = results.slice(0, 5);
+      listEl.innerHTML = searchResults
+        .map(
+          (r, i) =>
+            '<div class="sr-item" onclick="chooseSearchResult(' +
+            i +
+            ')"><div class="sr-nm">' +
+            escapeHtml(r.name || '') +
+            '</div><div class="sr-ad">' +
+            escapeHtml(r.formatted_address || '') +
+            '</div></div>'
+        )
+        .join('');
+    }
+  );
+}
+function chooseSearchResult(i) {
+  const r = searchResults[i];
+  if (!r || !r.geometry) return;
+  closeSearchResults();
+  document.getElementById('spot-search-input').value = '';
+  const loc = r.geometry.location;
+  pendingLatLng = loc;
+  pendingPlace = { place_id: r.place_id, name: r.name };
+  pendingExistingPlaceId = null;
+  const exist = spotPlaces.find((p) => p.place_id === r.place_id);
+  if (exist) pendingExistingPlaceId = exist.id; // 이미 있는 장소면 거기에 추가
+  map.panTo(loc);
+  map.setZoom(16);
+  openSpotForm();
+}
+function closeSearchResults() {
+  document.getElementById('spot-search-results').classList.remove('show');
+}
+
+// ── 지도 위 지명(POI) 클릭 → 그 장소에 스팟 남기기 ──
+function handlePoiClick(placeId, latLng) {
+  pendingLatLng = latLng;
+  pendingExistingPlaceId = null;
+  // 이미 등록된 같은 장소면 바로 그 장소에 추가(묻지 않음)
+  const exist = spotPlaces.find((p) => p.place_id === placeId);
+  if (exist) {
+    pendingPlace = { place_id: placeId, name: exist.name };
+    pendingExistingPlaceId = exist.id;
+    map.panTo(latLng);
+    openSpotForm();
+    return;
+  }
+  // 새 지명 → 이름만 가볍게 가져와서 채움
+  pendingPlace = { place_id: placeId, name: '' };
+  if (placesService) {
+    placesService.getDetails(
+      { placeId: placeId, fields: ['name'] },
+      (res, status) => {
+        if (
+          status === google.maps.places.PlacesServiceStatus.OK &&
+          res &&
+          res.name
+        ) {
+          pendingPlace.name = res.name;
+        }
+        map.panTo(latLng);
+        openSpotForm();
+      }
+    );
+  } else {
+    map.panTo(latLng);
+    openSpotForm();
   }
 }
 
@@ -1709,15 +1852,38 @@ async function saveSpot() {
       photoUrls.push(pub.data.publicUrl);
     }
 
-    // 2) 장소 만들기 (직접 찍기 → 새 장소)
+    // 2) 장소 결정
+    //    - 기존 장소에 추가(합치기): pendingExistingPlaceId 사용
+    //    - 검색·지명(place_id 있음): 같은 place_id가 이미 있으면 재사용, 없으면 새로
+    //    - 직접 찍기: 새 장소
     const lat = pendingLatLng.lat();
     const lng = pendingLatLng.lng();
-    const placeRes = await supabaseClient
-      .from('places')
-      .insert([{ name: title, latitude: lat, longitude: lng }])
-      .select();
-    if (placeRes.error) throw placeRes.error;
-    const placeId = placeRes.data[0].id;
+    let placeId = pendingExistingPlaceId;
+
+    if (!placeId && pendingPlace && pendingPlace.place_id) {
+      const found = await supabaseClient
+        .from('places')
+        .select('id')
+        .eq('place_id', pendingPlace.place_id)
+        .maybeSingle();
+      if (found.data) placeId = found.data.id;
+    }
+
+    if (!placeId) {
+      const newPlace = {
+        name: (pendingPlace && pendingPlace.name) || title,
+        latitude: lat,
+        longitude: lng,
+      };
+      if (pendingPlace && pendingPlace.place_id)
+        newPlace.place_id = pendingPlace.place_id;
+      const placeRes = await supabaseClient
+        .from('places')
+        .insert([newPlace])
+        .select();
+      if (placeRes.error) throw placeRes.error;
+      placeId = placeRes.data[0].id;
+    }
 
     // 3) 게시물 기록
     const isLive = chosenSpotTags.has('실시간 현장');
@@ -1734,16 +1900,11 @@ async function saveSpot() {
           tags: Array.from(chosenSpotTags),
           is_live: isLive,
         },
-      ])
-      .select('*, places(*)');
+      ]);
     if (postRes.error) throw postRes.error;
 
     lastSpotWrite = now;
-    // 지도에 바로 추가
-    const post = postRes.data[0];
-    spotData.unshift(post);
-    if (activeCategories.spot) addSpotPin(post);
-    updateSpotCount();
+    await loadSpots(); // 장소 단위로 다시 그리기(핀 중복 방지)
 
     msg.style.color = 'var(--live)';
     msg.textContent = '스팟이 등록됐어요! 🎉';
@@ -1774,19 +1935,63 @@ async function loadSpots() {
   const cutoff = Date.now() - 24 * 60 * 60 * 1000;
   spotData = (data || []).filter((p) => {
     if (!p.places || !p.places.latitude) return false;
-    if (p.is_live && new Date(p.created_at).getTime() < cutoff)
-      return false;
+    if (p.is_live && new Date(p.created_at).getTime() < cutoff) return false;
     return true;
   });
+
+  // 장소 단위로 묶기 (핀 1개 = 장소 1개, 대표 게시물 = 가장 최근 것)
+  const byPlace = {};
+  spotData.forEach((post) => {
+    const pl = post.places;
+    if (!byPlace[pl.id]) {
+      byPlace[pl.id] = {
+        id: pl.id,
+        place_id: pl.place_id || null,
+        name: pl.name,
+        latitude: pl.latitude,
+        longitude: pl.longitude,
+        posts: [],
+      };
+    }
+    byPlace[pl.id].posts.push(post);
+  });
+  spotPlaces = Object.values(byPlace);
+
   renderSpotPins();
 }
 
-// ── 스팟 핀 다시 그리기 (카테고리 on/off 반영) ──
+// ── 좌표로 50m 등 근처 장소 찾기 (직접 찍기 합치기용) ──
+function findNearbyPlace(latLng, meters) {
+  const lat = latLng.lat();
+  const lng = latLng.lng();
+  let best = null;
+  let bestD = meters;
+  spotPlaces.forEach((p) => {
+    const d = distMeters(lat, lng, p.latitude, p.longitude);
+    if (d <= bestD) {
+      bestD = d;
+      best = p;
+    }
+  });
+  return best;
+}
+function distMeters(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const toR = (d) => (d * Math.PI) / 180;
+  const dLat = toR(lat2 - lat1);
+  const dLng = toR(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toR(lat1)) * Math.cos(toR(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// ── 스팟 핀 다시 그리기 (장소 단위, 카테고리 on/off 반영) ──
 function renderSpotPins() {
   spotOverlays.forEach((s) => s.setMap(null));
   spotOverlays = [];
   if (activeCategories.spot) {
-    spotData.forEach((post) => addSpotPin(post));
+    spotPlaces.forEach((place) => addSpotPin(place.posts[0]));
   }
   updateSpotCount();
 }
@@ -1798,7 +2003,7 @@ function addSpotPin(post) {
 }
 function updateSpotCount() {
   document.getElementById('cnt-spot').textContent = activeCategories.spot
-    ? spotData.length
+    ? spotPlaces.length
     : 0;
 }
 

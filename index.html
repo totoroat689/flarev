@@ -1,10 +1,16 @@
 <!DOCTYPE html>
 <!-- ============================================
      Flare(V) 홈페이지
-     버전: v2.1.5
+     버전: v2.2.0
      수정일: 2026-06-10
-     ※ 이 버전부터 파일 분리: index.html(뼈대) + style.css(디자인) + app.js(동작)
-        - index.html 안에서 style.css와 app.js를 불러오는 구조 (동작은 동일)
+     ※ 파일 분리: index.html(뼈대) + style.css(디자인) + app.js(동작)
+     수정사항(v2.2.0) — 스팟 2단계:
+       - 지도 테마: 구글 순정 + 지명(POI) 표시
+       - 장소 검색창(지도 상단): 버튼/엔터 시 1회 검색, 결과 3~5개 목록
+         · 목록 클릭 → 그 위치로 이동 + 스팟 남기기 팝업 (주변 우선, 없으면 전국)
+       - 지도 위 지명 클릭 → 그 장소에 스팟 남기기 (구글 기본창 대신)
+       - 같은 장소 합치기: 검색·지명은 place_id로 자동, 직접 찍기는 50m 내 기존 장소면 "추가할래요?" 확인
+       - 핀 1개 = 장소 1개 (장소 단위로 묶음), 저장 모달에 저장 위치 표시
      수정사항(v2.1.5):
        - 스팟 기능 보강
          · (모바일) 길게 눌러 뜬 "스팟 남기기" 메뉴가 손을 떼도 유지, 다른 곳 누르면 닫힘
@@ -209,6 +215,20 @@
     <!-- ── MAP ── -->
     <div id="map-container">
       <div id="map"></div>
+
+      <!-- 스팟: 장소 검색 -->
+      <div id="spot-search">
+        <div class="ss-bar">
+          <input
+            id="spot-search-input"
+            type="text"
+            placeholder="장소·가게 이름 검색 (예: 광안리 해변)"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();runSpotSearch();}"
+          />
+          <button class="ss-go" onclick="runSpotSearch()">검색</button>
+        </div>
+        <div id="spot-search-results"></div>
+      </div>
 
       <!-- 스팟: 우클릭/롱프레스 메뉴 -->
       <div id="spot-ctx"><button onclick="openSpotForm()">📍 스팟 남기기</button></div>
@@ -427,6 +447,7 @@
       <div class="spot-sheet">
         <h3>📍 스팟 남기기</h3>
         <div class="sheet-sub">이 위치에 명소·풍경·맛집을 공유해요</div>
+        <div class="spot-place-label" id="spot-place-label">📍 위치</div>
 
         <div class="spot-field">
           <label>사진 (필수, 최대 5장)</label>
@@ -477,7 +498,7 @@
 
     <!-- 구글 지도 API -->
     <script
-      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB00WMTxhIKSr_rRXGjnK-wCABbvbkilPU&callback=initMap"
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB00WMTxhIKSr_rRXGjnK-wCABbvbkilPU&libraries=places&callback=initMap"
       async
       defer
     ></script>
