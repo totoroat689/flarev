@@ -109,10 +109,22 @@ const darkStyle = [
     elementType: 'geometry',
     stylers: [{ color: '#070710' }],
   },
+ {
+    // 지명: 색깔 아이콘은 끄고
+    featureType: 'poi',
+    elementType: 'labels.icon',
+    stylers: [{ visibility: 'off' }],
+  },
+  {
+    // 지명: 글자는 은은한 회색으로만 표시 (우리 핀이 주인공)
+    featureType: 'poi',
+    elementType: 'labels.text.fill',
+    stylers: [{ color: '#7a7a8c' }],
+  },
   {
     featureType: 'poi',
-    elementType: 'labels',
-    stylers: [{ visibility: 'on' }],
+    elementType: 'labels.text.stroke',
+    stylers: [{ color: '#0a0a0f' }],
   },
   {
     featureType: 'poi',
