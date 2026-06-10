@@ -109,7 +109,7 @@ const darkStyle = [
     elementType: 'geometry',
     stylers: [{ color: '#070710' }],
   },
- {
+  {
     // 지명: 색깔 아이콘은 끄고
     featureType: 'poi',
     elementType: 'labels.icon',
