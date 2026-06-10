@@ -112,7 +112,7 @@ const darkStyle = [
   {
     featureType: 'poi',
     elementType: 'labels',
-    stylers: [{ visibility: 'off' }],
+    stylers: [{ visibility: 'on' }],
   },
   {
     featureType: 'poi',
