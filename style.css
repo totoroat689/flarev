@@ -1798,8 +1798,20 @@ body {
 .sp-imgbox.loading img { display: none; }
 .sp-body { padding: 16px 18px; }
 .sp-title { font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: 6px; }
-.sp-author { font-size: 0.7rem; color: var(--muted); margin-bottom: 10px; }
+.sp-author { font-size: 0.7rem; color: var(--muted); margin-bottom: 6px; }
+.sp-date { font-size: 0.68rem; color: var(--live); margin-bottom: 10px; }
 .sp-desc { font-size: 0.8rem; line-height: 1.6; color: #d2d2de; margin-bottom: 10px; white-space: pre-line; }
+
+/* 모바일: 상세 팝업을 검색창 아래로 내려 겹치지 않게 */
+@media (max-width: 600px) {
+  #spot-panel {
+    top: 76px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-height: calc(100vh - 96px);
+  }
+}
 .sp-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
 .sp-tag { font-size: 0.66rem; padding: 3px 9px; border-radius: 14px; background: var(--live-bg); color: var(--live); border: 1px solid rgba(107, 255, 184, 0.3); }
 .sp-report { background: none; border: none; color: var(--muted); font-size: 0.68rem; cursor: pointer; text-decoration: underline; padding: 4px; margin-top: 4px; font-family: 'Noto Sans KR', sans-serif; }

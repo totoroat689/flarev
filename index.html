@@ -1,9 +1,17 @@
 <!DOCTYPE html>
 <!-- ============================================
      Flare(V) 홈페이지
-     버전: v2.2.0
+     버전: v2.2.1
      수정일: 2026-06-10
      ※ 파일 분리: index.html(뼈대) + style.css(디자인) + app.js(동작)
+     ※ DB 변경 필요(Supabase SQL): alter table posts add column taken_at text;
+     수정사항(v2.2.1):
+       - 지도 테마 다시 다크로
+       - 지명 클릭(PC·모바일) → 바로 팝업 대신 "스팟 남기기" 메뉴 표시
+       - 검색 결과 선택 → 위치 이동 후 "스팟 남기기" 메뉴 표시(PC·모바일 동일)
+       - (모바일) 팝업 바깥 누르면 닫힘 / 뒤로가기로 팝업 닫힘 / 상세팝업을 검색창 아래로
+       - 사진 촬영·업로드 날짜·시간 표시(EXIF→없으면 파일시각, 사용자 입력 아님)
+       - 길찾기: 제목 대신 장소명(지명)으로 카카오·네이버 검색
      수정사항(v2.2.0) — 스팟 2단계:
        - 지도 테마: 구글 순정 + 지명(POI) 표시
        - 장소 검색창(지도 상단): 버튼/엔터 시 1회 검색, 결과 3~5개 목록
@@ -368,6 +376,7 @@
         <div class="sp-body">
           <div class="sp-title" id="sp-title"></div>
           <div class="sp-author" id="sp-author"></div>
+          <div class="sp-date" id="sp-date"></div>
           <div class="sp-desc" id="sp-desc"></div>
           <div class="sp-tags" id="sp-tags"></div>
           <button class="nav-btn nav-festival" id="sp-nav" onclick="toggleSpotMapPicker()">📍 길 찾기</button>

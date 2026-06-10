@@ -53,6 +53,32 @@ let SpotPinClass = null;
 let dateFilter = 'week'; // 기본: 이번 주
 let customRange = { start: null, end: null };
 
+// ── 팝업 뒤로가기 처리 (모바일: 뒤로가기로 팝업 닫기) ──
+let popupPushed = false;
+function pushPopupState() {
+  if (popupPushed) return;
+  popupPushed = true;
+  try {
+    history.pushState({ flarePopup: 1 }, '');
+  } catch (e) {}
+}
+function afterManualPopupClose() {
+  if (!popupPushed) return;
+  popupPushed = false;
+  if (history.state && history.state.flarePopup) {
+    try {
+      history.back();
+    } catch (e) {}
+  }
+}
+window.addEventListener('popstate', function () {
+  popupPushed = false;
+  const ov = document.getElementById('spot-overlay');
+  const pn = document.getElementById('spot-panel');
+  if (ov && ov.classList.contains('show')) ov.classList.remove('show');
+  if (pn && pn.classList.contains('show')) pn.classList.remove('show');
+});
+
 // ── 구글 지도 다크 스타일 ──
 const darkStyle = [
   { elementType: 'geometry', stylers: [{ color: '#0d0d14' }] },
@@ -110,7 +136,7 @@ function initMap() {
   map = new google.maps.Map(document.getElementById('map'), {
     center: { lat: 36.5, lng: 127.8 },
     zoom: 7,
-    styles: [], // 구글 순정 지도 + 지명(POI) 표시
+    styles: darkStyle, // 다크 테마
     clickableIcons: true, // 지명 클릭 허용(우리 스팟 흐름으로 가로챔)
     disableDefaultUI: true,
     gestureHandling: 'greedy', // 한 손가락 이동
@@ -127,10 +153,23 @@ function initMap() {
   map.addListener('click', (e) => {
     if (e && e.placeId) {
       e.stop(); // 구글 기본 정보창 막기
-      handlePoiClick(e.placeId, e.latLng);
+      const rect = document
+        .getElementById('map-container')
+        .getBoundingClientRect();
+      let x, y;
+      if (e.domEvent && e.domEvent.clientX != null) {
+        x = e.domEvent.clientX - rect.left;
+        y = e.domEvent.clientY - rect.top;
+      } else {
+        const p = projectionHelper && projectionHelper.px(e.latLng);
+        x = p ? p.x : rect.width / 2;
+        y = p ? p.y : rect.height / 2;
+      }
+      handlePoiClick(e.placeId, e.latLng, x, y);
       return;
     }
     collapseSpider();
+    closeSpotPanel(); // 바깥(빈 지도) 누르면 스팟 상세 팝업 닫기
     // 메뉴를 막 연 직후(롱프레스 직후 자동 클릭)엔 닫지 않음 → 다른 곳 누를 때 닫힘
     if (Date.now() - spotMenuOpenedAt > 500) hideSpotContextMenu();
   });
@@ -150,6 +189,8 @@ function initMap() {
     const rect = document
       .getElementById('map-container')
       .getBoundingClientRect();
+    pendingPlace = null; // 직접 찍기 → 구글 장소 없음
+    pendingExistingPlaceId = null;
     showSpotContextMenu(
       de.clientX - rect.left,
       de.clientY - rect.top,
@@ -1520,7 +1561,11 @@ function setupLongPress() {
         const x = sx - rect.left;
         const y = sy - rect.top;
         const ll = projectionHelper && projectionHelper.latLngAt(x, y);
-        if (ll) showSpotContextMenu(x, y, ll);
+        if (ll) {
+          pendingPlace = null; // 직접 찍기 → 구글 장소 없음
+          pendingExistingPlaceId = null;
+          showSpotContextMenu(x, y, ll);
+        }
       }, 480);
     },
     { passive: true }
@@ -1537,11 +1582,9 @@ function setupLongPress() {
   el.addEventListener('touchmove', cancel);
 }
 
-// ── 우클릭/롱프레스 메뉴 ──
+// ── 우클릭/롱프레스/지명/검색 → 메뉴 표시 (장소정보는 호출부에서 설정) ──
 function showSpotContextMenu(x, y, latLng) {
   pendingLatLng = latLng;
-  pendingPlace = null; // 직접 찍기 → 구글 장소 없음
-  pendingExistingPlaceId = null;
   spotMenuOpenedAt = Date.now();
   const menu = document.getElementById('spot-ctx');
   const cont = document.getElementById('map-container');
@@ -1598,10 +1641,14 @@ function openSpotForm() {
     .forEach((t) => t.classList.remove('on'));
   document.getElementById('spot-live-note').classList.remove('show');
   document.getElementById('spot-overlay').classList.add('show');
+  pushPopupState(); // 뒤로가기로 닫을 수 있게
 }
 function closeSpotForm(e) {
-  if (!e || e.target === document.getElementById('spot-overlay')) {
-    document.getElementById('spot-overlay').classList.remove('show');
+  const ov = document.getElementById('spot-overlay');
+  if (!e || e.target === ov) {
+    const wasOpen = ov.classList.contains('show');
+    ov.classList.remove('show');
+    if (wasOpen) afterManualPopupClose();
   }
 }
 
@@ -1652,6 +1699,7 @@ function chooseSearchResult(i) {
   if (!r || !r.geometry) return;
   closeSearchResults();
   document.getElementById('spot-search-input').value = '';
+  closeSpotPanel(); // 열려 있던 상세 팝업 닫기
   const loc = r.geometry.location;
   pendingLatLng = loc;
   pendingPlace = { place_id: r.place_id, name: r.name };
@@ -1660,46 +1708,41 @@ function chooseSearchResult(i) {
   if (exist) pendingExistingPlaceId = exist.id; // 이미 있는 장소면 거기에 추가
   map.panTo(loc);
   map.setZoom(16);
-  openSpotForm();
+  // 바로 모달 대신, 그 위치에 "스팟 남기기" 메뉴를 띄움
+  const cont = document.getElementById('map-container');
+  showSpotContextMenu(cont.clientWidth / 2, cont.clientHeight / 2, loc);
 }
 function closeSearchResults() {
   document.getElementById('spot-search-results').classList.remove('show');
 }
 
-// ── 지도 위 지명(POI) 클릭 → 그 장소에 스팟 남기기 ──
-function handlePoiClick(placeId, latLng) {
+// ── 지도 위 지명(POI) 클릭 → "스팟 남기기" 메뉴 ──
+function handlePoiClick(placeId, latLng, x, y) {
   pendingLatLng = latLng;
   pendingExistingPlaceId = null;
-  // 이미 등록된 같은 장소면 바로 그 장소에 추가(묻지 않음)
   const exist = spotPlaces.find((p) => p.place_id === placeId);
   if (exist) {
+    // 이미 등록된 같은 장소면 그 장소에 추가
     pendingPlace = { place_id: placeId, name: exist.name };
     pendingExistingPlaceId = exist.id;
-    map.panTo(latLng);
-    openSpotForm();
-    return;
-  }
-  // 새 지명 → 이름만 가볍게 가져와서 채움
-  pendingPlace = { place_id: placeId, name: '' };
-  if (placesService) {
-    placesService.getDetails(
-      { placeId: placeId, fields: ['name'] },
-      (res, status) => {
-        if (
-          status === google.maps.places.PlacesServiceStatus.OK &&
-          res &&
-          res.name
-        ) {
-          pendingPlace.name = res.name;
-        }
-        map.panTo(latLng);
-        openSpotForm();
-      }
-    );
   } else {
-    map.panTo(latLng);
-    openSpotForm();
+    // 새 지명 → 이름만 가볍게 가져와 채움(메뉴는 즉시 표시)
+    pendingPlace = { place_id: placeId, name: '' };
+    if (placesService) {
+      placesService.getDetails(
+        { placeId: placeId, fields: ['name'] },
+        (res, status) => {
+          if (
+            status === google.maps.places.PlacesServiceStatus.OK &&
+            res &&
+            res.name
+          )
+            pendingPlace.name = res.name;
+        }
+      );
+    }
   }
+  showSpotContextMenu(x, y, latLng);
 }
 
 // ── 사진 고르기 + 썸네일(최대 5장, 추가/삭제) ──
@@ -1772,6 +1815,85 @@ function compressImage(file) {
   });
 }
 
+// ── 사진 날짜 추출: EXIF 촬영시각 → 없으면 파일 수정시각, ISO 문자열로 ──
+function readPhotoDate(file) {
+  return new Promise((resolve) => {
+    const fallback = () =>
+      file && file.lastModified
+        ? new Date(file.lastModified).toISOString()
+        : null;
+    if (!file) return resolve(null);
+    const fr = new FileReader();
+    fr.onload = function () {
+      try {
+        const exif = parseExifDate(fr.result); // "YYYY:MM:DD HH:MM:SS"
+        if (exif) {
+          const iso = exif
+            .replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3')
+            .replace(' ', 'T');
+          const d = new Date(iso);
+          if (!isNaN(d.getTime())) return resolve(d.toISOString());
+        }
+      } catch (e) {}
+      resolve(fallback());
+    };
+    fr.onerror = () => resolve(fallback());
+    fr.readAsArrayBuffer(file.slice(0, 131072)); // 앞 128KB면 EXIF 충분
+  });
+}
+function parseExifDate(buf) {
+  const v = new DataView(buf);
+  if (v.getUint16(0) !== 0xffd8) return null; // JPEG 아님
+  let off = 2;
+  const total = v.byteLength;
+  while (off + 4 <= total) {
+    const marker = v.getUint16(off);
+    if (marker === 0xffe1) {
+      const segStart = off + 4;
+      if (v.getUint32(segStart) !== 0x45786966) return null; // "Exif"
+      const tiff = segStart + 6;
+      const little = v.getUint16(tiff) === 0x4949;
+      const g16 = (o) => v.getUint16(o, little);
+      const g32 = (o) => v.getUint32(o, little);
+      const ifd0 = tiff + g32(tiff + 4);
+      const findTag = (ifd, tag) => {
+        const n = g16(ifd);
+        for (let i = 0; i < n; i++) {
+          const e = ifd + 2 + i * 12;
+          if (g16(e) === tag) return e;
+        }
+        return -1;
+      };
+      const readAscii = (entry) => {
+        const count = g32(entry + 4);
+        const valOff = count <= 4 ? entry + 8 : tiff + g32(entry + 8);
+        let s = '';
+        for (let i = 0; i < count; i++) {
+          const c = v.getUint8(valOff + i);
+          if (c === 0) break;
+          s += String.fromCharCode(c);
+        }
+        return s;
+      };
+      let dateStr = null;
+      const exifPtr = findTag(ifd0, 0x8769); // Exif sub-IFD
+      if (exifPtr >= 0) {
+        const exifIFD = tiff + g32(exifPtr + 8);
+        const dto = findTag(exifIFD, 0x9003); // DateTimeOriginal
+        if (dto >= 0) dateStr = readAscii(dto);
+      }
+      if (!dateStr) {
+        const dt = findTag(ifd0, 0x0132); // DateTime
+        if (dt >= 0) dateStr = readAscii(dt);
+      }
+      return dateStr || null;
+    }
+    if ((marker & 0xff00) !== 0xff00) break;
+    off += 2 + v.getUint16(off + 2);
+  }
+  return null;
+}
+
 // ── 태그 토글 ──
 (function initSpotTags() {
   const wrap = document.getElementById('spot-tags');
@@ -1832,6 +1954,9 @@ async function saveSpot() {
   msg.textContent = '저장하는 중…';
 
   try {
+    // 0) 첫 사진의 촬영시각(EXIF) → 없으면 파일 수정시각 (업로드 시점 메타)
+    const takenAt = await readPhotoDate(spotPhotoFiles[0]);
+
     // 1) 사진 여러 장 압축 + 업로드 → URL 배열
     const photoUrls = [];
     for (const file of spotPhotoFiles) {
@@ -1899,6 +2024,7 @@ async function saveSpot() {
           photos: photoUrls,
           tags: Array.from(chosenSpotTags),
           is_live: isLive,
+          taken_at: takenAt,
         },
       ]);
     if (postRes.error) throw postRes.error;
@@ -2046,6 +2172,12 @@ function openSpotPanel(post) {
   document.getElementById('sp-author').textContent = post.author
     ? '올린 사람: ' + post.author
     : '';
+  // 사진 촬영/업로드 날짜·시간 (메타데이터, 사용자 입력 아님)
+  const dateEl = document.getElementById('sp-date');
+  const dStr = fmtPhotoDate(post.taken_at);
+  dateEl.textContent = dStr ? '📷 ' + dStr : '';
+  dateEl.style.display = dStr ? 'block' : 'none';
+
   const descEl = document.getElementById('sp-desc');
   descEl.textContent = post.description || '';
   descEl.style.display = post.description ? 'block' : 'none';
@@ -2060,10 +2192,27 @@ function openSpotPanel(post) {
   void panel.offsetWidth;
   panel.classList.add('show');
   panel.scrollTop = 0;
+  pushPopupState(); // 뒤로가기로 닫을 수 있게
 }
 function closeSpotPanel() {
-  document.getElementById('spot-panel').classList.remove('show');
+  const pn = document.getElementById('spot-panel');
+  const wasOpen = pn.classList.contains('show');
+  pn.classList.remove('show');
   document.getElementById('sp-map-picker').classList.remove('show');
+  if (wasOpen) afterManualPopupClose();
+}
+// 사진 날짜 표시용 포맷 (저장된 ISO → 한국식)
+function fmtPhotoDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleString('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 function openSpotPhoto() {
   if (currentSpot && currentSpot.photos && currentSpot.photos[0]) {
@@ -2079,7 +2228,10 @@ function openSpotMap(type) {
   if (!currentSpot || !currentSpot.places) return;
   const lat = currentSpot.places.latitude;
   const lng = currentSpot.places.longitude;
-  const place = encodeURIComponent(currentSpot.title || '목적지');
+  // 검색·지명으로 남긴 경우 장소명, 직접 찍기면 장소명(=제목)으로 검색
+  const place = encodeURIComponent(
+    currentSpot.places.name || currentSpot.title || '목적지'
+  );
   let url = '';
   if (type === 'kakao') {
     url = 'https://map.kakao.com/?q=' + place;
