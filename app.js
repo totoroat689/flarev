@@ -110,16 +110,16 @@ const darkStyle = [
     stylers: [{ color: '#070710' }],
   },
   {
-    // 지명: 색깔 아이콘은 끄고
+    // 지명: 아이콘 표시 (주요 건물·가게가 또렷하게, 클릭도 잘 됨)
     featureType: 'poi',
     elementType: 'labels.icon',
-    stylers: [{ visibility: 'off' }],
+    stylers: [{ visibility: 'on' }],
   },
   {
-    // 지명: 글자는 은은한 회색으로만 표시 (우리 핀이 주인공)
+    // 지명: 글자는 은은한 회색
     featureType: 'poi',
     elementType: 'labels.text.fill',
-    stylers: [{ color: '#7a7a8c' }],
+    stylers: [{ color: '#9a9aae' }],
   },
   {
     featureType: 'poi',
