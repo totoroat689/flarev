@@ -1568,7 +1568,28 @@ body {
 
 /* 스팟 핀 (민트 물방울) */
 .spot-pin { position: relative; cursor: pointer; }
+/* 울림(파동) — 드롭 중심(8,8)에서 좌우대칭으로 퍼짐 */
+.spot-pin .spot-ring {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  width: 8px;
+  height: 8px;
+  border: 2px solid #6bffb8;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+  animation: spot-ripple 2.2s ease-out infinite;
+}
+@keyframes spot-ripple {
+  0% { width: 8px; height: 8px; opacity: 0.9; }
+  100% { width: 58px; height: 58px; opacity: 0; }
+}
 .spot-pin .spot-drop {
+  position: relative;
+  z-index: 2;
   width: 16px;
   height: 16px;
   background: radial-gradient(circle at 35% 35%, #b6ffe0, #6bffb8);
@@ -1577,6 +1598,25 @@ body {
   border: 2px solid rgba(255, 255, 255, 0.55);
   box-shadow: 0 0 10px rgba(107, 255, 184, 0.8),
     0 0 18px rgba(107, 255, 184, 0.4);
+}
+/* 같은 장소 2개 이상일 때 숫자 배지 */
+.spot-pin .spot-count {
+  position: absolute;
+  left: 14px;
+  top: -7px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  background: #14141f;
+  border: 1.5px solid #6bffb8;
+  color: #6bffb8;
+  border-radius: 9px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 14px;
+  text-align: center;
+  z-index: 3;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
 }
 .spot-pin:hover .spot-drop { filter: brightness(1.15); }
 .spot-pin .spot-label {

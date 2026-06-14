@@ -399,9 +399,10 @@ function defineOverlayClasses() {
 
   // 스팟 핀 (민트 물방울)
   SpotPinClass = class extends google.maps.OverlayView {
-    constructor(post) {
+    constructor(post, count) {
       super();
       this.post = post;
+      this.count = count || 1;
       const p = post.places;
       this.position = new google.maps.LatLng(p.latitude, p.longitude);
       this.div = null;
@@ -412,7 +413,11 @@ function defineOverlayClasses() {
       div.style.position = 'absolute';
       div.style.willChange = 'transform';
       div.innerHTML =
+        '<span class="spot-ring"></span>' +
         '<div class="spot-drop"></div>' +
+        (this.count > 1
+          ? '<span class="spot-count">' + this.count + '</span>'
+          : '') +
         '<div class="spot-label">' +
         escapeHtml(this.post.title || '스팟') +
         '</div>';
@@ -2129,13 +2134,13 @@ function renderSpotPins() {
   spotOverlays.forEach((s) => s.setMap(null));
   spotOverlays = [];
   if (activeCategories.spot) {
-    spotPlaces.forEach((place) => addSpotPin(place.posts[0]));
+    spotPlaces.forEach((place) => addSpotPin(place.posts[0], place.posts.length));
   }
   updateSpotCount();
 }
-function addSpotPin(post) {
+function addSpotPin(post, count) {
   if (!SpotPinClass || !map) return;
-  const pin = new SpotPinClass(post);
+  const pin = new SpotPinClass(post, count);
   pin.setMap(map);
   spotOverlays.push(pin);
 }
