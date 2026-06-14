@@ -47,6 +47,8 @@ let spotPlaces = []; // 장소 단위로 묶은 목록(핀 1개=장소 1개)
 let spotPhotoFiles = []; // 저장 대기 사진들 (최대 5장)
 let spotMenuOpenedAt = 0; // 스팟 메뉴 연 시각(직후 클릭으로 닫힘 방지)
 let currentSpot = null; // 현재 열린 스팟 팝업
+let spotPhotoList = []; // 현재 팝업의 사진 목록
+let spotPhotoIndex = 0; // 현재 보고 있는 사진 번호
 const chosenSpotTags = new Set();
 let lastSpotWrite = 0; // 스팟 저장 10초 제한
 let SpotPinClass = null;
@@ -702,6 +704,7 @@ function matchesDateFilter(f) {
 // ── 필터 적용: 필터가 바뀌면 해당하는 핀만 다시 생성 ──
 function applyFilters() {
   buildPinsForCurrentFilter();
+  rebuildSpotPlaces(); // 스팟도 날짜 필터 반영
 }
 
 // ── HTML 태그/특수문자 정리 (설명·프로그램 등 공공 데이터용) ──
@@ -2082,9 +2085,51 @@ async function loadSpots() {
     return true;
   });
 
-  // 장소 단위로 묶기 (핀 1개 = 장소 1개, 대표 게시물 = 가장 최근 것)
+  rebuildSpotPlaces(); // 날짜 필터 적용 + 장소 단위로 묶어 핀 표시
+}
+
+// ── 스팟 한 개가 현재 날짜 필터에 맞는지 (사진 업로드/촬영 시간 기준) ──
+function spotInDateRange(post) {
+  const iso = post.taken_at || post.created_at;
+  if (!iso) return true;
+  const t = new Date(iso);
+  if (isNaN(t.getTime())) return true;
+
+  const today = new Date();
+  const endToday = new Date(today);
+  endToday.setHours(23, 59, 59, 999);
+  let from, to;
+
+  if (dateFilter === 'today') {
+    from = new Date(today);
+    from.setHours(0, 0, 0, 0);
+    to = endToday;
+  } else if (dateFilter === 'week') {
+    from = new Date(today);
+    from.setHours(0, 0, 0, 0);
+    from.setDate(from.getDate() - 7); // 최근 7일에 올라온 스팟
+    to = endToday;
+  } else if (dateFilter === 'month') {
+    from = new Date(today);
+    from.setHours(0, 0, 0, 0);
+    from.setMonth(from.getMonth() - 1); // 최근 한 달
+    to = endToday;
+  } else if (dateFilter === 'custom') {
+    if (!customRange.start || !customRange.end) return true;
+    from = toDate(customRange.start);
+    to = toDate(customRange.end);
+    to.setHours(23, 59, 59, 999);
+  } else {
+    return true; // 필터 없음 = 전체
+  }
+  return t >= from && t <= to;
+}
+
+// ── 스팟을 날짜 필터로 거른 뒤 장소 단위로 묶어 다시 그리기 ──
+function rebuildSpotPlaces() {
   const byPlace = {};
   spotData.forEach((post) => {
+    if (!spotInDateRange(post)) return; // 날짜 필터에서 제외
     const pl = post.places;
     if (!byPlace[pl.id]) {
       byPlace[pl.id] = {
@@ -2099,7 +2144,6 @@ async function loadSpots() {
     byPlace[pl.id].posts.push(post);
   });
   spotPlaces = Object.values(byPlace);
-
   renderSpotPins();
 }
 
@@ -2156,35 +2200,13 @@ function openSpotPanel(post) {
   closePanel(); // 축제 팝업 닫기
   document.getElementById('sp-map-picker').classList.remove('show');
 
-  // 사진: 이전 스팟 사진이 남지 않게 즉시 비우고 로딩 표시 (Fix 3)
+  // 사진 캐러셀 준비 (여러 장이면 화살표/카운터)
+  spotPhotoList = (post.photos || []).filter(Boolean);
+  spotPhotoIndex = 0;
   const box = document.getElementById('sp-imgbox');
-  const imgEl = document.getElementById('sp-img');
-  box.classList.remove('has-photo', 'pan-v', 'pan-h', 'loading');
-  imgEl.onload = null;
-  imgEl.onerror = null;
-  imgEl.removeAttribute('src');
+  box.classList.toggle('multi', spotPhotoList.length > 1);
+  showSpotPhotoAt(0);
 
-  const photo = post.photos && post.photos[0];
-  if (photo) {
-    box.classList.add('loading');
-    imgEl.onload = function () {
-      box.classList.remove('loading');
-      box.classList.add('has-photo');
-      // 사진 크기 확인 → 잘리는 쪽으로 천천히 훑기 (Fix 4)
-      const boxRatio = box.clientWidth / box.clientHeight;
-      const imgRatio = imgEl.naturalWidth / imgEl.naturalHeight;
-      if (imgRatio && boxRatio) {
-        if (imgRatio > boxRatio * 1.05) box.classList.add('pan-h');
-        else if (imgRatio < boxRatio * 0.95) box.classList.add('pan-v');
-      }
-    };
-    imgEl.onerror = function () {
-      box.classList.remove('loading');
-    };
-    imgEl.src = photo;
-    // 캐시된 이미지는 onload가 안 뜰 수 있어 보강
-    if (imgEl.complete && imgEl.naturalWidth) imgEl.onload();
-  }
   document.getElementById('sp-title').textContent = post.title || '';
   document.getElementById('sp-author').textContent = post.author
     ? '올린 사람: ' + post.author
@@ -2231,10 +2253,55 @@ function fmtPhotoDate(iso) {
     minute: '2-digit',
   });
 }
-function openSpotPhoto() {
-  if (currentSpot && currentSpot.photos && currentSpot.photos[0]) {
-    window.open(currentSpot.photos[0], '_blank');
+// ── 스팟 사진 캐러셀 ──
+function showSpotPhotoAt(i) {
+  const box = document.getElementById('sp-imgbox');
+  const imgEl = document.getElementById('sp-img');
+  if (!spotPhotoList.length) {
+    box.classList.remove('has-photo', 'pan-v', 'pan-h', 'loading');
+    imgEl.removeAttribute('src');
+    return;
   }
+  spotPhotoIndex = (i + spotPhotoList.length) % spotPhotoList.length;
+  const photo = spotPhotoList[spotPhotoIndex];
+
+  box.classList.remove('has-photo', 'pan-v', 'pan-h');
+  box.classList.add('loading');
+  imgEl.onload = null;
+  imgEl.onerror = null;
+  imgEl.removeAttribute('src');
+
+  imgEl.onload = function () {
+    box.classList.remove('loading');
+    box.classList.add('has-photo');
+    const boxRatio = box.clientWidth / box.clientHeight;
+    const imgRatio = imgEl.naturalWidth / imgEl.naturalHeight;
+    if (imgRatio && boxRatio) {
+      if (imgRatio > boxRatio * 1.05) box.classList.add('pan-h');
+      else if (imgRatio < boxRatio * 0.95) box.classList.add('pan-v');
+    }
+  };
+  imgEl.onerror = function () {
+    box.classList.remove('loading');
+  };
+  imgEl.src = photo;
+  if (imgEl.complete && imgEl.naturalWidth) imgEl.onload();
+
+  // 카운터 (예: 2/5)
+  document.getElementById('sp-counter').textContent =
+    spotPhotoIndex + 1 + '/' + spotPhotoList.length;
+}
+function spotPhotoPrev(e) {
+  if (e) e.stopPropagation();
+  showSpotPhotoAt(spotPhotoIndex - 1);
+}
+function spotPhotoNext(e) {
+  if (e) e.stopPropagation();
+  showSpotPhotoAt(spotPhotoIndex + 1);
+}
+function openSpotPhoto() {
+  const url = spotPhotoList[spotPhotoIndex];
+  if (url) window.open(url, '_blank');
 }
 
 // ── 스팟 길찾기 ──
@@ -2243,17 +2310,26 @@ function toggleSpotMapPicker() {
 }
 function openSpotMap(type) {
   if (!currentSpot || !currentSpot.places) return;
-  const lat = currentSpot.places.latitude;
-  const lng = currentSpot.places.longitude;
-  // 검색·지명으로 남긴 경우 장소명, 직접 찍기면 장소명(=제목)으로 검색
-  const place = encodeURIComponent(
-    currentSpot.places.name || currentSpot.title || '목적지'
-  );
+  const pl = currentSpot.places;
+  const lat = pl.latitude;
+  const lng = pl.longitude;
+  const name = pl.name || currentSpot.title || '목적지';
+  const hasRealPlace = !!pl.place_id; // 검색·지명으로 만든 실제 장소
   let url = '';
   if (type === 'kakao') {
-    url = 'https://map.kakao.com/?q=' + place;
+    // 좌표로 정확히 이동 + 이름 라벨
+    url =
+      'https://map.kakao.com/link/map/' +
+      encodeURIComponent(name) +
+      ',' +
+      lat +
+      ',' +
+      lng;
   } else if (type === 'naver') {
-    url = 'https://map.naver.com/v5/search/' + place;
+    // 실제 장소면 장소명, 직접 찍기면 좌표로 검색
+    url = hasRealPlace
+      ? 'https://map.naver.com/p/search/' + encodeURIComponent(name)
+      : 'https://map.naver.com/p/search/' + lat + ',' + lng;
   } else if (type === 'google') {
     url =
       'https://www.google.com/maps/search/?api=1&query=' + lat + ',' + lng;

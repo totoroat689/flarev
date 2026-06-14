@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <!-- ============================================
      Flare(V) 홈페이지
-     버전: v2.2.1
-     수정일: 2026-06-10
+     버전: v2.2.2
+     수정일: 2026-06-12
      ※ 파일 분리: index.html(뼈대) + style.css(디자인) + app.js(동작)
-     ※ DB 변경 필요(Supabase SQL): alter table posts add column taken_at text;
+     수정사항(v2.2.2):
+       - 길찾기: 제목 대신 좌표/장소로 이동 (카카오=좌표+이름, 네이버=장소명/좌표, 구글=좌표)
+       - 스팟 사진 여러 장: 팝업에서 좌우 화살표로 넘기기 + n/총 카운터
+       - 스팟도 메뉴의 날짜 필터로 걸러짐 (사진 업로드/촬영 시간 기준, 오늘/최근7일/최근30일/직접)
      수정사항(v2.2.1):
        - 지도 테마 다시 다크로
        - 지명 클릭(PC·모바일) → 바로 팝업 대신 "스팟 남기기" 메뉴 표시
@@ -373,6 +376,9 @@
         <div class="sp-imgbox" id="sp-imgbox">
           <img id="sp-img" alt="스팟 사진" onclick="openSpotPhoto()" />
           <div class="sp-img-loading" id="sp-img-loading">사진 불러오는 중…</div>
+          <button class="sp-arrow sp-arrow-prev" id="sp-prev" onclick="spotPhotoPrev(event)">‹</button>
+          <button class="sp-arrow sp-arrow-next" id="sp-next" onclick="spotPhotoNext(event)">›</button>
+          <div class="sp-counter" id="sp-counter"></div>
         </div>
         <div class="sp-body">
           <div class="sp-title" id="sp-title"></div>
