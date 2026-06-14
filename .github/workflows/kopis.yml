@@ -1,7 +1,10 @@
-name: KOPIS 공연 수집 (테스트)
+name: KOPIS 공연 수집 (백필 - 매일)
 
-# 자동 실행 없음 — 손으로 "지금 실행" 버튼만
 on:
+  # 매일 밤 10시(한국시간) 자동 실행 = UTC 13:00
+  schedule:
+    - cron: "0 13 * * *"
+  # 손으로 "지금 실행" 버튼도 유지
   workflow_dispatch:
 
 jobs:
@@ -9,10 +12,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 코드 체크아웃
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 파이썬 설치
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
