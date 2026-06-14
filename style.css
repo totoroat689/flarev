@@ -11,6 +11,11 @@
   --festival-bg: rgba(255, 107, 107, 0.12);
   --discount-bg: rgba(255, 217, 61, 0.12);
   --live-bg: rgba(107, 255, 184, 0.12);
+  /* 실시간 영상 모드 색 */
+  --cctv: #5ab9ff;
+  --cctv-bg: rgba(90, 185, 255, 0.12);
+  --yt: #ff4e45;
+  --yt-bg: rgba(255, 78, 69, 0.12);
 }
 
 * {
@@ -271,7 +276,17 @@ body {
   border-color: rgba(107, 255, 184, 0.3);
 }
 
-.filter-item:not(.active-festival):not(.active-spot):hover {
+.filter-item.active-cctv {
+  background: var(--cctv-bg);
+  border-color: rgba(90, 185, 255, 0.3);
+}
+
+.filter-item.active-yt {
+  background: var(--yt-bg);
+  border-color: rgba(255, 78, 69, 0.3);
+}
+
+.filter-item:not(.active-festival):not(.active-spot):not(.active-cctv):not(.active-yt):hover {
   background: rgba(255, 255, 255, 0.04);
 }
 
@@ -290,6 +305,14 @@ body {
   background: var(--live);
   box-shadow: 0 0 8px rgba(107, 255, 184, 0.8);
 }
+.dot-cctv {
+  background: var(--cctv);
+  box-shadow: 0 0 8px rgba(90, 185, 255, 0.8);
+}
+.dot-yt {
+  background: var(--yt);
+  box-shadow: 0 0 8px rgba(255, 78, 69, 0.8);
+}
 
 .filter-text {
   flex: 1;
@@ -302,6 +325,104 @@ body {
   background: rgba(255, 255, 255, 0.06);
   padding: 2px 8px;
   border-radius: 20px;
+}
+
+/* ── 보기 모드 토글 (A안 세그먼트) ── */
+.seg {
+  position: relative;
+  display: flex;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 4px;
+}
+.seg .seg-thumb {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  height: calc(100% - 8px);
+  border-radius: 9px;
+  background: var(--festival-bg);
+  border: 1px solid rgba(255, 107, 107, 0.4);
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), background 0.28s,
+    border-color 0.28s;
+}
+.seg.live .seg-thumb {
+  transform: translateX(100%);
+  background: var(--cctv-bg);
+  border-color: rgba(90, 185, 255, 0.4);
+}
+.seg button {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  padding: 10px 4px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.seg:not(.live) button.s-fest {
+  color: var(--festival);
+}
+.seg.live button.s-live {
+  color: var(--cctv);
+}
+
+/* ── 모드별 표시/숨김 ── */
+/* 기본(축제 모드): 영상 카테고리 숨김 */
+#cat-live {
+  display: none;
+}
+/* 영상 모드: 축제용 UI 숨기고 영상용만 */
+body.mode-live #date-section,
+body.mode-live #cat-festival,
+body.mode-live #spot-search,
+body.mode-live #spot-ctx {
+  display: none !important;
+}
+body.mode-live #cat-live {
+  display: flex;
+}
+
+/* ── 영상 모드 안내 문구 (지도 중앙) ── */
+#live-notice {
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  background: rgba(16, 16, 26, 0.92);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px 32px;
+  z-index: 50;
+  max-width: 280px;
+  pointer-events: none;
+}
+body.mode-live #live-notice {
+  display: block;
+}
+#live-notice .ln-emoji {
+  font-size: 2.4rem;
+  margin-bottom: 8px;
+}
+#live-notice .ln-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--cctv);
+  margin-bottom: 8px;
+}
+#live-notice .ln-sub {
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.6;
 }
 
 .login-wrap {

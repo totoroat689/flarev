@@ -1,9 +1,15 @@
 <!DOCTYPE html>
 <!-- ============================================
      Flare(V) 홈페이지
-     버전: v2.2.2
-     수정일: 2026-06-12
+     버전: v2.3.0
+     수정일: 2026-06-15
      ※ 파일 분리: index.html(뼈대) + style.css(디자인) + app.js(동작)
+     수정사항(v2.3.0) — 보기 모드 전환 추가(뼈대):
+       - 사이드바 상단에 모드 토글(A안 세그먼트): 🎪 축제·스팟 ↔ 📡 실시간 영상
+       - 영상 모드: 카테고리가 🚦 교통정보 CCTV / ▶️ 유튜브 스트리밍 으로 바뀜
+       - 영상 모드에선 날짜 필터·장소 검색·스팟 남기기(우클릭/길게누르기) 숨김
+       - 영상 모드 지도엔 임시 안내 문구 표시 (ITS 키 승인 후 CCTV 핀 채울 예정)
+       - 축제 모드 복귀 시 기존 동작 그대로
      수정사항(v2.2.2):
        - 길찾기: 제목 대신 좌표/장소로 이동 (카카오=좌표+이름, 네이버=장소명/좌표, 구글=좌표)
        - 스팟 사진 여러 장: 팝업에서 좌우 화살표로 넘기기 + n/총 카운터
@@ -156,6 +162,16 @@
         <span class="logo-light"></span>
       </div>
 
+      <!-- 보기 모드 전환 (축제·스팟 ↔ 실시간 영상) -->
+      <div class="section">
+        <div class="section-label">보기 모드</div>
+        <div class="seg" id="mode-seg">
+          <div class="seg-thumb"></div>
+          <button class="s-fest" onclick="setViewMode('festival')">🎪 축제·스팟</button>
+          <button class="s-live" onclick="setViewMode('live')">📡 실시간 영상</button>
+        </div>
+      </div>
+
       <!-- 개발자에게 메시지 보내기 -->
       <div class="section">
         <button class="contact-btn" onclick="openContact()">
@@ -163,8 +179,8 @@
         </button>
       </div>
 
-      <!-- 날짜 필터 (기본 '이번 주' 활성) -->
-      <div class="section">
+      <!-- 날짜 필터 (기본 '이번 주' 활성) — 영상 모드에선 숨김 -->
+      <div class="section" id="date-section">
         <div class="section-label">날짜</div>
         <div class="date-row">
           <button class="date-btn" onclick="setDate(this,'today')">
@@ -194,10 +210,12 @@
         </div>
       </div>
 
-      <!-- 카테고리 필터 -->
+      <!-- 카테고리 필터 (모드에 따라 두 묶음 중 하나만 보임) -->
       <div class="section">
         <div class="section-label">카테고리</div>
-        <div class="filter-list">
+
+        <!-- 축제·스팟 모드 -->
+        <div class="filter-list" id="cat-festival">
           <div
             class="filter-item active-festival"
             onclick="toggleFilter(this,'festival')"
@@ -213,6 +231,26 @@
             <div class="filter-dot dot-spot"></div>
             <span class="filter-text">📍 스팟</span>
             <span class="filter-count" id="cnt-spot">0</span>
+          </div>
+        </div>
+
+        <!-- 실시간 영상 모드 -->
+        <div class="filter-list" id="cat-live">
+          <div
+            class="filter-item active-cctv"
+            onclick="toggleFilter(this,'cctv')"
+          >
+            <div class="filter-dot dot-cctv"></div>
+            <span class="filter-text">🚦 교통정보 CCTV</span>
+            <span class="filter-count" id="cnt-cctv">0</span>
+          </div>
+          <div
+            class="filter-item active-yt"
+            onclick="toggleFilter(this,'yt')"
+          >
+            <div class="filter-dot dot-yt"></div>
+            <span class="filter-text">▶️ 유튜브 스트리밍</span>
+            <span class="filter-count" id="cnt-yt">0</span>
           </div>
         </div>
       </div>
@@ -249,6 +287,13 @@
       <button id="locate-btn" onclick="goToMyLocation()" title="내 위치로 이동">🧭</button>
 
       <div id="loading">🔄 축제 정보를 불러오는 중...</div>
+
+      <!-- 영상 모드 안내 (CCTV 핀 채우기 전 임시) -->
+      <div id="live-notice">
+        <div class="ln-emoji">🚦</div>
+        <div class="ln-title">실시간 영상 모드</div>
+        <div class="ln-sub">교통정보 CCTV를 곧 여기 지도에 보여드릴게요.<br />지금은 준비 중이에요.</div>
+      </div>
 
       <!-- 정보 패널 -->
       <div id="info-panel">
