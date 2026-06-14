@@ -27,8 +27,3 @@ jobs:
         env:
           TOURAPI_KEY: ${{ secrets.TOURAPI_KEY }}
         run: python api_collector.py
-
-      - name: KOPIS 공연 수집기 실행
-        env:
-          KOPIS_KEY: ${{ secrets.KOPIS_KEY }}
-        run: python kopis_collector.py
