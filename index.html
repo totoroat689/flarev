@@ -1,9 +1,17 @@
 <!DOCTYPE html>
 <!-- ============================================
      Flare(V) 홈페이지
-     버전: v2.3.0
+     버전: v2.4.0
      수정일: 2026-06-15
      ※ 파일 분리: index.html(뼈대) + style.css(디자인) + app.js(동작)
+     수정사항(v2.4.0) — 보기 모드 3개 + 공연 데이터:
+       - 보기 모드 3개: 📍스팟 / 🎉축제·공연 / 📡실시간 영상 (A안 3칸 세그먼트)
+       - 사이드바 순서: 개발자메시지 → 날짜 → 보기모드 → 카테고리
+       - 스팟 모드 카테고리: 풍경·맛집·이색·힐링·놀라운·실시간 현장(태그 필터)
+       - 축제·공연 모드: 축제(코랄) + 공연 장르(노란색, 데이터에서 자동 생성)
+       - 공연 핀(노란색) + 공연 팝업(포스터·날짜·장소·가격·장르·예매링크)
+       - 공연/축제는 날짜 필터 적용, 스팟은 태그 필터 적용
+       - 스팟 남기기(검색·우클릭·길게누르기)는 스팟 모드에서만 동작
      수정사항(v2.3.0) — 보기 모드 전환 추가(뼈대):
        - 사이드바 상단에 모드 토글(A안 세그먼트): 🎪 축제·스팟 ↔ 📡 실시간 영상
        - 영상 모드: 카테고리가 🚦 교통정보 CCTV / ▶️ 유튜브 스트리밍 으로 바뀜
@@ -138,7 +146,7 @@
     </script>
     <script defer src="/_vercel/insights/script.js"></script>
   </head>
-  <body>
+  <body data-mode="festival">
     <!-- 검색엔진/스크린리더용 소개 (화면 비표시) -->
     <h1 class="sr-only">전국 축제 지도 Flare(V) — 오늘과 이번 주 전국에서 열리는 축제를 지도에서 한눈에</h1>
     <p class="sr-only">
@@ -160,16 +168,6 @@
         <div class="logo-sub">기쁨을 발견하고 순간을 공유하다</div>
         <span class="logo-flare"></span>
         <span class="logo-light"></span>
-      </div>
-
-      <!-- 보기 모드 전환 (축제·스팟 ↔ 실시간 영상) -->
-      <div class="section">
-        <div class="section-label">보기 모드</div>
-        <div class="seg" id="mode-seg">
-          <div class="seg-thumb"></div>
-          <button class="s-fest" onclick="setViewMode('festival')">🎪 축제·스팟</button>
-          <button class="s-live" onclick="setViewMode('live')">📡 실시간 영상</button>
-        </div>
       </div>
 
       <!-- 개발자에게 메시지 보내기 -->
@@ -210,12 +208,57 @@
         </div>
       </div>
 
-      <!-- 카테고리 필터 (모드에 따라 두 묶음 중 하나만 보임) -->
+      <!-- 보기 모드 전환 (스팟 / 축제·공연 / 실시간 영상) -->
+      <div class="section">
+        <div class="section-label">보기 모드</div>
+        <div class="seg3" id="mode-seg" data-m="festival">
+          <div class="seg-thumb"></div>
+          <button class="b-spot" onclick="setViewMode('spot')">📍 스팟</button>
+          <button class="b-fest" onclick="setViewMode('festival')">🎉 축제·공연</button>
+          <button class="b-live" onclick="setViewMode('live')">📡 영상</button>
+        </div>
+      </div>
+
+      <!-- 카테고리 필터 (모드별로 한 묶음만 보임) -->
       <div class="section">
         <div class="section-label">카테고리</div>
 
-        <!-- 축제·스팟 모드 -->
-        <div class="filter-list" id="cat-festival">
+        <!-- 스팟 모드 -->
+        <div class="filter-list cat-group" id="cat-spot">
+          <div class="filter-item active-tag" onclick="toggleSpotTag(this,'풍경')">
+            <div class="filter-dot dot-spot"></div>
+            <span class="filter-text">🏞️ 풍경</span>
+            <span class="filter-count" data-tagcount="풍경">0</span>
+          </div>
+          <div class="filter-item active-tag" onclick="toggleSpotTag(this,'맛집')">
+            <div class="filter-dot dot-spot"></div>
+            <span class="filter-text">🍜 맛집</span>
+            <span class="filter-count" data-tagcount="맛집">0</span>
+          </div>
+          <div class="filter-item active-tag" onclick="toggleSpotTag(this,'이색')">
+            <div class="filter-dot dot-spot"></div>
+            <span class="filter-text">✨ 이색</span>
+            <span class="filter-count" data-tagcount="이색">0</span>
+          </div>
+          <div class="filter-item active-tag" onclick="toggleSpotTag(this,'힐링')">
+            <div class="filter-dot dot-spot"></div>
+            <span class="filter-text">🌿 힐링</span>
+            <span class="filter-count" data-tagcount="힐링">0</span>
+          </div>
+          <div class="filter-item active-tag" onclick="toggleSpotTag(this,'놀라운')">
+            <div class="filter-dot dot-spot"></div>
+            <span class="filter-text">😮 놀라운</span>
+            <span class="filter-count" data-tagcount="놀라운">0</span>
+          </div>
+          <div class="filter-item active-tag" onclick="toggleSpotTag(this,'실시간 현장')">
+            <div class="filter-dot dot-spot"></div>
+            <span class="filter-text">🔴 실시간 현장</span>
+            <span class="filter-count" data-tagcount="실시간 현장">0</span>
+          </div>
+        </div>
+
+        <!-- 축제·공연 모드 -->
+        <div class="filter-list cat-group" id="cat-festival">
           <div
             class="filter-item active-festival"
             onclick="toggleFilter(this,'festival')"
@@ -224,18 +267,12 @@
             <span class="filter-text">🎪 축제</span>
             <span class="filter-count" id="cnt-festival">0</span>
           </div>
-          <div
-            class="filter-item active-spot"
-            onclick="toggleFilter(this,'spot')"
-          >
-            <div class="filter-dot dot-spot"></div>
-            <span class="filter-text">📍 스팟</span>
-            <span class="filter-count" id="cnt-spot">0</span>
-          </div>
+          <!-- 공연 장르(노란색) — 데이터에서 자동 생성 -->
+          <div id="cat-perf-genres"></div>
         </div>
 
         <!-- 실시간 영상 모드 -->
-        <div class="filter-list" id="cat-live">
+        <div class="filter-list cat-group" id="cat-live">
           <div
             class="filter-item active-cctv"
             onclick="toggleFilter(this,'cctv')"
@@ -447,6 +484,26 @@
             </button>
           </div>
           <button class="sp-report" onclick="reportSpot()">🚩 신고하기</button>
+        </div>
+      </div>
+
+      <!-- 공연 상세 팝업 (노란색 계열) -->
+      <div id="perf-panel">
+        <div class="panel-header">
+          <span class="panel-badge" style="background: var(--perf-bg); color: var(--perf); border: 1px solid rgba(255,217,61,0.35);">공연</span>
+          <button class="panel-close" onclick="closePerfPanel()">✕</button>
+        </div>
+        <div class="pf-imgbox" id="pf-imgbox">
+          <img id="pf-img" alt="공연 포스터" />
+        </div>
+        <div class="pf-body">
+          <div class="pf-title" id="pf-title"></div>
+          <div class="pf-meta" id="pf-genre"></div>
+          <div class="pf-meta" id="pf-place"></div>
+          <div class="pf-meta" id="pf-date"></div>
+          <div class="pf-meta" id="pf-price"></div>
+          <div class="pf-meta" id="pf-cast"></div>
+          <a id="pf-ticket" class="pf-ticket" href="#" target="_blank" rel="noopener noreferrer">🎟️ 예매하러 가기</a>
         </div>
       </div>
       <button

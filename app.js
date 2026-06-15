@@ -32,11 +32,22 @@ let myLocationMarker = null; // 내 위치 파란 점
 const CLUSTER_RADIUS = 48; // 이 픽셀 거리 안에 있으면 한 뭉치로 묶음
 const LONG_RUNNING_DAYS = 14; // 진행중이며 기간이 이 일수 이상이면 '상시'
 
-// 필터 상태
-let activeCategories = { festival: true, spot: true, cctv: true, yt: true };
+// 필터 상태 (축제·CCTV·유튜브 on/off)
+let activeCategories = { festival: true, cctv: true, yt: true };
 
-// 보기 모드: 'festival'(축제·스팟) | 'live'(실시간 영상)
+// 보기 모드: 'spot' | 'festival'(축제·공연) | 'live'(실시간 영상)
 let viewMode = 'festival';
+
+// 스팟 태그 필터 / 공연 장르 필터 (켜진 것만 표시)
+const SPOT_TAGS = ['풍경', '맛집', '이색', '힐링', '놀라운', '실시간 현장'];
+let activeSpotTags = new Set(SPOT_TAGS);
+let activeGenres = new Set(); // 공연 데이터 로드 후 채움(처음엔 전부 켜짐)
+
+// 공연(performances) 상태
+let perfData = []; // 각 항목에 venues(공연장: 좌표 등) 포함
+let perfOverlays = []; // 지도에 뜬 공연 핀
+let PerfPinClass = null;
+let currentPerf = null; // 현재 열린 공연 팝업
 
 // 스팟(사용자 명소) 상태
 let spotOverlays = []; // 지도에 뜬 스팟 핀들
@@ -80,8 +91,10 @@ window.addEventListener('popstate', function () {
   popupPushed = false;
   const ov = document.getElementById('spot-overlay');
   const pn = document.getElementById('spot-panel');
+  const pf = document.getElementById('perf-panel');
   if (ov && ov.classList.contains('show')) ov.classList.remove('show');
   if (pn && pn.classList.contains('show')) pn.classList.remove('show');
+  if (pf && pf.classList.contains('show')) pf.classList.remove('show');
 });
 
 // ── 구글 지도 다크 스타일 ──
@@ -170,7 +183,7 @@ function initMap() {
   map.addListener('click', (e) => {
     if (e && e.placeId) {
       e.stop(); // 구글 기본 정보창 막기
-      if (viewMode === 'live') return; // 영상 모드: 스팟 남기기 비활성
+      if (viewMode !== 'spot') return; // 스팟 모드에서만 스팟 남기기
       const rect = document
         .getElementById('map-container')
         .getBoundingClientRect();
@@ -188,6 +201,7 @@ function initMap() {
     }
     collapseSpider();
     closeSpotPanel(); // 바깥(빈 지도) 누르면 스팟 상세 팝업 닫기
+    closePerfPanel(); // 공연 팝업도 닫기
     // 메뉴를 막 연 직후(롱프레스 직후 자동 클릭)엔 닫지 않음 → 다른 곳 누를 때 닫힘
     if (Date.now() - spotMenuOpenedAt > 500) hideSpotContextMenu();
   });
@@ -203,7 +217,7 @@ function initMap() {
   // 스팟: 지도 우클릭(PC) → 메뉴
   map.addListener('contextmenu', (e) => {
     if (!e.latLng) return;
-    if (viewMode === 'live') return; // 영상 모드: 스팟 남기기 비활성
+    if (viewMode !== 'spot') return; // 스팟 모드에서만 스팟 남기기
     const de = e.domEvent;
     const rect = document
       .getElementById('map-container')
@@ -221,6 +235,7 @@ function initMap() {
 
   if (festivalData.length > 0) showFestivalPins();
   loadSpots(); // 스팟 불러오기
+  loadPerformances(); // 공연 불러오기
 }
 
 // ── 핀·뭉치 클래스 정의 (google.maps 로드된 뒤 실행) ──
@@ -454,6 +469,52 @@ function defineOverlayClasses() {
       }
     }
   };
+
+  // 공연 핀 (노란 물방울)
+  PerfPinClass = class extends google.maps.OverlayView {
+    constructor(perf) {
+      super();
+      this.perf = perf;
+      const v = perf.venues;
+      this.position = new google.maps.LatLng(v.latitude, v.longitude);
+      this.div = null;
+    }
+    onAdd() {
+      const div = document.createElement('div');
+      div.className = 'perf-pin';
+      div.style.position = 'absolute';
+      div.style.willChange = 'transform';
+      div.innerHTML =
+        '<div class="perf-drop"></div>' +
+        '<div class="perf-label">' +
+        escapeHtml(this.perf.title || '공연') +
+        '</div>';
+      const self = this;
+      div.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openPerfPanel(self.perf);
+      });
+      this.div = div;
+      this.getPanes().overlayMouseTarget.appendChild(div);
+    }
+    draw() {
+      if (!this.div) return;
+      const pt = this.getProjection().fromLatLngToDivPixel(this.position);
+      if (pt) {
+        this.div.style.transform =
+          'translate(' + (pt.x - 8) + 'px,' + (pt.y - 16) + 'px)';
+      }
+    }
+    setVisible(v) {
+      if (this.div) this.div.style.display = v ? 'block' : 'none';
+    }
+    onRemove() {
+      if (this.div) {
+        this.div.parentNode.removeChild(this.div);
+        this.div = null;
+      }
+    }
+  };
 }
 async function loadFestivals() {
   document.getElementById('loading').style.display = 'block';
@@ -500,7 +561,7 @@ function buildPinsForCurrentFilter() {
   clusterMarkers = [];
   expandedCluster = null;
 
-  if (viewMode === 'live') return; // 영상 모드: 축제 핀 생성 안 함
+  if (viewMode !== 'festival') return; // 축제·공연 모드에서만 축제 핀 생성
 
   let visibleCount = 0;
   festivalData.forEach((f) => {
@@ -710,8 +771,9 @@ function matchesDateFilter(f) {
 
 // ── 필터 적용: 필터가 바뀌면 해당하는 핀만 다시 생성 ──
 function applyFilters() {
-  buildPinsForCurrentFilter();
-  rebuildSpotPlaces(); // 스팟도 날짜 필터 반영
+  buildPinsForCurrentFilter(); // 축제 핀
+  renderPerfPins(); // 공연 핀 (날짜 필터 반영)
+  rebuildSpotPlaces(); // 스팟도 (스팟은 사진 날짜 기준)
 }
 
 // ── HTML 태그/특수문자 정리 (설명·프로그램 등 공공 데이터용) ──
@@ -878,6 +940,7 @@ function toggleProgram() {
 function openFestivalPanel(f) {
   const panel = document.getElementById('info-panel');
   closeSpotPanel(); // 스팟 팝업 닫기
+  closePerfPanel(); // 공연 팝업 닫기
 
   // 길찾기 메뉴는 매번 닫고 시작 (다른 축제 누를 때 초기화)
   document.getElementById('map-picker').classList.remove('show');
@@ -1368,42 +1431,67 @@ function toggleFilter(el, type) {
     el.classList.add(activeClass);
     activeCategories[type] = true;
   }
-  if (type === 'spot') {
-    renderSpotPins(); // 스팟만 다시 표시/숨김
-  } else if (type === 'cctv' || type === 'yt') {
-    // 영상 모드 카테고리: 핀 연결은 추후(ITS 키 승인 후) 추가 예정
+  if (type === 'cctv' || type === 'yt') {
+    // 영상 모드 카테고리: 핀 연결은 추후(ITS 키 승인 후)
   } else {
-    applyFilters(); // 축제 핀 갱신
+    applyFilters(); // 축제 핀 갱신 (공연도 함께)
   }
 }
 
-// ── 보기 모드 전환 (축제·스팟 ↔ 실시간 영상) ──
+// ── 스팟 태그 토글 (스팟 모드 카테고리) ──
+function toggleSpotTag(el, tag) {
+  if (activeSpotTags.has(tag)) {
+    activeSpotTags.delete(tag);
+    el.classList.remove('active-tag');
+  } else {
+    activeSpotTags.add(tag);
+    el.classList.add('active-tag');
+  }
+  renderSpotPins();
+}
+
+// ── 공연 장르 토글 (축제·공연 모드 카테고리) ──
+function toggleGenre(el, genre) {
+  if (activeGenres.has(genre)) {
+    activeGenres.delete(genre);
+    el.classList.remove('active-perf');
+  } else {
+    activeGenres.add(genre);
+    el.classList.add('active-perf');
+  }
+  renderPerfPins();
+}
+
+// ── 보기 모드 전환 (스팟 / 축제·공연 / 실시간 영상) ──
 function setViewMode(mode) {
   if (mode === viewMode) return;
   viewMode = mode;
 
-  // 토글 모양 갱신
+  // 토글 모양 + 모드별 UI 표시(날짜·검색·카테고리)는 data 속성으로 제어
   const seg = document.getElementById('mode-seg');
-  if (seg) seg.classList.toggle('live', mode === 'live');
-  // 모드별 UI 표시/숨김(날짜·검색·스팟메뉴·카테고리)은 body 클래스로 제어
-  document.body.classList.toggle('mode-live', mode === 'live');
+  if (seg) seg.dataset.m = mode;
+  document.body.dataset.mode = mode;
 
   // 열려 있던 팝업/메뉴 정리
   closePanel();
   closeSpotPanel();
+  closePerfPanel();
   hideSpotContextMenu();
   closeSearchResults();
 
-  if (mode === 'live') {
-    // 축제·스팟 핀 모두 지도에서 제거 (영상 모드엔 아직 핀 없음)
-    clearFestivalPins();
-    spotOverlays.forEach((s) => s.setMap(null));
-    spotOverlays = [];
-  } else {
-    // 축제 모드 복귀 → 기존 핀 다시 생성
-    buildPinsForCurrentFilter();
-    renderSpotPins();
+  // 일단 모든 핀 제거 후, 모드에 맞는 핀만 다시 표시
+  clearFestivalPins();
+  clearPerfPins();
+  spotOverlays.forEach((s) => s.setMap(null));
+  spotOverlays = [];
+
+  if (mode === 'festival') {
+    buildPinsForCurrentFilter(); // 축제(코랄)
+    renderPerfPins(); // 공연(노랑)
+  } else if (mode === 'spot') {
+    renderSpotPins(); // 스팟(민트)
   }
+  // live: 핀 없음 (안내 문구는 CSS로 표시)
 }
 
 // 축제 핀·뭉치 모두 제거 (모드 전환용)
@@ -1413,6 +1501,12 @@ function clearFestivalPins() {
   clusterMarkers.forEach((c) => c.setMap(null));
   clusterMarkers = [];
   expandedCluster = null;
+}
+
+// 공연 핀 제거
+function clearPerfPins() {
+  perfOverlays.forEach((p) => p.setMap(null));
+  perfOverlays = [];
 }
 
 // ── 진행 중 축제인지 판단 (오늘이 시작~종료 사이) ──
@@ -1618,7 +1712,7 @@ function setupLongPress() {
     'touchstart',
     (e) => {
       if (e.touches.length !== 1) return;
-      if (viewMode === 'live') return; // 영상 모드: 스팟 남기기 비활성
+      if (viewMode !== 'spot') return; // 스팟 모드에서만 스팟 남기기
       const t = e.touches[0];
       sx = t.clientX;
       sy = t.clientY;
@@ -2221,12 +2315,18 @@ function distMeters(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// ── 스팟 핀 다시 그리기 (장소 단위, 카테고리 on/off 반영) ──
+// ── 스팟 핀 다시 그리기 (스팟 모드 + 켜진 태그 반영) ──
 function renderSpotPins() {
   spotOverlays.forEach((s) => s.setMap(null));
   spotOverlays = [];
-  if (activeCategories.spot && viewMode !== 'live') {
-    spotPlaces.forEach((place) => addSpotPin(place.posts[0], place.posts.length));
+  if (viewMode === 'spot') {
+    spotPlaces.forEach((place) => {
+      // 장소의 게시물 중 켜진 태그를 가진 게 하나라도 있으면 표시
+      const show = place.posts.some((p) =>
+        (p.tags || []).some((t) => activeSpotTags.has(t))
+      );
+      if (show) addSpotPin(place.posts[0], place.posts.length);
+    });
   }
   updateSpotCount();
 }
@@ -2236,16 +2336,23 @@ function addSpotPin(post, count) {
   pin.setMap(map);
   spotOverlays.push(pin);
 }
+// 태그별 장소 개수 표시
 function updateSpotCount() {
-  document.getElementById('cnt-spot').textContent = activeCategories.spot
-    ? spotPlaces.length
-    : 0;
+  SPOT_TAGS.forEach((tag) => {
+    const el = document.querySelector('[data-tagcount="' + tag + '"]');
+    if (!el) return;
+    const n = spotPlaces.filter((pl) =>
+      pl.posts.some((p) => (p.tags || []).includes(tag))
+    ).length;
+    el.textContent = n;
+  });
 }
 
 // ── 스팟 상세 팝업 ──
 function openSpotPanel(post) {
   currentSpot = post;
   closePanel(); // 축제 팝업 닫기
+  closePerfPanel(); // 공연 팝업 닫기
   document.getElementById('sp-map-picker').classList.remove('show');
 
   // 사진 캐러셀 준비 (여러 장이면 화살표/카운터)
@@ -2421,6 +2528,150 @@ async function reportSpot() {
   });
   pick.addEventListener('mouseleave', () => paintStars(pickedRating));
 })();
+
+// ====================================================
+//  공연(performances) — 로딩 · 노란 핀 · 장르 · 팝업
+// ====================================================
+
+// 공연 + 공연장(좌표) 불러오기
+async function loadPerformances() {
+  const { data, error } = await supabaseClient
+    .from('performances')
+    .select('*, venues(*)')
+    .eq('is_active', true);
+  if (error) {
+    console.log('❌ 공연 로드 에러:', error.message);
+    return;
+  }
+  // 공연장 좌표 있는 것만 (핀 찍을 수 있는 것)
+  perfData = (data || []).filter(
+    (p) => p.venues && p.venues.latitude != null && p.venues.longitude != null
+  );
+  console.log('✅ 공연', perfData.length, '개 불러옴');
+
+  buildGenreCategories(); // 장르 카테고리 자동 생성
+  if (viewMode === 'festival') renderPerfPins();
+}
+
+// 장르 이모지 (없으면 기본)
+function genreEmoji(g) {
+  if (!g) return '🎵';
+  if (g.includes('대중음악')) return '🎤';
+  if (g.includes('뮤지컬')) return '🎭';
+  if (g.includes('연극')) return '🎬';
+  if (g.includes('클래식') || g.includes('서양음악')) return '🎻';
+  if (g.includes('국악') || g.includes('한국음악')) return '🪕';
+  if (g.includes('무용')) return '💃';
+  if (g.includes('서커스') || g.includes('마술')) return '🎪';
+  if (g.includes('복합')) return '🎨';
+  if (g.includes('아동')) return '🧸';
+  if (g.includes('축제')) return '🎉';
+  return '🎵';
+}
+
+// 데이터에서 장르를 뽑아 카테고리 항목 자동 생성 (개수 많은 순, 전부 켜짐)
+function buildGenreCategories() {
+  const host = document.getElementById('cat-perf-genres');
+  if (!host) return;
+
+  const counts = {};
+  perfData.forEach((p) => {
+    const g = p.genre || p.tags;
+    if (!g) return;
+    counts[g] = (counts[g] || 0) + 1;
+  });
+  const genres = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+  activeGenres = new Set(genres); // 처음엔 전부 켜기
+
+  host.innerHTML = '';
+  genres.forEach((g) => {
+    const item = document.createElement('div');
+    item.className = 'filter-item active-perf';
+    item.innerHTML =
+      '<div class="filter-dot dot-perf"></div>' +
+      '<span class="filter-text">' +
+      escapeHtml(genreEmoji(g) + ' ' + g) +
+      '</span>' +
+      '<span class="filter-count">' +
+      counts[g] +
+      '</span>';
+    item.addEventListener('click', () => toggleGenre(item, g));
+    host.appendChild(item);
+  });
+}
+
+// 공연 핀 다시 그리기 (축제·공연 모드 + 날짜 필터 + 켜진 장르)
+function renderPerfPins() {
+  clearPerfPins();
+  if (viewMode !== 'festival') return;
+  if (!PerfPinClass || !map) return;
+
+  perfData.forEach((p) => {
+    const g = p.genre || p.tags;
+    if (!g || !activeGenres.has(g)) return; // 꺼진 장르 제외
+    if (!matchesDateFilter(p)) return; // 날짜 필터(공연기간 겹침)
+    const pin = new PerfPinClass(p);
+    pin.setMap(map);
+    perfOverlays.push(pin);
+  });
+}
+
+// 공연 팝업 열기
+function openPerfPanel(p) {
+  currentPerf = p;
+  closePanel(); // 축제 팝업 닫기
+  closeSpotPanel(); // 스팟 팝업 닫기
+
+  const img = document.getElementById('pf-img');
+  img.src = p.image_url || '';
+  img.style.display = p.image_url ? 'block' : 'none';
+
+  document.getElementById('pf-title').textContent = p.title || '공연';
+  setPerfMeta('pf-genre', p.genre || p.tags, genreEmoji(p.genre || p.tags) + ' ');
+  setPerfMeta('pf-place', p.place_name || (p.venues && p.venues.name), '📍 ');
+  const dates = p.date_start
+    ? p.date_start +
+      (p.date_end && p.date_end !== p.date_start ? ' ~ ' + p.date_end : '')
+    : '';
+  setPerfMeta('pf-date', dates, '📅 ');
+  setPerfMeta('pf-price', p.price, '💰 ');
+  setPerfMeta('pf-cast', p.cast_members, '👤 ');
+
+  const ticket = document.getElementById('pf-ticket');
+  if (p.ticket_url) {
+    ticket.href = p.ticket_url;
+    ticket.classList.remove('hidden');
+  } else {
+    ticket.classList.add('hidden');
+  }
+
+  const panel = document.getElementById('perf-panel');
+  panel.classList.remove('show');
+  void panel.offsetWidth; // 애니메이션 재생용 리플로우
+  panel.classList.add('show');
+  panel.scrollTop = 0;
+  pushPopupState(); // 뒤로가기로 닫기
+}
+
+// 정보 줄: 값 있으면 보이고, 없으면 줄 자체를 숨김
+function setPerfMeta(id, val, prefix) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (val && String(val).trim()) {
+    el.textContent = prefix + String(val).trim();
+    el.style.display = 'block';
+  } else {
+    el.textContent = '';
+    el.style.display = 'none';
+  }
+}
+
+function closePerfPanel() {
+  const pn = document.getElementById('perf-panel');
+  const was = pn.classList.contains('show');
+  pn.classList.remove('show');
+  if (was) afterManualPopupClose();
+}
 
 // ── 시작 ──
 loadFestivals();

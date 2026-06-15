@@ -16,6 +16,9 @@
   --cctv-bg: rgba(90, 185, 255, 0.12);
   --yt: #ff4e45;
   --yt-bg: rgba(255, 78, 69, 0.12);
+  /* 공연 = 노란색 */
+  --perf: #ffd93d;
+  --perf-bg: rgba(255, 217, 61, 0.12);
 }
 
 * {
@@ -286,7 +289,7 @@ body {
   border-color: rgba(255, 78, 69, 0.3);
 }
 
-.filter-item:not(.active-festival):not(.active-spot):not(.active-cctv):not(.active-yt):hover {
+.filter-item:not(.active-festival):not(.active-spot):not(.active-cctv):not(.active-yt):not(.active-tag):not(.active-perf):hover {
   background: rgba(255, 255, 255, 0.04);
 }
 
@@ -313,6 +316,20 @@ body {
   background: var(--yt);
   box-shadow: 0 0 8px rgba(255, 78, 69, 0.8);
 }
+.dot-perf {
+  background: var(--perf);
+  box-shadow: 0 0 8px rgba(255, 217, 61, 0.8);
+}
+
+/* 스팟 태그 카테고리(민트) / 공연 장르 카테고리(노랑) 활성색 */
+.filter-item.active-tag {
+  background: var(--live-bg);
+  border-color: rgba(107, 255, 184, 0.3);
+}
+.filter-item.active-perf {
+  background: var(--perf-bg);
+  border-color: rgba(255, 217, 61, 0.3);
+}
 
 .filter-text {
   flex: 1;
@@ -327,8 +344,8 @@ body {
   border-radius: 20px;
 }
 
-/* ── 보기 모드 토글 (A안 세그먼트) ── */
-.seg {
+/* ── 보기 모드 토글 (A안 3칸 세그먼트) ── */
+.seg3 {
   position: relative;
   display: flex;
   background: rgba(255, 255, 255, 0.05);
@@ -336,11 +353,11 @@ body {
   border-radius: 12px;
   padding: 4px;
 }
-.seg .seg-thumb {
+.seg3 .seg-thumb {
   position: absolute;
   top: 4px;
   left: 4px;
-  width: calc(50% - 4px);
+  width: calc(33.333% - 2.7px);
   height: calc(100% - 8px);
   border-radius: 9px;
   background: var(--festival-bg);
@@ -348,46 +365,67 @@ body {
   transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), background 0.28s,
     border-color 0.28s;
 }
-.seg.live .seg-thumb {
+.seg3[data-m='spot'] .seg-thumb {
+  transform: translateX(0%);
+  background: var(--live-bg);
+  border-color: rgba(107, 255, 184, 0.4);
+}
+.seg3[data-m='festival'] .seg-thumb {
   transform: translateX(100%);
+  background: var(--festival-bg);
+  border-color: rgba(255, 107, 107, 0.4);
+}
+.seg3[data-m='live'] .seg-thumb {
+  transform: translateX(200%);
   background: var(--cctv-bg);
   border-color: rgba(90, 185, 255, 0.4);
 }
-.seg button {
+.seg3 button {
   position: relative;
   z-index: 2;
   flex: 1;
-  padding: 10px 4px;
+  padding: 9px 2px;
   background: transparent;
   border: none;
   color: var(--muted);
   font-family: inherit;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
   transition: color 0.2s;
 }
-.seg:not(.live) button.s-fest {
+.seg3[data-m='spot'] button.b-spot {
+  color: var(--live);
+}
+.seg3[data-m='festival'] button.b-fest {
   color: var(--festival);
 }
-.seg.live button.s-live {
+.seg3[data-m='live'] button.b-live {
   color: var(--cctv);
 }
 
-/* ── 모드별 표시/숨김 ── */
-/* 기본(축제 모드): 영상 카테고리 숨김 */
-#cat-live {
+/* ── 모드별 표시/숨김 (body[data-mode]로 제어) ── */
+.cat-group {
   display: none;
 }
-/* 영상 모드: 축제용 UI 숨기고 영상용만 */
-body.mode-live #date-section,
-body.mode-live #cat-festival,
-body.mode-live #spot-search,
-body.mode-live #spot-ctx {
-  display: none !important;
-}
-body.mode-live #cat-live {
+body[data-mode='spot'] #cat-spot {
   display: flex;
+}
+body[data-mode='festival'] #cat-festival {
+  display: flex;
+}
+body[data-mode='live'] #cat-live {
+  display: flex;
+}
+/* 영상 모드: 날짜 필터 숨김(실시간이라 의미 없음) */
+body[data-mode='live'] #date-section {
+  display: none;
+}
+/* 스팟 남기기(검색·우클릭 메뉴)는 스팟 모드에서만 */
+body:not([data-mode='spot']) #spot-search,
+body:not([data-mode='spot']) #spot-ctx {
+  display: none !important;
 }
 
 /* ── 영상 모드 안내 문구 (지도 중앙) ── */
@@ -406,7 +444,7 @@ body.mode-live #cat-live {
   max-width: 280px;
   pointer-events: none;
 }
-body.mode-live #live-notice {
+body[data-mode='live'] #live-notice {
   display: block;
 }
 #live-notice .ln-emoji {
@@ -2014,3 +2052,93 @@ body.mode-live #live-notice {
 .sp-report { background: none; border: none; color: var(--muted); font-size: 0.68rem; cursor: pointer; text-decoration: underline; padding: 4px; margin-top: 4px; font-family: 'Noto Sans KR', sans-serif; }
 .sp-report:hover { color: #ff5577; }
 
+
+/* ============================================
+   공연 핀 (노란색 물방울) + 공연 팝업  (v2.4.0)
+   ============================================ */
+.perf-pin { position: relative; cursor: pointer; }
+.perf-pin .perf-drop {
+  position: relative;
+  z-index: 2;
+  width: 16px;
+  height: 16px;
+  background: radial-gradient(circle at 35% 35%, #fff0b8, #ffd93d);
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 0 10px rgba(255, 217, 61, 0.85), 0 0 18px rgba(255, 217, 61, 0.4);
+}
+.perf-pin:hover .perf-drop { filter: brightness(1.12); }
+.perf-pin .perf-label {
+  position: absolute;
+  left: 22px;
+  top: 0;
+  white-space: nowrap;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(16, 16, 26, 0.82);
+  padding: 2px 7px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 217, 61, 0.35);
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: none;
+}
+.perf-pin:hover .perf-label { opacity: 1; }
+
+/* 공연 상세 팝업 */
+#perf-panel {
+  position: absolute;
+  right: 24px;
+  top: 24px;
+  width: 320px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden auto;
+  max-height: calc(100vh - 48px);
+  z-index: 200;
+  display: none;
+  backdrop-filter: blur(20px);
+}
+#perf-panel.show { display: block; animation: panel-pop 0.4s cubic-bezier(0.34, 1.8, 0.5, 1); }
+.pf-imgbox {
+  width: 100%;
+  height: 260px;
+  background: #16213e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.pf-imgbox img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+.pf-body { padding: 16px 18px; }
+.pf-title { font-size: 1.05rem; font-weight: 700; color: #fff; margin-bottom: 12px; line-height: 1.35; }
+.pf-meta { font-size: 0.82rem; color: var(--text); margin-bottom: 7px; line-height: 1.5; }
+.pf-meta:empty { display: none; }
+.pf-ticket {
+  display: block;
+  margin-top: 14px;
+  text-align: center;
+  padding: 11px 0;
+  border-radius: 10px;
+  background: var(--perf-bg);
+  border: 1px solid rgba(255, 217, 61, 0.4);
+  color: var(--perf);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+.pf-ticket:hover { background: rgba(255, 217, 61, 0.2); }
+.pf-ticket.hidden { display: none; }
+
+@media (max-width: 600px) {
+  #perf-panel {
+    top: 76px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-height: calc(100vh - 96px);
+  }
+}
