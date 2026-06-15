@@ -258,6 +258,7 @@ function initMap() {
   loadSpots(); // 스팟 불러오기
   loadPerformances(); // 공연 불러오기
   loadLiveVideos(); // 유튜브 라이브 불러오기
+  setupLiveResize(); // 라이브 팝업 드래그 크기조절
 }
 
 // ── 핀·뭉치 클래스 정의 (google.maps 로드된 뒤 실행) ──
@@ -3064,6 +3065,16 @@ function openLivePanel(item) {
   const link = document.getElementById('lv-link');
   link.href = 'https://www.youtube.com/watch?v=' + item.video_id;
 
+  // 현지 시간 표시 시작 (1분마다 갱신)
+  startLiveClock(item.timezone);
+
+  // 크기: 기본 '보통'으로 초기화
+  setLiveSize(liveSizePref || 'm');
+
+  // 한줄평 불러오기 (video_id 기준)
+  lvCloseForm();
+  loadLiveReviews(item.video_id);
+
   const panel = document.getElementById('live-panel');
   panel.classList.remove('show');
   void panel.offsetWidth;
@@ -3079,11 +3090,310 @@ function closeLivePanel() {
   // 영상 정지: iframe 비우기
   const box = document.getElementById('lv-videobox');
   if (box) box.innerHTML = '';
+  stopLiveClock(); // 현지시간 타이머 정지
+  lvCloseForm();
   if (selectedPin) {
     selectedPin.setSelected(false);
     selectedPin = null;
   }
   if (was) afterManualPopupClose();
+}
+
+// ── 팝업 크기 조절 (B: 단계 버튼) ──
+let liveSizePref = 'm';
+function setLiveSize(s) {
+  liveSizePref = s;
+  const panel = document.getElementById('live-panel');
+  if (!panel) return;
+  panel.classList.remove('size-m', 'size-l', 'size-xl');
+  panel.classList.add('size-' + s);
+  panel.style.width = ''; // 드래그로 늘린 폭 초기화 → 단계 폭 적용
+  // 버튼 활성 표시
+  document.querySelectorAll('.lv-sizes button').forEach((b) => {
+    b.classList.toggle('on', b.dataset.s === s);
+  });
+}
+
+// ── 현지 시간 시계 ──
+let liveClockTimer = null;
+function startLiveClock(tz) {
+  stopLiveClock();
+  const el = document.getElementById('lv-time');
+  if (!el) return;
+  if (!tz) {
+    el.textContent = '';
+    return;
+  }
+  const paint = () => {
+    try {
+      const t = new Intl.DateTimeFormat('ko-KR', {
+        timeZone: tz,
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).format(new Date());
+      el.textContent = '🕐 현지 시간 ' + t;
+    } catch (e) {
+      el.textContent = '';
+    }
+  };
+  paint();
+  liveClockTimer = setInterval(paint, 60000);
+}
+function stopLiveClock() {
+  if (liveClockTimer) {
+    clearInterval(liveClockTimer);
+    liveClockTimer = null;
+  }
+}
+
+// ====================================================
+//  라이브 전용 한줄평 (축제와 분리, 같은 reviews 테이블 · content_id=video_id)
+// ====================================================
+let lvReviewVid = null;
+let lvReviews = [];
+let lvPickedRating = 0;
+let lvLastWrite = 0;
+
+async function loadLiveReviews(vid) {
+  lvReviewVid = vid;
+  lvReviews = [];
+  const list = document.getElementById('lv-review-list');
+  if (list) list.innerHTML = '<div class="rv-empty">불러오는 중…</div>';
+  const rb = document.getElementById('lv-rating');
+  if (rb) rb.textContent = '⭐ –';
+
+  const { data, error } = await supabaseClient
+    .from('reviews')
+    .select('*')
+    .eq('content_id', vid)
+    .order('created_at', { ascending: false });
+  if (lvReviewVid !== vid) return; // 그 사이 다른 라이브로 바뀌면 무시
+  if (error) {
+    console.log('라이브 한줄평 로드 에러:', error.message);
+    lvReviews = [];
+  } else {
+    lvReviews = data || [];
+  }
+  renderLvRating();
+  renderLvReviews();
+}
+
+function renderLvRating() {
+  const box = document.getElementById('lv-rating');
+  if (!box) return;
+  if (lvReviews.length === 0) {
+    box.textContent = '⭐ 아직 평가 없음';
+    return;
+  }
+  const avg =
+    lvReviews.reduce((s, r) => s + r.rating, 0) / lvReviews.length;
+  box.textContent = '⭐ ' + avg.toFixed(1) + ' | ' + lvReviews.length + '명';
+}
+
+function renderLvReviews() {
+  const list = document.getElementById('lv-review-list');
+  if (!list) return;
+  if (lvReviews.length === 0) {
+    list.innerHTML = '<div class="rv-empty">한줄평이 없어요!</div>';
+    return;
+  }
+  list.innerHTML = lvReviews
+    .map((r) => {
+      const stars = '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
+      const liked = likedIds.has(r.id) ? ' liked' : '';
+      return (
+        '<div class="review">' +
+        '<div class="r-top">' +
+        '<span class="r-author">' +
+        escapeHtml(r.author) +
+        '</span>' +
+        '<span class="r-stars">' +
+        stars +
+        '</span>' +
+        '<span class="r-date">' +
+        formatReviewDate(r.created_at) +
+        '</span>' +
+        '</div>' +
+        '<div class="r-content">' +
+        escapeHtml(r.content) +
+        '</div>' +
+        '<div class="r-actions">' +
+        '<button class="like-btn' +
+        liked +
+        '" onclick="lvLikeReview(' +
+        r.id +
+        ')">♥ <span>' +
+        r.likes +
+        '</span></button>' +
+        '<button class="del-btn" onclick="lvAskDelete(' +
+        r.id +
+        ')">🗑 삭제</button>' +
+        '</div>' +
+        '<div class="del-confirm" id="lvdc-' +
+        r.id +
+        '">' +
+        '<input type="text" inputmode="numeric" placeholder="비밀번호" id="lvdcpw-' +
+        r.id +
+        '" />' +
+        '<button class="dc-ok" onclick="lvDoDelete(' +
+        r.id +
+        ')">삭제</button>' +
+        '<button class="dc-no" onclick="lvCancelDelete(' +
+        r.id +
+        ')">취소</button>' +
+        '</div>' +
+        '</div>'
+      );
+    })
+    .join('');
+}
+
+function lvOpenForm() {
+  document.getElementById('lv-reviews').classList.add('form-open');
+  document.getElementById('lv-rv-author').value = '';
+  document.getElementById('lv-rv-pw').value = '';
+  document.getElementById('lv-rv-content').value = '';
+  document.getElementById('lv-rv-form-msg').textContent = '';
+  lvPickedRating = 0;
+  lvPaintStars(0);
+}
+function lvCloseForm() {
+  const el = document.getElementById('lv-reviews');
+  if (el) el.classList.remove('form-open');
+}
+function lvPickStar(n) {
+  lvPickedRating = n;
+  lvPaintStars(n);
+}
+function lvPaintStars(n) {
+  document.querySelectorAll('#lv-star-pick span').forEach((s) => {
+    s.classList.toggle('on', Number(s.dataset.v) <= n);
+  });
+}
+
+async function lvSubmitReview() {
+  const author = document.getElementById('lv-rv-author').value.trim();
+  const pw = document.getElementById('lv-rv-pw').value.trim();
+  const content = document.getElementById('lv-rv-content').value.trim();
+  const msg = document.getElementById('lv-rv-form-msg');
+  if (!lvReviewVid) return;
+  if (!author) { msg.textContent = '아이디를 입력해주세요'; return; }
+  if (!pw) { msg.textContent = '비밀번호를 입력해주세요'; return; }
+  if (lvPickedRating === 0) { msg.textContent = '별점을 선택해주세요'; return; }
+  if (!content) { msg.textContent = '한줄평을 입력해주세요'; return; }
+  const now = Date.now();
+  if (now - lvLastWrite < 10000) {
+    msg.textContent = '10초 후에 다시 작성할 수 있어요';
+    return;
+  }
+  const { data, error } = await supabaseClient
+    .from('reviews')
+    .insert([
+      {
+        content_id: lvReviewVid,
+        author: author,
+        password: pw,
+        content: content,
+        rating: lvPickedRating,
+      },
+    ])
+    .select();
+  if (error) {
+    console.log('라이브 한줄평 등록 에러:', error.message);
+    msg.textContent = '등록에 실패했어요. 잠시 후 다시 시도해주세요.';
+    return;
+  }
+  lvLastWrite = now;
+  if (data && data[0]) lvReviews.unshift(data[0]);
+  lvCloseForm();
+  renderLvReviews();
+  renderLvRating();
+}
+
+async function lvLikeReview(id) {
+  if (likedIds.has(id)) { toast('이미 좋아요한 한줄평이에요'); return; }
+  const now = Date.now();
+  if (now - lastReviewLike < 10000) {
+    toast('좋아요는 10초에 한 번만 가능해요');
+    return;
+  }
+  const r = lvReviews.find((x) => x.id === id);
+  if (!r) return;
+  const newLikes = (r.likes || 0) + 1;
+  const { error } = await supabaseClient
+    .from('reviews')
+    .update({ likes: newLikes })
+    .eq('id', id);
+  if (error) { toast('잠시 후 다시 시도해주세요'); return; }
+  r.likes = newLikes;
+  likedIds.add(id);
+  lastReviewLike = now;
+  renderLvReviews();
+}
+
+function lvAskDelete(id) {
+  document
+    .querySelectorAll('#lv-reviews .del-confirm')
+    .forEach((e) => e.classList.remove('show'));
+  const el = document.getElementById('lvdc-' + id);
+  if (el) el.classList.add('show');
+}
+function lvCancelDelete(id) {
+  const el = document.getElementById('lvdc-' + id);
+  if (el) el.classList.remove('show');
+}
+async function lvDoDelete(id) {
+  const input = document.getElementById('lvdcpw-' + id);
+  const pw = input ? input.value.trim() : '';
+  if (!pw) { toast('비밀번호를 입력해주세요'); return; }
+  const { data, error } = await supabaseClient
+    .from('reviews')
+    .delete()
+    .eq('id', id)
+    .eq('password', pw)
+    .select();
+  if (error) { toast('잠시 후 다시 시도해주세요'); return; }
+  if (!data || data.length === 0) { toast('비밀번호가 달라요'); return; }
+  lvReviews = lvReviews.filter((x) => x.id !== id);
+  renderLvReviews();
+  renderLvRating();
+}
+
+// ── 팝업 크기 조절 (A: 모서리 드래그) ──
+let liveResizeBound = false;
+function setupLiveResize() {
+  if (liveResizeBound) return;
+  const handle = document.querySelector('#live-panel .lv-resize');
+  const panel = document.getElementById('live-panel');
+  if (!handle || !panel) return;
+  liveResizeBound = true;
+  let startX = 0,
+    startW = 0,
+    dragging = false;
+  const onMove = (e) => {
+    if (!dragging) return;
+    const x = e.touches ? e.touches[0].clientX : e.clientX;
+    let w = startW + (x - startX);
+    const max = window.innerWidth * 0.92;
+    w = Math.max(300, Math.min(max, w));
+    panel.style.width = w + 'px';
+    if (e.cancelable) e.preventDefault();
+  };
+  const onUp = () => {
+    dragging = false;
+    document.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerup', onUp);
+  };
+  handle.addEventListener('pointerdown', (e) => {
+    dragging = true;
+    startX = e.clientX;
+    startW = panel.getBoundingClientRect().width;
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+    e.preventDefault();
+    e.stopPropagation();
+  });
 }
 
 // ── 시작 ──

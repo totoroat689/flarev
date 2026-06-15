@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!-- ============================================
      Flare(V) 홈페이지
-     버전: v2.6.0 (유튜브 라이브 영상 모드 추가)
+     버전: v2.6.1 (라이브 팝업 크기조절+현지시간+한줄평)
      수정일: 2026-06-15
      ※ 파일 분리: index.html(뼈대) + style.css(디자인) + app.js(동작)
      수정사항(v2.5.0) — UX 다듬기:
@@ -549,14 +549,57 @@
       <div id="live-panel">
         <div class="panel-header">
           <span class="panel-badge" style="background: rgba(255,78,69,0.15); color: #ff4e45; border: 1px solid rgba(255,78,69,0.4);">LIVE</span>
+          <div class="lv-sizes">
+            <button onclick="setLiveSize('m')" data-s="m">보통</button>
+            <button onclick="setLiveSize('l')" data-s="l">크게</button>
+            <button onclick="setLiveSize('xl')" data-s="xl">아주크게</button>
+          </div>
           <button class="panel-close" onclick="closeLivePanel()">✕</button>
         </div>
-        <div class="lv-videobox" id="lv-videobox"></div>
+        <div class="lv-videowrap">
+          <div class="lv-videobox" id="lv-videobox"></div>
+          <span class="lv-resize" title="드래그해서 크기 조절"></span>
+        </div>
         <div class="lv-offline" id="lv-offline">📴 지금은 방송 중이 아니에요</div>
         <div class="lv-body">
           <div class="lv-title" id="lv-title"></div>
+          <div class="lv-meta" id="lv-time"></div>
           <div class="lv-meta" id="lv-place"></div>
           <a id="lv-link" class="lv-link" href="#" target="_blank" rel="noopener noreferrer">▶️ 유튜브에서 보기</a>
+
+          <!-- 한줄평 (별점 + 글) -->
+          <div class="lv-reviews" id="lv-reviews">
+            <div class="lv-rv-head">
+              <span class="lv-rating" id="lv-rating">⭐ –</span>
+              <button class="lv-write-btn" onclick="lvOpenForm()">✏️ 한줄평 쓰기</button>
+            </div>
+            <div class="rv-list" id="lv-review-list"></div>
+            <div class="lv-rv-form" id="lv-review-form">
+              <div class="rv-field">
+                <label>아이디</label>
+                <input id="lv-rv-author" maxlength="12" placeholder="표시될 이름" />
+              </div>
+              <div class="rv-field">
+                <label>비밀번호</label>
+                <input id="lv-rv-pw" maxlength="8" inputmode="numeric" placeholder="삭제용 숫자" />
+              </div>
+              <div class="rv-field">
+                <label>별점</label>
+                <div class="star-pick" id="lv-star-pick">
+                  <span data-v="1" onclick="lvPickStar(1)">★</span><span data-v="2" onclick="lvPickStar(2)">★</span><span data-v="3" onclick="lvPickStar(3)">★</span><span data-v="4" onclick="lvPickStar(4)">★</span><span data-v="5" onclick="lvPickStar(5)">★</span>
+                </div>
+              </div>
+              <div class="rv-field">
+                <label>한줄평</label>
+                <textarea id="lv-rv-content" rows="2" maxlength="60" placeholder="짧은 감상을 남겨주세요"></textarea>
+              </div>
+              <div class="rv-form-msg" id="lv-rv-form-msg"></div>
+              <div class="rv-form-btns">
+                <button class="rv-no" onclick="lvCloseForm()">취소</button>
+                <button class="rv-ok" onclick="lvSubmitReview()">등록</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       <button
