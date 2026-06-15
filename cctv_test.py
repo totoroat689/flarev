@@ -16,22 +16,21 @@ import ssl
 
 API_KEY = os.environ["ITS_KEY"]
 
-# 9000 포트가 막혔으므로, 포트 없는 일반 주소(/api/NCCTVInfo)로 시도
+# 공식 샘플 기준: 포트 9443 (우리가 막혔던 건 9000 — 잘못된 포트였음)
 BASES = [
-    "https://openapi.its.go.kr/api/NCCTVInfo",
-    "http://openapi.its.go.kr/api/NCCTVInfo",
+    "https://openapi.its.go.kr:9443/cctvInfo",
 ]
 
-# 이 엔드포인트는 파라미터 이름이 다름 (key, ReqType, 대문자 MinX 등)
-# 작은 영역(서울 도심 일부)으로 가볍게 테스트
+# 공식 샘플 파라미터 (apiKey, cctvType, getType ...)
 PARAMS = {
-    "key": API_KEY,
-    "ReqType": "2",      # 2: 좌표 영역으로 조회
-    "type": "ex",        # ex: 고속도로 / its: 국도
-    "MinX": "126.95",
-    "MaxX": "127.10",
-    "MinY": "37.50",
-    "MaxY": "37.60",
+    "apiKey": API_KEY,
+    "type": "ex",        # ex: 고속도로 / its: 국도 / all: 전체
+    "cctvType": "4",     # 4: 실시간 스트리밍(HLS, HTTPS)
+    "minX": "126.80",
+    "maxX": "127.89",
+    "minY": "37.40",
+    "maxY": "37.70",
+    "getType": "xml",    # 이 API는 xml이 기본/안전
 }
 
 # SSL 인증서 검증 완화(테스트용)
@@ -69,33 +68,43 @@ def main():
         print("   → 다른 경로(공공데이터포털 버전 등)를 찾아야 합니다.")
         return
 
-    # JSON 파싱 시도
+    # JSON 또는 XML 파싱 시도
     print("\n--- 응답 분석 ---")
+    items = []
+    data = None
     try:
         data = json.loads(raw)
     except json.JSONDecodeError:
-        print("  JSON이 아님. 앞부분 미리보기:")
-        print("  " + raw[:500])
-        return
+        data = None
 
-    # ITS 응답 구조: response > data (목록)
-    items = []
-    if isinstance(data, dict):
-        resp = data.get("response", data)
+    if data is not None:
+        # JSON 구조
+        resp = data.get("response", data) if isinstance(data, dict) else {}
         items = resp.get("data") or resp.get("datas") or []
         if isinstance(items, dict):
             items = [items]
+        get = lambda it, k: it.get(k)
+    else:
+        # XML 구조 (<response><data>...</data></response>)
+        try:
+            import xml.etree.ElementTree as ET
+            root = ET.fromstring(raw)
+            datas = root.findall(".//data")
+            items = datas
+            get = lambda el, k: (el.findtext(k) or "").strip()
+        except Exception as e:
+            print(f"  파싱 실패({e}). 앞부분 미리보기:")
+            print("  " + raw[:600])
+            return
 
     print(f"  📦 받아온 CCTV 개수: {len(items)}")
-
-    # 앞 3개만 핵심 필드 출력
     for i, it in enumerate(items[:3]):
         print(f"\n  [{i+1}]")
-        print(f"     이름(cctvname): {it.get('cctvname')}")
-        print(f"     좌표: x={it.get('coordx')}, y={it.get('coordy')}")
-        url = str(it.get("cctvurl", ""))
+        print(f"     이름(cctvname): {get(it, 'cctvname')}")
+        print(f"     좌표: x={get(it, 'coordx')}, y={get(it, 'coordy')}")
+        url = str(get(it, "cctvurl") or "")
         print(f"     영상주소(cctvurl): {url[:90]}...")
-        print(f"     형식: type={it.get('cctvtype')} format={it.get('cctvformat')}")
+        print(f"     형식(cctvformat): {get(it, 'cctvformat')}")
 
     if items:
         print("\n🎉 성공! 서버에서 CCTV 데이터를 받아옵니다.")
