@@ -348,12 +348,12 @@
           <input
             id="fest-search-input"
             type="text"
-            placeholder="공연·축제 검색 (예: EDM, 뮤지컬, 부산)"
+            placeholder="공연·축제 키워드 검색 (예: EDM, 뮤지컬, 부산)"
             onkeydown="if(event.key==='Enter'){event.preventDefault();runFestSearch();}"
             oninput="if(this.value===''){clearFestSearch();}"
           />
           <button class="ss-go" onclick="runFestSearch()">검색</button>
-          <button class="ss-go" id="fest-search-clear" style="display:none;background:rgba(255,255,255,0.08);" onclick="clearFestSearch()">✕</button>
+          <button class="ss-go" id="fest-search-clear" style="display:none;" onclick="clearFestSearch()">✕</button>
         </div>
       </div>
 

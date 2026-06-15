@@ -214,6 +214,7 @@ function initMap() {
   // 지도 이동/줌이 끝나면 뭉치 다시 계산
   map.addListener('idle', recluster);
   map.addListener('zoom_changed', updatePinLabels);
+  updatePinZoomScale();
 
   // 스팟: 지도 우클릭(PC) → 메뉴
   map.addListener('contextmenu', (e) => {
@@ -620,6 +621,20 @@ function updatePinLabels() {
   if (!map || typeof map.getZoom !== 'function') return; // 지도 로드 전 방어
   const zoomedIn = map.getZoom() >= LABEL_ZOOM;
   pinOverlays.forEach((pin) => pin.setZoomed(zoomedIn));
+  updatePinZoomScale();
+}
+
+// 줌 단계별 핀 크기 (축소=현재 크기, 확대할수록 커짐, 최대 ~1.7배)
+function updatePinZoomScale() {
+  if (!map || typeof map.getZoom !== 'function') return;
+  const z = map.getZoom();
+  let s = 1;
+  if (z >= 18) s = 1.7;
+  else if (z >= 17) s = 1.5;
+  else if (z >= 16) s = 1.3;
+  else if (z >= 15) s = 1.15;
+  else s = 1; // 14 이하: 지금과 동일
+  document.body.style.setProperty('--pin-zoom', s);
 }
 
 // ── 뭉치 계산: 가까운 핀끼리 묶어서 숫자로 ──
@@ -2407,16 +2422,25 @@ function openSpotPanel(post) {
   }
   document.getElementById('sp-map-picker').classList.remove('show');
 
-  // 출처 표시: 장소 선택(place_id 있음) vs 직접 찍은 좌표
+  // 출처 표시: 장소 선택(place_id 있음, 누르면 이동) vs 직접 찍은 좌표
   const place = post.places || {};
   const srcEl = document.getElementById('sp-source');
   if (srcEl) {
     if (place.place_id) {
-      srcEl.className = 'sp-source place';
-      srcEl.textContent = '📍 ' + (place.name || '선택한 장소');
+      srcEl.className = 'sp-source place clickable';
+      srcEl.textContent = '📍 ' + (place.name || '선택한 장소') + '  ›';
+      const la = Number(place.latitude);
+      const lo = Number(place.longitude);
+      srcEl.onclick = () => {
+        if (map && !isNaN(la) && !isNaN(lo)) {
+          map.panTo({ lat: la, lng: lo });
+          map.setZoom(Math.max(map.getZoom(), 16));
+        }
+      };
     } else {
       srcEl.className = 'sp-source custom';
       srcEl.textContent = '📌 직접 표시한 위치';
+      srcEl.onclick = null;
     }
   }
 
