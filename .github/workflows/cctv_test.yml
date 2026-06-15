@@ -1,0 +1,21 @@
+name: CCTV 연결 테스트
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v5
+
+      - name: 파이썬 설치
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: CCTV 테스트 실행
+        env:
+          ITS_KEY: ${{ secrets.ITS_KEY }}
+        run: python cctv_test.py
