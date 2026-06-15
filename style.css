@@ -16,9 +16,9 @@
   --cctv-bg: rgba(90, 185, 255, 0.12);
   --yt: #ff4e45;
   --yt-bg: rgba(255, 78, 69, 0.12);
-  /* 공연 = 노란색 */
-  --perf: #ffd93d;
-  --perf-bg: rgba(255, 217, 61, 0.12);
+  /* 공연 = 노란색 (살짝 어둡게) */
+  --perf: #f0c419;
+  --perf-bg: rgba(240, 196, 25, 0.12);
 }
 
 * {
@@ -543,22 +543,29 @@ body[data-mode='live'] #live-notice {
   cursor: pointer;
 }
 
-/* 기본 핀(예정·오늘 아님) = 핑크, 채도만 살짝 낮춤 */
+/* 기본 핀(예정·오늘 아님) = 핑크 물방울(위치핀) + 커졌다작아졌다 + 파동 */
 .flare-dot {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #f3b8af, #e87f95);
-  box-shadow: 0 0 10px rgba(232, 127, 149, 0.8),
-    0 0 18px rgba(232, 127, 149, 0.4);
+  width: 16px;
+  height: 16px;
   position: relative;
   animation: dot-pulse 2.5s ease-in-out infinite;
+}
+.flare-dot::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  background: radial-gradient(circle at 35% 35%, #f3b8af, #e87f95);
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 0 10px rgba(232, 127, 149, 0.8),
+    0 0 18px rgba(232, 127, 149, 0.4);
 }
 
 .flare-dot::after {
   content: '';
   position: absolute;
-  inset: -6px;
+  inset: -5px;
   border-radius: 50%;
   border: 1px solid rgba(232, 127, 149, 0.45);
   animation: ring-pulse 2.5s ease-in-out infinite;
@@ -566,9 +573,11 @@ body[data-mode='live'] #live-notice {
 
 /* 지난 축제 핀 (종료일이 어제 이하): 어두운 회보라 + 퍼짐 효과 제거 */
 .flare-pin.past .flare-dot {
+  animation: none; /* 두근거림(pulse) 제거 */
+}
+.flare-pin.past .flare-dot::before {
   background: radial-gradient(circle at 35% 35%, #6a5a7e, #3e3450);
   box-shadow: 0 0 6px rgba(90, 75, 110, 0.5);
-  animation: none; /* 두근거림(pulse) 제거 */
 }
 .flare-pin.past .flare-dot::after {
   display: none; /* 퍼지는 링 제거 */
@@ -582,14 +591,16 @@ body[data-mode='live'] #live-notice {
 .flare-pin.ongoing .flare-dot {
   width: 18px;
   height: 18px;
-  margin: -2px; /* 14→18px 커진 만큼 중심 보정 */
+  margin: -1px; /* 16→18px 커진 만큼 중심 보정 */
+}
+.flare-pin.ongoing .flare-dot::before {
   background: radial-gradient(circle at 35% 35%, #ffd9cc, #ff5577);
   box-shadow: 0 0 16px rgba(255, 90, 120, 1),
     0 0 30px rgba(255, 90, 120, 0.7),
     0 0 44px rgba(255, 90, 120, 0.4);
 }
 .flare-pin.ongoing .flare-dot::after {
-  inset: -8px;
+  inset: -7px;
   border-color: rgba(255, 90, 120, 0.7);
 }
 .flare-pin.ongoing .flare-label {
@@ -647,17 +658,17 @@ body[data-mode='live'] #live-notice {
   transform: translateY(-50%) translateX(0) scale(1);
 }
 
-/* 선택된(팝업 열린) 핀 → 노란색 */
-.flare-pin.selected .flare-dot {
-  background: radial-gradient(circle at 35% 35%, #fff4b0, #ffd93d);
-  box-shadow: 0 0 12px rgba(255, 217, 61, 0.95),
-    0 0 22px rgba(255, 217, 61, 0.5);
+/* 선택된(팝업 열린) 핀 → 하얀색 (공연 노랑과 구분) */
+.flare-pin.selected .flare-dot::before {
+  background: radial-gradient(circle at 35% 35%, #ffffff, #e8e8f0);
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.95),
+    0 0 26px rgba(255, 255, 255, 0.55);
 }
 .flare-pin.selected .flare-dot::after {
-  border-color: rgba(255, 217, 61, 0.6);
+  border-color: rgba(255, 255, 255, 0.7);
 }
 .flare-pin.selected .flare-label {
-  border-color: rgba(255, 217, 61, 0.7);
+  border-color: rgba(255, 255, 255, 0.7);
 }
 .flare-pin.selected {
   z-index: 998 !important;
@@ -1727,30 +1738,31 @@ body[data-mode='live'] #live-notice {
 
 /* 스팟 핀 (민트 물방울) */
 .spot-pin { position: relative; cursor: pointer; }
-/* 울림(파동) — 드롭 중심(8,8)에서 좌우대칭으로 퍼짐 */
+/* 울림(파동) — 축제 핀과 동일한 ring-pulse */
 .spot-pin .spot-ring {
   position: absolute;
   left: 8px;
   top: 8px;
-  width: 8px;
-  height: 8px;
-  border: 2px solid #6bffb8;
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
+  border: 1px solid rgba(107, 255, 184, 0.5);
   border-radius: 50%;
-  transform: translate(-50%, -50%);
-  opacity: 0;
   pointer-events: none;
   z-index: 1;
-  animation: spot-ripple 2.2s ease-out infinite;
-}
-@keyframes spot-ripple {
-  0% { width: 8px; height: 8px; opacity: 0.9; }
-  100% { width: 58px; height: 58px; opacity: 0; }
+  animation: ring-pulse 2.5s ease-in-out infinite;
 }
 .spot-pin .spot-drop {
   position: relative;
   z-index: 2;
   width: 16px;
   height: 16px;
+  animation: dot-pulse 2.5s ease-in-out infinite;
+}
+.spot-pin .spot-drop::before {
+  content: '';
+  position: absolute;
+  inset: 0;
   background: radial-gradient(circle at 35% 35%, #b6ffe0, #6bffb8);
   border-radius: 50% 50% 50% 0;
   transform: rotate(-45deg);
@@ -2057,22 +2069,70 @@ body[data-mode='live'] #live-notice {
    공연 핀 (노란색 물방울) + 공연 팝업  (v2.4.0)
    ============================================ */
 .perf-pin { position: relative; cursor: pointer; }
+.perf-pin .perf-ring {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
+  border: 1px solid rgba(240, 196, 25, 0.5);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+  animation: ring-pulse 2.5s ease-in-out infinite;
+}
 .perf-pin .perf-drop {
   position: relative;
   z-index: 2;
   width: 16px;
   height: 16px;
-  background: radial-gradient(circle at 35% 35%, #fff0b8, #ffd93d);
+  animation: dot-pulse 2.5s ease-in-out infinite;
+}
+.perf-pin .perf-drop::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 35% 35%, #ffe680, #f0c419);
   border-radius: 50% 50% 50% 0;
   transform: rotate(-45deg);
   border: 2px solid rgba(255, 255, 255, 0.55);
-  box-shadow: 0 0 10px rgba(255, 217, 61, 0.85), 0 0 18px rgba(255, 217, 61, 0.4);
+  box-shadow: 0 0 10px rgba(240, 196, 25, 0.85),
+    0 0 18px rgba(240, 196, 25, 0.4);
 }
 .perf-pin:hover .perf-drop { filter: brightness(1.12); }
+
+/* 진행 중 공연 (크게 + 빛 강하게) */
+.perf-pin.ongoing .perf-drop { width: 18px; height: 18px; margin: -1px; }
+.perf-pin.ongoing .perf-drop::before {
+  box-shadow: 0 0 16px rgba(240, 196, 25, 1),
+    0 0 30px rgba(240, 196, 25, 0.7),
+    0 0 44px rgba(240, 196, 25, 0.4);
+}
+.perf-pin.ongoing { z-index: 996; }
+
+/* 지난 공연 (어두운 회보라) */
+.perf-pin.past .perf-drop { animation: none; }
+.perf-pin.past .perf-drop::before {
+  background: radial-gradient(circle at 35% 35%, #6a5a7e, #3e3450);
+  box-shadow: 0 0 6px rgba(90, 75, 110, 0.5);
+}
+.perf-pin.past .perf-ring { display: none; }
+
+/* 선택된 공연 핀 → 하얀색 */
+.perf-pin.selected .perf-drop::before {
+  background: radial-gradient(circle at 35% 35%, #ffffff, #e8e8f0);
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.95),
+    0 0 26px rgba(255, 255, 255, 0.55);
+}
+.perf-pin.selected .perf-ring { border-color: rgba(255, 255, 255, 0.7); }
+.perf-pin.selected { z-index: 998 !important; }
+
 .perf-pin .perf-label {
   position: absolute;
   left: 22px;
-  top: 0;
+  top: 50%;
+  transform: translateY(-50%);
   white-space: nowrap;
   font-size: 0.7rem;
   font-weight: 600;
@@ -2080,7 +2140,7 @@ body[data-mode='live'] #live-notice {
   background: rgba(16, 16, 26, 0.82);
   padding: 2px 7px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 217, 61, 0.35);
+  border: 1px solid rgba(240, 196, 25, 0.35);
   opacity: 0;
   transition: opacity 0.15s;
   pointer-events: none;
@@ -2141,4 +2201,59 @@ body[data-mode='live'] #live-notice {
     width: auto;
     max-height: calc(100vh - 96px);
   }
+}
+
+/* ============================================
+   카테고리 전체선택/해제 · 공연 검색창 · 스팟 출처 (v2.5.0)
+   ============================================ */
+/* 카테고리 전체 선택/해제 버튼 */
+.cat-tools { display: flex; gap: 6px; margin-bottom: 8px; }
+.cat-tools button {
+  flex: 1;
+  font-family: inherit;
+  font-size: 0.66rem;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 0;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.cat-tools button:hover { color: var(--text); background: rgba(255, 255, 255, 0.08); }
+
+/* 공연 모드 검색창 (지도 상단) — 스팟 검색창과 동일 스타일(.ss-bar 재사용) */
+#fest-search {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(440px, calc(100% - 90px));
+  z-index: 240;
+  display: none;
+}
+body[data-mode='festival'] #fest-search { display: block; }
+
+/* 스팟 팝업 출처 표시 (장소선택 / 직접 좌표) */
+.sp-source {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  width: fit-content;
+  max-width: 100%;
+}
+.sp-source.place {
+  background: var(--live-bg);
+  color: var(--live);
+  border: 1px solid rgba(107, 255, 184, 0.3);
+}
+.sp-source.custom {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--muted);
+  border: 1px solid var(--border);
 }

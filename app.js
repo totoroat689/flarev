@@ -66,8 +66,9 @@ let spotPhotoIndex = 0; // 현재 보고 있는 사진 번호
 const chosenSpotTags = new Set();
 let lastSpotWrite = 0; // 스팟 저장 10초 제한
 let SpotPinClass = null;
-let dateFilter = 'week'; // 기본: 이번 주
+let dateFilter = 'today'; // 기본: 오늘 (첫 화면엔 오늘 핀만)
 let customRange = { start: null, end: null };
+let festSearchQuery = ''; // 공연 모드 검색 필터 (비면 전체)
 
 // ── 팝업 뒤로가기 처리 (모바일: 뒤로가기로 팝업 닫기) ──
 let popupPushed = false;
@@ -301,8 +302,8 @@ function defineOverlayClasses() {
       const self = this;
       div.addEventListener('click', (e) => {
         e.stopPropagation();
-        selectPin(self); // 노란색으로 표시
         openFestivalPanel(self.festival);
+        selectPin(self); // 선택 → 하얀색 (팝업 연 뒤)
       });
 
       this.div = div;
@@ -478,14 +479,28 @@ function defineOverlayClasses() {
       const v = perf.venues;
       this.position = new google.maps.LatLng(v.latitude, v.longitude);
       this.div = null;
+      this.isOngoing = isOngoingFestival(perf); // 오늘 진행 중?
+      this.isLong =
+        this.isOngoing && festivalDurationDays(perf) >= LONG_RUNNING_DAYS;
+      this.isPast = isPastFestival(perf);
     }
     onAdd() {
       const div = document.createElement('div');
-      div.className = 'perf-pin';
+      div.className =
+        'perf-pin' +
+        (this.isOngoing ? ' ongoing' : '') +
+        (this.isPast ? ' past' : '');
       div.style.position = 'absolute';
       div.style.willChange = 'transform';
+      const badgeHtml = this.isOngoing
+        ? this.isLong
+          ? '<div class="sangsi-badge">상시</div>'
+          : '<div class="now-badge">NOW</div>'
+        : '';
       div.innerHTML =
+        '<span class="perf-ring"></span>' +
         '<div class="perf-drop"></div>' +
+        badgeHtml +
         '<div class="perf-label">' +
         escapeHtml(this.perf.title || '공연') +
         '</div>';
@@ -493,6 +508,7 @@ function defineOverlayClasses() {
       div.addEventListener('click', (e) => {
         e.stopPropagation();
         openPerfPanel(self.perf);
+        selectPin(self); // 선택 → 하얀색 (팝업 연 뒤에 표시)
       });
       this.div = div;
       this.getPanes().overlayMouseTarget.appendChild(div);
@@ -504,6 +520,9 @@ function defineOverlayClasses() {
         this.div.style.transform =
           'translate(' + (pt.x - 8) + 'px,' + (pt.y - 16) + 'px)';
       }
+    }
+    setSelected(isSel) {
+      if (this.div) this.div.classList.toggle('selected', isSel);
     }
     setVisible(v) {
       if (this.div) this.div.style.display = v ? 'block' : 'none';
@@ -545,7 +564,25 @@ function showFestivalPins() {
 // 현재 필터(카테고리+날짜)를 통과하는 축제인지
 function passesCurrentFilter(f) {
   if (!activeCategories.festival) return false;
+  if (festSearchQuery) {
+    // 검색 중에는 날짜 필터를 무시하고 검색어로만 거름
+    return matchesFestSearch([
+      f.title,
+      f.description,
+      f.tags,
+      f.place_name,
+      f.location_name,
+      f.address,
+    ]);
+  }
   return matchesDateFilter(f);
+}
+
+// 공연 모드 검색: 주어진 글자들 중 하나라도 검색어를 포함하면 true
+function matchesFestSearch(parts) {
+  if (!festSearchQuery) return true;
+  const q = festSearchQuery.toLowerCase();
+  return parts.some((t) => t && String(t).toLowerCase().includes(q));
 }
 
 // 필터에 맞는 핀만 새로 생성 (나머지는 아예 안 만들어 가볍게)
@@ -1479,6 +1516,17 @@ function setViewMode(mode) {
   hideSpotContextMenu();
   closeSearchResults();
 
+  // 선택(하양) 핀 해제 + 공연 검색 초기화
+  if (selectedPin) {
+    selectedPin.setSelected(false);
+    selectedPin = null;
+  }
+  festSearchQuery = '';
+  const fsInput = document.getElementById('fest-search-input');
+  if (fsInput) fsInput.value = '';
+  const fsClear = document.getElementById('fest-search-clear');
+  if (fsClear) fsClear.style.display = 'none';
+
   // 일단 모든 핀 제거 후, 모드에 맞는 핀만 다시 표시
   clearFestivalPins();
   clearPerfPins();
@@ -2353,7 +2401,24 @@ function openSpotPanel(post) {
   currentSpot = post;
   closePanel(); // 축제 팝업 닫기
   closePerfPanel(); // 공연 팝업 닫기
+  if (selectedPin) {
+    selectedPin.setSelected(false); // 다른 핀 선택(하양) 해제
+    selectedPin = null;
+  }
   document.getElementById('sp-map-picker').classList.remove('show');
+
+  // 출처 표시: 장소 선택(place_id 있음) vs 직접 찍은 좌표
+  const place = post.places || {};
+  const srcEl = document.getElementById('sp-source');
+  if (srcEl) {
+    if (place.place_id) {
+      srcEl.className = 'sp-source place';
+      srcEl.textContent = '📍 ' + (place.name || '선택한 장소');
+    } else {
+      srcEl.className = 'sp-source custom';
+      srcEl.textContent = '📌 직접 표시한 위치';
+    }
+  }
 
   // 사진 캐러셀 준비 (여러 장이면 화살표/카운터)
   spotPhotoList = (post.photos || []).filter(Boolean);
@@ -2609,11 +2674,84 @@ function renderPerfPins() {
   perfData.forEach((p) => {
     const g = p.genre || p.tags;
     if (!g || !activeGenres.has(g)) return; // 꺼진 장르 제외
-    if (!matchesDateFilter(p)) return; // 날짜 필터(공연기간 겹침)
+    if (festSearchQuery) {
+      // 검색 중: 날짜 무시, 검색어(제목·장르·장소·출연진·공연장)로 거름
+      if (
+        !matchesFestSearch([
+          p.title,
+          p.genre,
+          p.tags,
+          p.place_name,
+          p.cast_members,
+          p.venues && p.venues.name,
+          p.venues && p.venues.address,
+        ])
+      )
+        return;
+    } else if (!matchesDateFilter(p)) {
+      return; // 날짜 필터(공연기간 겹침)
+    }
     const pin = new PerfPinClass(p);
     pin.setMap(map);
     perfOverlays.push(pin);
   });
+}
+
+// 공연 모드 검색 실행 (제목·장르·지역 등으로 필터)
+function runFestSearch() {
+  const input = document.getElementById('fest-search-input');
+  const q = input ? (input.value || '').trim() : '';
+  festSearchQuery = q;
+  const clearBtn = document.getElementById('fest-search-clear');
+  if (clearBtn) clearBtn.style.display = q ? 'block' : 'none';
+  buildPinsForCurrentFilter();
+  renderPerfPins();
+}
+
+// 공연 모드 검색 해제 → 원래(날짜 필터) 상태로 복귀
+function clearFestSearch() {
+  festSearchQuery = '';
+  const input = document.getElementById('fest-search-input');
+  if (input) input.value = '';
+  const clearBtn = document.getElementById('fest-search-clear');
+  if (clearBtn) clearBtn.style.display = 'none';
+  buildPinsForCurrentFilter();
+  renderPerfPins();
+}
+
+// 카테고리 전체 선택/해제
+function setAllCategories(mode, on) {
+  if (mode === 'spot') {
+    activeSpotTags = on ? new Set(SPOT_TAGS) : new Set();
+    document
+      .querySelectorAll('#cat-spot .filter-item')
+      .forEach((el) => el.classList.toggle('active-tag', on));
+    renderSpotPins();
+  } else if (mode === 'festival') {
+    // 축제
+    const festItem = document.querySelector('#cat-festival .filter-item');
+    activeCategories.festival = on;
+    if (festItem) festItem.classList.toggle('active-festival', on);
+    // 공연 장르 전체
+    document
+      .querySelectorAll('#cat-perf-genres .filter-item')
+      .forEach((el) => el.classList.toggle('active-perf', on));
+    activeGenres = new Set();
+    if (on) {
+      perfData.forEach((p) => {
+        const g = p.genre || p.tags;
+        if (g) activeGenres.add(g);
+      });
+    }
+    buildPinsForCurrentFilter();
+    renderPerfPins();
+  } else if (mode === 'live') {
+    document.querySelectorAll('#cat-live .filter-item').forEach((el) => {
+      const t = el.querySelector('.dot-cctv') ? 'cctv' : 'yt';
+      activeCategories[t] = on;
+      el.classList.toggle('active-' + t, on);
+    });
+  }
 }
 
 // 공연 팝업 열기
@@ -2670,6 +2808,10 @@ function closePerfPanel() {
   const pn = document.getElementById('perf-panel');
   const was = pn.classList.contains('show');
   pn.classList.remove('show');
+  if (selectedPin) {
+    selectedPin.setSelected(false);
+    selectedPin = null;
+  }
   if (was) afterManualPopupClose();
 }
 

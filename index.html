@@ -1,9 +1,19 @@
 <!DOCTYPE html>
 <!-- ============================================
      Flare(V) 홈페이지
-     버전: v2.4.0
+     버전: v2.5.0
      수정일: 2026-06-15
      ※ 파일 분리: index.html(뼈대) + style.css(디자인) + app.js(동작)
+     수정사항(v2.5.0) — UX 다듬기:
+       - 사이드바 순서: 개발자메시지 → 보기모드 → 날짜 → 카테고리
+       - 보기모드 탭 '축제·공연' → '공연'
+       - 핀 모양 통일: 셋 다 물방울(위치핀) + 커졌다작아졌다 + 파동(축제 방식)
+       - 공연 노랑 채도 낮춤 / 선택된 핀 = 하얀색
+       - 공연 핀도 NOW·상시 표시
+       - 첫 화면 기본: 공연 모드 + 카테고리 전체선택 + 날짜 '오늘'(오늘 핀만)
+       - 카테고리 전체 선택/해제 버튼
+       - 스팟 팝업에 출처 표시(장소선택 vs 직접 좌표, 장소명)
+       - 공연 모드 검색 필터(제목·장르·지역, X로 복귀)
      수정사항(v2.4.0) — 보기 모드 3개 + 공연 데이터:
        - 보기 모드 3개: 📍스팟 / 🎉축제·공연 / 📡실시간 영상 (A안 3칸 세그먼트)
        - 사이드바 순서: 개발자메시지 → 날짜 → 보기모드 → 카테고리
@@ -177,14 +187,25 @@
         </button>
       </div>
 
-      <!-- 날짜 필터 (기본 '이번 주' 활성) — 영상 모드에선 숨김 -->
+      <!-- 보기 모드 전환 (스팟 / 공연 / 실시간 영상) -->
+      <div class="section">
+        <div class="section-label">보기 모드</div>
+        <div class="seg3" id="mode-seg" data-m="festival">
+          <div class="seg-thumb"></div>
+          <button class="b-spot" onclick="setViewMode('spot')">📍 스팟</button>
+          <button class="b-fest" onclick="setViewMode('festival')">🎉 공연</button>
+          <button class="b-live" onclick="setViewMode('live')">📡 영상</button>
+        </div>
+      </div>
+
+      <!-- 날짜 필터 (기본 '오늘' 활성) — 영상 모드에선 숨김 -->
       <div class="section" id="date-section">
         <div class="section-label">날짜</div>
         <div class="date-row">
-          <button class="date-btn" onclick="setDate(this,'today')">
+          <button class="date-btn active" onclick="setDate(this,'today')">
             오늘
           </button>
-          <button class="date-btn active" onclick="setDate(this,'week')">
+          <button class="date-btn" onclick="setDate(this,'week')">
             이번 주
           </button>
           <button class="date-btn" onclick="setDate(this,'month')">
@@ -208,23 +229,16 @@
         </div>
       </div>
 
-      <!-- 보기 모드 전환 (스팟 / 축제·공연 / 실시간 영상) -->
-      <div class="section">
-        <div class="section-label">보기 모드</div>
-        <div class="seg3" id="mode-seg" data-m="festival">
-          <div class="seg-thumb"></div>
-          <button class="b-spot" onclick="setViewMode('spot')">📍 스팟</button>
-          <button class="b-fest" onclick="setViewMode('festival')">🎉 축제·공연</button>
-          <button class="b-live" onclick="setViewMode('live')">📡 영상</button>
-        </div>
-      </div>
-
       <!-- 카테고리 필터 (모드별로 한 묶음만 보임) -->
       <div class="section">
         <div class="section-label">카테고리</div>
 
         <!-- 스팟 모드 -->
         <div class="filter-list cat-group" id="cat-spot">
+          <div class="cat-tools">
+            <button onclick="setAllCategories('spot', true)">전체 선택</button>
+            <button onclick="setAllCategories('spot', false)">전체 해제</button>
+          </div>
           <div class="filter-item active-tag" onclick="toggleSpotTag(this,'풍경')">
             <div class="filter-dot dot-spot"></div>
             <span class="filter-text">🏞️ 풍경</span>
@@ -259,6 +273,10 @@
 
         <!-- 축제·공연 모드 -->
         <div class="filter-list cat-group" id="cat-festival">
+          <div class="cat-tools">
+            <button onclick="setAllCategories('festival', true)">전체 선택</button>
+            <button onclick="setAllCategories('festival', false)">전체 해제</button>
+          </div>
           <div
             class="filter-item active-festival"
             onclick="toggleFilter(this,'festival')"
@@ -273,6 +291,10 @@
 
         <!-- 실시간 영상 모드 -->
         <div class="filter-list cat-group" id="cat-live">
+          <div class="cat-tools">
+            <button onclick="setAllCategories('live', true)">전체 선택</button>
+            <button onclick="setAllCategories('live', false)">전체 해제</button>
+          </div>
           <div
             class="filter-item active-cctv"
             onclick="toggleFilter(this,'cctv')"
@@ -319,6 +341,21 @@
 
       <!-- 스팟: 우클릭/롱프레스 메뉴 -->
       <div id="spot-ctx"><button onclick="openSpotForm()">📍 스팟 남기기</button></div>
+
+      <!-- 공연 모드: 검색 필터 (제목·장르·지역) -->
+      <div id="fest-search">
+        <div class="ss-bar">
+          <input
+            id="fest-search-input"
+            type="text"
+            placeholder="공연·축제 검색 (예: EDM, 뮤지컬, 부산)"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();runFestSearch();}"
+            oninput="if(this.value===''){clearFestSearch();}"
+          />
+          <button class="ss-go" onclick="runFestSearch()">검색</button>
+          <button class="ss-go" id="fest-search-clear" style="display:none;background:rgba(255,255,255,0.08);" onclick="clearFestSearch()">✕</button>
+        </div>
+      </div>
 
       <!-- 내 위치 버튼 (나침반) -->
       <button id="locate-btn" onclick="goToMyLocation()" title="내 위치로 이동">🧭</button>
@@ -463,6 +500,7 @@
           <div class="sp-counter" id="sp-counter"></div>
         </div>
         <div class="sp-body">
+          <div class="sp-source" id="sp-source"></div>
           <div class="sp-title" id="sp-title"></div>
           <div class="sp-author" id="sp-author"></div>
           <div class="sp-date" id="sp-date"></div>
