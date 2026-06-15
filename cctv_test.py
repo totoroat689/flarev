@@ -16,22 +16,22 @@ import ssl
 
 API_KEY = os.environ["ITS_KEY"]
 
-# 9000 포트가 막히는 경우를 대비해 http/https 둘 다 시도
+# 9000 포트가 막혔으므로, 포트 없는 일반 주소(/api/NCCTVInfo)로 시도
 BASES = [
-    "https://openapi.its.go.kr:9000/cctvInfo",
-    "http://openapi.its.go.kr:9000/cctvInfo",
+    "https://openapi.its.go.kr/api/NCCTVInfo",
+    "http://openapi.its.go.kr/api/NCCTVInfo",
 ]
 
+# 이 엔드포인트는 파라미터 이름이 다름 (key, ReqType, 대문자 MinX 등)
 # 작은 영역(서울 도심 일부)으로 가볍게 테스트
 PARAMS = {
-    "apiKey": API_KEY,
+    "key": API_KEY,
+    "ReqType": "2",      # 2: 좌표 영역으로 조회
     "type": "ex",        # ex: 고속도로 / its: 국도
-    "cctvType": "4",     # 4: 실시간 스트리밍(HLS, HTTPS)
-    "minX": "126.95",
-    "maxX": "127.10",
-    "minY": "37.50",
-    "maxY": "37.60",
-    "getType": "json",
+    "MinX": "126.95",
+    "MaxX": "127.10",
+    "MinY": "37.50",
+    "MaxY": "37.60",
 }
 
 # SSL 인증서 검증 완화(테스트용)
