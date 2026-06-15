@@ -49,6 +49,15 @@ let perfOverlays = []; // 지도에 뜬 공연 핀
 let PerfPinClass = null;
 let currentPerf = null; // 현재 열린 공연 팝업
 
+// 유튜브 라이브 영상 상태
+let liveData = []; // live_videos 행 (is_active=true)
+let liveGroups = []; // 같은 장소끼리 묶음 [{key, lat, lng, items:[]}]
+let liveOverlays = []; // 지도에 뜬 라이브 핀
+let LivePinClass = null;
+let LiveClusterClass = null;
+let currentLive = null; // 현재 열린 라이브 팝업
+let expandedLiveGroup = null; // 펼쳐진(분리된) 그룹의 key
+
 // 스팟(사용자 명소) 상태
 let spotOverlays = []; // 지도에 뜬 스팟 핀들
 let spotData = []; // 불러온 스팟(게시물) 목록
@@ -96,6 +105,12 @@ window.addEventListener('popstate', function () {
   if (ov && ov.classList.contains('show')) ov.classList.remove('show');
   if (pn && pn.classList.contains('show')) pn.classList.remove('show');
   if (pf && pf.classList.contains('show')) pf.classList.remove('show');
+  const lv = document.getElementById('live-panel');
+  if (lv && lv.classList.contains('show')) {
+    lv.classList.remove('show');
+    const box = document.getElementById('lv-videobox');
+    if (box) box.innerHTML = '';
+  }
 });
 
 // ── 구글 지도 다크 스타일 ──
@@ -203,6 +218,11 @@ function initMap() {
     collapseSpider();
     closeSpotPanel(); // 바깥(빈 지도) 누르면 스팟 상세 팝업 닫기
     closePerfPanel(); // 공연 팝업도 닫기
+    closeLivePanel(); // 라이브 팝업도 닫기
+    if (expandedLiveGroup) {
+      expandedLiveGroup = null; // 분리됐던 라이브 핀 다시 묶기
+      renderLivePins();
+    }
     // 메뉴를 막 연 직후(롱프레스 직후 자동 클릭)엔 닫지 않음 → 다른 곳 누를 때 닫힘
     if (Date.now() - spotMenuOpenedAt > 500) hideSpotContextMenu();
   });
@@ -237,6 +257,7 @@ function initMap() {
   if (festivalData.length > 0) showFestivalPins();
   loadSpots(); // 스팟 불러오기
   loadPerformances(); // 공연 불러오기
+  loadLiveVideos(); // 유튜브 라이브 불러오기
 }
 
 // ── 핀·뭉치 클래스 정의 (google.maps 로드된 뒤 실행) ──
@@ -526,6 +547,98 @@ function defineOverlayClasses() {
     }
     setVisible(v) {
       if (this.div) this.div.style.display = v ? 'block' : 'none';
+    }
+    onRemove() {
+      if (this.div) {
+        this.div.parentNode.removeChild(this.div);
+        this.div = null;
+      }
+    }
+  };
+
+  // 유튜브 라이브 핀 (방송중=빨강, 꺼짐=회색)
+  LivePinClass = class extends google.maps.OverlayView {
+    constructor(item, fan) {
+      super();
+      this.item = item;
+      this.fan = fan || null; // 같은 장소 분리 시 픽셀 오프셋 {dx,dy}
+      this.position = new google.maps.LatLng(item.latitude, item.longitude);
+      this.div = null;
+    }
+    onAdd() {
+      const on = !!this.item.is_live;
+      const div = document.createElement('div');
+      div.className = 'live-pin' + (on ? ' on' : ' off');
+      div.style.position = 'absolute';
+      div.style.willChange = 'transform';
+      div.innerHTML =
+        (on ? '<span class="live-ring"></span>' : '') +
+        '<div class="live-drop"></div>' +
+        (on ? '<div class="live-badge">LIVE</div>' : '') +
+        '<div class="live-label">' +
+        escapeHtml(this.item.title || '라이브') +
+        '</div>';
+      const self = this;
+      div.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openLivePanel(self.item);
+        selectPin(self);
+      });
+      this.div = div;
+      this.getPanes().overlayMouseTarget.appendChild(div);
+    }
+    draw() {
+      if (!this.div) return;
+      const pt = this.getProjection().fromLatLngToDivPixel(this.position);
+      if (pt) {
+        const dx = this.fan ? this.fan.dx : 0;
+        const dy = this.fan ? this.fan.dy : 0;
+        this.div.style.transform =
+          'translate(' + (pt.x - 8 + dx) + 'px,' + (pt.y - 16 + dy) + 'px)';
+      }
+    }
+    setSelected(isSel) {
+      if (this.div) this.div.classList.toggle('selected', isSel);
+    }
+    onRemove() {
+      if (this.div) {
+        this.div.parentNode.removeChild(this.div);
+        this.div = null;
+      }
+    }
+  };
+
+  // 같은 장소에 라이브가 여러 개일 때: 숫자 묶음 핀 (누르면 분리)
+  LiveClusterClass = class extends google.maps.OverlayView {
+    constructor(group) {
+      super();
+      this.group = group;
+      this.position = new google.maps.LatLng(group.lat, group.lng);
+      this.div = null;
+    }
+    onAdd() {
+      const anyOn = this.group.items.some((it) => it.is_live);
+      const div = document.createElement('div');
+      div.className = 'live-cluster' + (anyOn ? ' on' : ' off');
+      div.style.position = 'absolute';
+      div.style.willChange = 'transform';
+      div.textContent = this.group.items.length;
+      const self = this;
+      div.addEventListener('click', (e) => {
+        e.stopPropagation();
+        expandedLiveGroup = self.group.key; // 분리해서 펼치기
+        renderLivePins();
+      });
+      this.div = div;
+      this.getPanes().overlayMouseTarget.appendChild(div);
+    }
+    draw() {
+      if (!this.div) return;
+      const pt = this.getProjection().fromLatLngToDivPixel(this.position);
+      if (pt) {
+        this.div.style.transform =
+          'translate(' + (pt.x - 14) + 'px,' + (pt.y - 14) + 'px)';
+      }
     }
     onRemove() {
       if (this.div) {
@@ -1468,8 +1581,10 @@ function toggleFilter(el, type) {
     el.classList.add(activeClass);
     activeCategories[type] = true;
   }
-  if (type === 'cctv' || type === 'yt') {
-    // 영상 모드 카테고리: 핀 연결은 추후(ITS 키 승인 후)
+  if (type === 'yt') {
+    renderLivePins(); // 유튜브 스트리밍 켜기/끄기
+  } else if (type === 'cctv') {
+    // CCTV는 데이터 연결 보류 상태
   } else {
     applyFilters(); // 축제 핀 갱신 (공연도 함께)
   }
@@ -1513,6 +1628,7 @@ function setViewMode(mode) {
   closePanel();
   closeSpotPanel();
   closePerfPanel();
+  closeLivePanel();
   hideSpotContextMenu();
   closeSearchResults();
 
@@ -1530,6 +1646,8 @@ function setViewMode(mode) {
   // 일단 모든 핀 제거 후, 모드에 맞는 핀만 다시 표시
   clearFestivalPins();
   clearPerfPins();
+  clearLivePins();
+  expandedLiveGroup = null;
   spotOverlays.forEach((s) => s.setMap(null));
   spotOverlays = [];
 
@@ -1538,8 +1656,9 @@ function setViewMode(mode) {
     renderPerfPins(); // 공연(노랑)
   } else if (mode === 'spot') {
     renderSpotPins(); // 스팟(민트)
+  } else if (mode === 'live') {
+    renderLivePins(); // 유튜브 라이브(빨강/회색)
   }
-  // live: 핀 없음 (안내 문구는 CSS로 표시)
 }
 
 // 축제 핀·뭉치 모두 제거 (모드 전환용)
@@ -2760,6 +2879,7 @@ function setAllCategories(mode, on) {
       activeCategories[t] = on;
       el.classList.toggle('active-' + t, on);
     });
+    renderLivePins();
   }
 }
 
@@ -2817,6 +2937,148 @@ function closePerfPanel() {
   const pn = document.getElementById('perf-panel');
   const was = pn.classList.contains('show');
   pn.classList.remove('show');
+  if (selectedPin) {
+    selectedPin.setSelected(false);
+    selectedPin = null;
+  }
+  if (was) afterManualPopupClose();
+}
+
+// ====================================================
+//  유튜브 라이브 — 로딩 · 장소묶기 · 핀 · 팝업
+// ====================================================
+
+async function loadLiveVideos() {
+  const { data, error } = await supabaseClient
+    .from('live_videos')
+    .select('*')
+    .eq('is_active', true);
+  if (error) {
+    console.log('❌ 라이브 로드 에러:', error.message);
+    return;
+  }
+  liveData = (data || []).filter(
+    (v) => v.latitude != null && v.longitude != null
+  );
+  console.log('✅ 라이브', liveData.length, '개 불러옴');
+  buildLiveGroups();
+
+  // 라이브가 하나라도 있으면 "곧 추가됩니다" 안내 숨김
+  const notice = document.getElementById('live-notice');
+  if (notice) notice.classList.toggle('has-live', liveData.length > 0);
+
+  // 카테고리 개수 표시(유튜브)
+  const cnt = document.getElementById('cnt-yt');
+  if (cnt) cnt.textContent = liveData.length;
+
+  if (viewMode === 'live') renderLivePins();
+}
+
+// 같은 좌표끼리 묶기 (소수 4자리 ≈ 11m)
+function buildLiveGroups() {
+  const byKey = {};
+  liveData.forEach((v) => {
+    const key = Number(v.latitude).toFixed(4) + ',' + Number(v.longitude).toFixed(4);
+    if (!byKey[key]) {
+      byKey[key] = {
+        key,
+        lat: Number(v.latitude),
+        lng: Number(v.longitude),
+        items: [],
+      };
+    }
+    byKey[key].items.push(v);
+  });
+  liveGroups = Object.values(byKey);
+}
+
+function clearLivePins() {
+  liveOverlays.forEach((p) => p.setMap(null));
+  liveOverlays = [];
+}
+
+function addLivePin(item, fan) {
+  const pin = new LivePinClass(item, fan);
+  pin.setMap(map);
+  liveOverlays.push(pin);
+}
+function addLiveCluster(group) {
+  const c = new LiveClusterClass(group);
+  c.setMap(map);
+  liveOverlays.push(c);
+}
+
+// 라이브 핀 그리기 (영상 모드 + 유튜브 카테고리 ON)
+function renderLivePins() {
+  clearLivePins();
+  if (viewMode !== 'live') return;
+  if (!LivePinClass || !map) return;
+  if (!activeCategories.yt) return; // 유튜브 스트리밍 토글 OFF면 표시 안 함
+
+  liveGroups.forEach((g) => {
+    if (g.items.length === 1) {
+      addLivePin(g.items[0], null);
+    } else if (expandedLiveGroup === g.key) {
+      // 펼침: 멤버들을 원형으로 분리 배치
+      const N = g.items.length;
+      const R = 36;
+      g.items.forEach((it, i) => {
+        const ang = (2 * Math.PI / N) * i - Math.PI / 2;
+        addLivePin(it, { dx: Math.cos(ang) * R, dy: Math.sin(ang) * R });
+      });
+    } else {
+      addLiveCluster(g); // 숫자 묶음
+    }
+  });
+}
+
+// 라이브 팝업 열기
+function openLivePanel(item) {
+  currentLive = item;
+  closePanel();
+  closeSpotPanel();
+  closePerfPanel();
+
+  const box = document.getElementById('lv-videobox');
+  const offline = document.getElementById('lv-offline');
+  if (item.is_live) {
+    // 방송 중 → 유튜브 임베드 재생 (음소거 자동재생)
+    box.innerHTML =
+      '<iframe src="https://www.youtube.com/embed/' +
+      encodeURIComponent(item.video_id) +
+      '?autoplay=1&mute=1&playsinline=1" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>';
+    box.style.display = 'block';
+    if (offline) offline.style.display = 'none';
+  } else {
+    // 꺼짐 → 썸네일 + 안내
+    box.innerHTML =
+      '<img src="https://i.ytimg.com/vi/' +
+      encodeURIComponent(item.video_id) +
+      '/hqdefault.jpg" alt="" />';
+    box.style.display = 'block';
+    if (offline) offline.style.display = 'flex';
+  }
+
+  document.getElementById('lv-title').textContent = item.title || '라이브';
+  setPerfMeta('lv-place', item.place_name, '📍 ');
+  const link = document.getElementById('lv-link');
+  link.href = 'https://www.youtube.com/watch?v=' + item.video_id;
+
+  const panel = document.getElementById('live-panel');
+  panel.classList.remove('show');
+  void panel.offsetWidth;
+  panel.classList.add('show');
+  panel.scrollTop = 0;
+  pushPopupState();
+}
+
+function closeLivePanel() {
+  const pn = document.getElementById('live-panel');
+  const was = pn.classList.contains('show');
+  pn.classList.remove('show');
+  // 영상 정지: iframe 비우기
+  const box = document.getElementById('lv-videobox');
+  if (box) box.innerHTML = '';
   if (selectedPin) {
     selectedPin.setSelected(false);
     selectedPin = null;
