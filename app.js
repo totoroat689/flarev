@@ -214,7 +214,6 @@ function initMap() {
   // 지도 이동/줌이 끝나면 뭉치 다시 계산
   map.addListener('idle', recluster);
   map.addListener('zoom_changed', updatePinLabels);
-  updatePinZoomScale();
 
   // 스팟: 지도 우클릭(PC) → 메뉴
   map.addListener('contextmenu', (e) => {
@@ -621,20 +620,6 @@ function updatePinLabels() {
   if (!map || typeof map.getZoom !== 'function') return; // 지도 로드 전 방어
   const zoomedIn = map.getZoom() >= LABEL_ZOOM;
   pinOverlays.forEach((pin) => pin.setZoomed(zoomedIn));
-  updatePinZoomScale();
-}
-
-// 줌 단계별 핀 크기 (축소=현재 크기, 확대할수록 커짐, 최대 ~1.7배)
-function updatePinZoomScale() {
-  if (!map || typeof map.getZoom !== 'function') return;
-  const z = map.getZoom();
-  let s = 1;
-  if (z >= 18) s = 1.7;
-  else if (z >= 17) s = 1.5;
-  else if (z >= 16) s = 1.3;
-  else if (z >= 15) s = 1.15;
-  else s = 1; // 14 이하: 지금과 동일
-  document.body.style.setProperty('--pin-zoom', s);
 }
 
 // ── 뭉치 계산: 가까운 핀끼리 묶어서 숫자로 ──
