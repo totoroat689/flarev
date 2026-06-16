@@ -1,7 +1,9 @@
 /* ============================================
-   Flare(V) 스타일 — 버전 v2.8.0 (2026-06-17)
-   변경: 유튜브 알약 버튼(.lv-yt-pill) / 상시 토글(.dot-sangsi, .active-sangsi)
-        / 공연핀 묶음 spider(.perf-pin.spider) / 모바일 팝업 100dvh
+   Flare(V) 스타일 — 버전 v2.9.0 (2026-06-17)
+   v2.9.0: 스팟 남기기 버튼(민트, 스팟모드 전용) / 위치 확인하기 행(.spot-locrow)
+        / A안 위치 고르기 모드(#spot-pick) — 가운데 핀 + 검색
+   v2.8.1: 모바일 메뉴 열림 시 검색창 숨김 / 상시 맨위 / LIVE+유튜브 묶음(.lv-head-left)
+   v2.8.0: 유튜브 알약 / 상시 토글 / 공연핀 묶음 spider / 모바일 팝업 100dvh
         / 사이드바 얇은 스크롤 / 상단 검색창 좌우 여백 확보
    ============================================ */
 :root {
@@ -1335,20 +1337,27 @@ body[data-mode='live'] #live-notice {
   padding: 14px 24px;
   border-radius: 50px;
   border: none;
-  background: var(--festival);
-  color: #0a0a0f;
+  background: var(--live);
+  color: #06231a;
   font-size: 0.85rem;
   font-family: 'Noto Sans KR', sans-serif;
   font-weight: 700;
   cursor: pointer;
   z-index: 100;
-  display: flex;
+  display: none; /* 스팟 모드에서만 표시 */
   align-items: center;
   gap: 8px;
-  box-shadow: 0 0 24px rgba(255, 107, 107, 0.5);
+  box-shadow: 0 0 24px rgba(107, 255, 184, 0.45);
   transition: all 0.25s;
   letter-spacing: 0.5px;
 }
+#upload-btn:hover { filter: brightness(1.05); }
+/* 스팟 모드에서만 노출 (위치 고르기 중에는 숨김) */
+body[data-mode='spot'] #upload-btn { display: flex; }
+body.spot-picking #upload-btn,
+body.spot-picking #spot-search,
+body.spot-picking #locate-btn,
+body.spot-picking #menu-toggle { display: none !important; }
 
 #loading {
   position: absolute;
@@ -1737,6 +1746,97 @@ body[data-mode='live'] #live-notice {
   margin-bottom: 14px;
   word-break: keep-all;
 }
+
+/* (8) 위치 확인하기 행 — 평소엔 민트 강조(아직 위치 미지정) */
+.spot-locrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 13px;
+  border-radius: 13px;
+  background: var(--live-bg);
+  border: 1px solid rgba(107, 255, 184, 0.5);
+  box-shadow: 0 0 0 3px rgba(107, 255, 184, 0.1);
+  margin-bottom: 14px;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+.spot-locrow:hover { filter: brightness(1.08); }
+.spot-locrow .slr-ic { font-size: 1.15rem; }
+.spot-locrow .slr-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.spot-locrow .slr-txt b {
+  font-size: 0.85rem; font-weight: 700; color: var(--live);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.spot-locrow .slr-txt span { font-size: 0.68rem; color: var(--muted); margin-top: 1px; }
+.spot-locrow .slr-go {
+  font-size: 0.7rem; font-weight: 700; color: #06231a;
+  background: var(--live); padding: 6px 11px; border-radius: 9px; white-space: nowrap;
+}
+/* 위치가 지정된 뒤 — 차분한 회색 톤 + 흰 글씨 */
+.spot-locrow.set {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--border);
+  box-shadow: none;
+}
+.spot-locrow.set .slr-txt b { color: #fff; }
+.spot-locrow.set .slr-go {
+  background: transparent; color: var(--live);
+  border: 1px solid rgba(107, 255, 184, 0.5);
+}
+
+/* (8) A안: 위치 고르기 모드 (지도 위에 떠 있는 컨트롤들) */
+#spot-pick {
+  position: absolute;
+  inset: 0;
+  z-index: 260;
+  display: none;
+  pointer-events: none; /* 지도는 그대로 움직이게, 컨트롤만 클릭 */
+}
+#spot-pick.show { display: block; }
+#spot-pick .sp-top,
+#spot-pick .sp-back,
+#spot-pick .sp-searchcol,
+#spot-pick .sp-bottom,
+#spot-pick .ss-bar,
+#spot-pick .ss-go,
+#spot-pick #spot-pick-results { pointer-events: auto; }
+
+.sp-top { position: absolute; top: 14px; left: 12px; right: 12px; display: flex; gap: 8px; align-items: flex-start; }
+.sp-back {
+  width: 44px; height: 44px; flex: 0 0 44px; border-radius: 12px;
+  border: 1px solid var(--border); background: rgba(20, 20, 31, 0.92);
+  color: var(--text); font-size: 1.2rem; cursor: pointer; backdrop-filter: blur(10px);
+}
+.sp-searchcol { flex: 1; min-width: 0; }
+#spot-pick-results {
+  display: none; margin-top: 6px; background: rgba(20, 20, 31, 0.96);
+  border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+  backdrop-filter: blur(10px); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+#spot-pick-results.show { display: block; }
+
+/* 가운데 고정 핀 */
+.sp-cross { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -100%); z-index: 261; pointer-events: none; text-align: center; }
+.sp-pin { font-size: 2.3rem; line-height: 1; filter: drop-shadow(0 6px 9px rgba(0, 0, 0, 0.55)); animation: sp-bob 1.6s ease-in-out infinite; }
+.sp-pindot { width: 10px; height: 4px; background: rgba(0, 0, 0, 0.4); border-radius: 50%; margin: 2px auto 0; filter: blur(0.5px); }
+@keyframes sp-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+
+.sp-hint {
+  position: absolute; left: 50%; top: calc(50% - 64px); transform: translateX(-50%);
+  z-index: 261; pointer-events: none; white-space: nowrap;
+  background: rgba(10, 10, 16, 0.85); border: 1px solid var(--border); color: var(--text);
+  font-size: 0.72rem; padding: 6px 12px; border-radius: 20px;
+}
+.sp-bottom { position: absolute; left: 12px; right: 12px; bottom: 16px; z-index: 261; }
+.sp-where { font-size: 0.74rem; color: var(--muted); margin: 0 0 8px 4px; }
+.sp-where b { color: #fff; font-weight: 600; }
+.sp-confirm {
+  width: 100%; padding: 14px; border: none; border-radius: 13px; cursor: pointer;
+  background: var(--live); color: #06231a; font-weight: 800; font-size: 0.9rem;
+  box-shadow: 0 6px 20px rgba(107, 255, 184, 0.3); font-family: 'Noto Sans KR', sans-serif;
+}
+.sp-confirm:active { transform: scale(0.98); }
 
 /* 지도 우클릭/롱프레스 메뉴 */
 #spot-ctx {
@@ -2405,6 +2505,14 @@ body[data-mode='festival'] #fest-search { display: block; }
 }
 .lv-link:hover { background: rgba(255, 78, 69, 0.28); }
 
+/* (3) LIVE + 유튜브를 한 묶음으로 묶어 항상 붙어있게 (모바일 포함) */
+.lv-head-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 /* (1) LIVE 옆 유튜브 알약 버튼 — 배지와 비슷한 모양 */
 .lv-yt-pill {
   font-size: 0.62rem;
@@ -2417,10 +2525,23 @@ body[data-mode='festival'] #fest-search { display: block; }
   border: 1px solid rgba(255, 78, 69, 0.45);
   text-decoration: none;
   white-space: nowrap;
-  margin-left: 8px;
   transition: background 0.15s;
 }
 .lv-yt-pill:hover { background: rgba(255, 78, 69, 0.3); }
+
+/* (모바일) 메뉴를 펼치는 동안엔 검색창을 뿅 숨김 (메뉴와 겹침 방지) */
+@media (max-width: 768px) {
+  #spot-search, #fest-search {
+    transition: opacity 0.22s ease,
+      transform 0.24s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  #sidebar.open ~ #map-container #spot-search,
+  #sidebar.open ~ #map-container #fest-search {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.55);
+    pointer-events: none;
+  }
+}
 
 /* 라이브가 있으면 "곧 추가됩니다" 안내 숨김 */
 #live-notice.has-live { display: none !important; }

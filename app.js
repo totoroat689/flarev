@@ -1,8 +1,11 @@
 // ============================================
-// Flare(V) 동작 — 버전 v2.8.0 (2026-06-17)
-// 변경: (C) 공연 핀도 숫자 뭉치 클러스터에 포함(흩어짐 가능)
-//      (D) 상시 행사 토글(기본 꺼짐, 축제·공연 함께 표시/숨김)
-//      (영상) 유튜브 보기 버튼은 팝업 헤더(lv-link)로 이동 — href만 그대로 세팅
+// Flare(V) 동작 — 버전 v2.9.0 (2026-06-17)
+// v2.9.0: (스팟) 우측하단 '스팟 남기기' 버튼 → 위치 없이 폼 열기(startNewSpot)
+//      (스팟) A안 위치 고르기 모드 — 지도 가운데 핀/검색으로 지정
+//        enterSpotPickMode / confirmSpotPick / cancelSpotPick / runPickSearch
+//      openSpotForm은 위치 없이도 열리도록 정리(기존 진입로는 그대로 동작)
+// v2.8.1: 로직 변경 없음(HTML/CSS만 수정)
+// v2.8.0: (C) 공연 핀 클러스터 포함 / (D) 상시 토글 / 유튜브버튼 헤더 이동
 // ============================================
 // Supabase 연결 설정
 // ============================================
@@ -76,6 +79,9 @@ let pendingPlace = null; // 검색·지명에서 온 구글 장소 {place_id, na
 let pendingExistingPlaceId = null; // 같은 장소가 이미 있으면 그 DB place id
 let placesService = null; // 구글 장소 검색 서비스
 let searchResults = []; // 최근 검색 결과 목록
+let pickResults = []; // 위치 고르기 모드 검색 결과
+let pickSearchPlace = null; // 위치 고르기에서 검색으로 고른 장소 {place_id,name,loc}
+let pickIdleListener = null; // 위치 고르기 중 지도 이동 리스너
 let spotPlaces = []; // 장소 단위로 묶은 목록(핀 1개=장소 1개)
 let spotPhotoFiles = []; // 저장 대기 사진들 (최대 5장)
 let spotMenuOpenedAt = 0; // 스팟 메뉴 연 시각(직후 클릭으로 닫힘 방지)
@@ -2002,13 +2008,206 @@ function hideSpotContextMenu() {
   document.getElementById('spot-ctx').classList.remove('show');
 }
 
+// ── 새 스팟 시작 (우측 하단 버튼) — 위치 없이 폼부터 열기 ──
+function startNewSpot() {
+  pendingLatLng = null;
+  pendingPlace = null;
+  pendingExistingPlaceId = null;
+  pickSearchPlace = null;
+  openSpotForm();
+}
+
+// ── 상단 '위치 확인하기' 행 갱신 (지정 전: 민트 강조 / 지정 후: 회색+장소명) ──
+function updateSpotLocationLabel() {
+  const row = document.getElementById('spot-locrow');
+  const titleEl = document.getElementById('spot-loc-title');
+  const subEl = document.getElementById('spot-loc-sub');
+  const goEl = document.getElementById('spot-loc-go');
+  if (!row || !titleEl) return;
+
+  if (!pendingLatLng) {
+    row.classList.remove('set');
+    titleEl.textContent = '위치 확인하기';
+    subEl.textContent = '지도에서 위치를 지정해주세요';
+    goEl.textContent = '지정';
+    return;
+  }
+  row.classList.add('set');
+  let name;
+  if (pendingExistingPlaceId) {
+    const ex = spotPlaces.find((p) => p.id === pendingExistingPlaceId);
+    name = (ex ? ex.name : '기존 장소') + ' (여기에 추가)';
+  } else if (pendingPlace && pendingPlace.name) {
+    name = pendingPlace.name;
+  } else {
+    name = '지도에서 지정한 위치';
+  }
+  titleEl.textContent = '📍 ' + name;
+  subEl.textContent = '탭하면 위치 변경';
+  goEl.textContent = '변경';
+}
+
+// ── (A안) 위치 고르기 모드 시작: 시트는 잠깐 숨기고(데이터 유지) 지도에서 지정 ──
+function enterSpotPickMode() {
+  if (!map) return;
+  // 시트 숨김 (입력값/사진은 그대로 유지)
+  document.getElementById('spot-overlay').classList.remove('show');
+  document.body.classList.add('spot-picking');
+  pickSearchPlace = null;
+  closeSearchResults();
+  const input = document.getElementById('spot-pick-input');
+  if (input) input.value = '';
+  const res = document.getElementById('spot-pick-results');
+  if (res) res.classList.remove('show');
+  document.getElementById('spot-pick').classList.add('show');
+  // 이미 지정된 위치가 있으면 거기로, 없으면 현재 화면 그대로
+  if (pendingLatLng) map.panTo(pendingLatLng);
+  updatePickWhere();
+  // 지도 움직일 때 안내문 갱신
+  if (!pickIdleListener) {
+    pickIdleListener = map.addListener('center_changed', updatePickWhere);
+  }
+}
+
+// ── 위치 고르기: 가운데 안내 텍스트 갱신 ──
+function updatePickWhere() {
+  const el = document.getElementById('spot-pick-where');
+  if (!el) return;
+  if (pickSearchPlace && pickSearchPlace.loc && map) {
+    const c = map.getCenter();
+    if (
+      distMeters(
+        c.lat(),
+        c.lng(),
+        pickSearchPlace.loc.lat(),
+        pickSearchPlace.loc.lng()
+      ) < 40
+    ) {
+      el.innerHTML = '📍 <b>' + escapeHtml(pickSearchPlace.name) + '</b>';
+      return;
+    }
+  }
+  el.textContent = '📍 지도 가운데 지점이 지정돼요';
+}
+
+// ── 위치 고르기: '이 위치로 지정' ──
+function confirmSpotPick() {
+  if (!map) return;
+  const c = map.getCenter();
+  pendingLatLng = c;
+
+  // 검색으로 고른 장소가 가운데와 가까우면(40m 이내) 그 장소명을 사용
+  if (
+    pickSearchPlace &&
+    pickSearchPlace.loc &&
+    distMeters(c.lat(), c.lng(), pickSearchPlace.loc.lat(), pickSearchPlace.loc.lng()) < 40
+  ) {
+    pendingPlace = { place_id: pickSearchPlace.place_id, name: pickSearchPlace.name };
+  } else {
+    pendingPlace = null; // 직접 지정한 위치
+  }
+
+  // 기존 장소와 연결
+  pendingExistingPlaceId = null;
+  if (pendingPlace && pendingPlace.place_id) {
+    const ex = spotPlaces.find((p) => p.place_id === pendingPlace.place_id);
+    if (ex) pendingExistingPlaceId = ex.id;
+  } else {
+    const near = findNearbyPlace(c, 50);
+    if (near) {
+      const ok = confirm(
+        '근처에 이미 "' +
+          (near.name || '등록된 스팟') +
+          '"이(가) 있어요.\n그 장소에 추가할까요?\n(취소하면 새 위치로 만들어요)'
+      );
+      pendingExistingPlaceId = ok ? near.id : null;
+    }
+  }
+
+  exitSpotPick();
+  // 제목이 비어 있고 장소명이 있으면 기본값으로 채워주기
+  const t = document.getElementById('spot-title');
+  if (t && !t.value && pendingPlace && pendingPlace.name) t.value = pendingPlace.name;
+  updateSpotLocationLabel();
+  document.getElementById('spot-overlay').classList.add('show');
+}
+
+// ── 위치 고르기: 취소(원래 시트로) ──
+function cancelSpotPick() {
+  exitSpotPick();
+  document.getElementById('spot-overlay').classList.add('show');
+}
+
+// ── 위치 고르기 모드 종료(공통 정리) ──
+function exitSpotPick() {
+  document.getElementById('spot-pick').classList.remove('show');
+  document.body.classList.remove('spot-picking');
+  if (pickIdleListener) {
+    google.maps.event.removeListener(pickIdleListener);
+    pickIdleListener = null;
+  }
+}
+
+// ── 위치 고르기: 검색 (결과를 누르면 지도를 그 위치로 이동) ──
+function runPickSearch() {
+  const q = document.getElementById('spot-pick-input').value.trim();
+  if (!q) return;
+  const listEl = document.getElementById('spot-pick-results');
+  if (!placesService) {
+    listEl.innerHTML = '<div class="sr-empty">검색 준비 중이에요. 잠시 후 다시 시도해주세요.</div>';
+    listEl.classList.add('show');
+    return;
+  }
+  listEl.innerHTML = '<div class="sr-empty">검색 중…</div>';
+  listEl.classList.add('show');
+  placesService.textSearch(
+    { query: q, location: map.getCenter(), radius: 30000 },
+    (results, status) => {
+      if (
+        status !== google.maps.places.PlacesServiceStatus.OK ||
+        !results ||
+        !results.length
+      ) {
+        pickResults = [];
+        listEl.innerHTML =
+          '<div class="sr-empty">결과가 없어요. 다른 이름으로 검색해보세요.</div>';
+        return;
+      }
+      pickResults = results.slice(0, 5);
+      listEl.innerHTML = pickResults
+        .map(
+          (r, i) =>
+            '<div class="sr-item" onclick="choosePickResult(' +
+            i +
+            ')"><div class="sr-nm">' +
+            escapeHtml(r.name || '') +
+            '</div><div class="sr-ad">' +
+            escapeHtml(r.formatted_address || '') +
+            '</div></div>'
+        )
+        .join('');
+    }
+  );
+}
+
+function choosePickResult(i) {
+  const r = pickResults[i];
+  if (!r || !r.geometry) return;
+  const loc = r.geometry.location;
+  pickSearchPlace = { place_id: r.place_id, name: r.name, loc: loc };
+  document.getElementById('spot-pick-results').classList.remove('show');
+  document.getElementById('spot-pick-input').value = r.name || '';
+  map.panTo(loc);
+  map.setZoom(16);
+  updatePickWhere();
+}
+
 // ── 저장 모달 열기/닫기 ──
 function openSpotForm() {
   hideSpotContextMenu();
-  if (!pendingLatLng) return;
 
-  // 직접 찍기(구글 장소 아님)일 때만 50m 내 기존 장소 확인 → 추가할지 물어보기
-  if (!pendingPlace) {
+  // 위치가 이미 있고 직접 찍기(구글 장소 아님)면 50m 내 기존 장소 확인 → 추가할지 물어보기
+  if (pendingLatLng && !pendingPlace) {
     const near = findNearbyPlace(pendingLatLng, 50);
     if (near) {
       const ok = confirm(
@@ -2020,16 +2219,8 @@ function openSpotForm() {
     }
   }
 
-  // 어디에 저장되는지 팝업 상단에 표시
-  const label = document.getElementById('spot-place-label');
-  if (pendingExistingPlaceId) {
-    const ex = spotPlaces.find((p) => p.id === pendingExistingPlaceId);
-    label.textContent = '📍 ' + (ex ? ex.name : '기존 장소') + ' (여기에 추가)';
-  } else if (pendingPlace && pendingPlace.name) {
-    label.textContent = '📍 ' + pendingPlace.name;
-  } else {
-    label.textContent = '📍 지도에서 찍은 위치';
-  }
+  // 상단 '위치 확인하기' 행 갱신 (지정 전/후 모양 다름)
+  updateSpotLocationLabel();
 
   // 초기화
   spotPhotoFiles = [];
@@ -2351,7 +2542,7 @@ async function saveSpot() {
     return;
   }
   if (!pendingLatLng) {
-    msg.textContent = '위치 정보가 없어요. 지도를 다시 눌러주세요.';
+    msg.textContent = '먼저 위쪽 "위치 확인하기"로 위치를 지정해주세요.';
     return;
   }
 

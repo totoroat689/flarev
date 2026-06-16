@@ -1,9 +1,18 @@
 <!DOCTYPE html>
 <!-- ============================================
      Flare(V) 홈페이지
-     버전: v2.8.0 (1차: 영상팝업 유튜브버튼 상단 이동 + 공연핀 묶음 + 상시 토글 + 레이아웃 손질)
+     버전: v2.9.0 (2차: 스팟 남기기 버튼 + A안 위치 고르기 모드)
      수정일: 2026-06-17
      ※ 파일 분리: index.html(뼈대) + style.css(디자인) + app.js(동작)
+     수정사항(v2.9.0):
+       - (스팟) 우측 하단 버튼 '준비 중' → '📸 스팟 남기기'(스팟 모드에서만 표시)
+       - (스팟) 누르면 스팟 남기기 시트가 위치 없이도 열림
+       - (스팟) '위치 확인하기'(민트 강조) → 전체 지도에서 가운데 핀/검색으로 위치 지정
+       - 나머지(사진·태그·설명·저장)는 기존과 동일
+     수정사항(v2.8.1):
+       - (모바일) 메뉴 펼치면 검색창이 뿅 사라지고, 닫으면 뿅 나타남(겹침 해소)
+       - (카테고리) 상시 행사를 맨 위로 (상시 → 축제 → 장르)
+       - (모바일) 영상 팝업의 유튜브 버튼을 LIVE 바로 옆에 붙임
      수정사항(v2.8.0):
        - (영상) '유튜브에서 보기'를 팝업 위 LIVE 배지 옆 알약(▶️ 유튜브)으로 이동
        - (영상) 모바일에서 팝업이 길어도 아래가 안 잘리게(100dvh) + 모바일 크기버튼 숨김
@@ -284,6 +293,12 @@
             <button onclick="setAllCategories('festival', true)">전체 선택</button>
             <button onclick="setAllCategories('festival', false)">전체 해제</button>
           </div>
+          <!-- 상시 행사 토글(초록) — 맨 위. 기본 꺼짐, 켜면 축제·공연의 장기/상시 표시 -->
+          <div class="filter-item" onclick="toggleSangsi(this)">
+            <div class="filter-dot dot-sangsi"></div>
+            <span class="filter-text">♾️ 상시 행사</span>
+            <span class="filter-count" id="cnt-sangsi">0</span>
+          </div>
           <div
             class="filter-item active-festival"
             onclick="toggleFilter(this,'festival')"
@@ -291,12 +306,6 @@
             <div class="filter-dot dot-festival"></div>
             <span class="filter-text">🎪 축제</span>
             <span class="filter-count" id="cnt-festival">0</span>
-          </div>
-          <!-- 상시 행사 토글(초록) — 기본 꺼짐, 켜면 축제·공연의 장기/상시 행사 표시 -->
-          <div class="filter-item" onclick="toggleSangsi(this)">
-            <div class="filter-dot dot-sangsi"></div>
-            <span class="filter-text">♾️ 상시 행사</span>
-            <span class="filter-count" id="cnt-sangsi">0</span>
           </div>
           <!-- 공연 장르(노란색) — 데이터에서 자동 생성 -->
           <div id="cat-perf-genres"></div>
@@ -362,6 +371,34 @@
 
       <!-- 스팟: 우클릭/롱프레스 메뉴 -->
       <div id="spot-ctx"><button onclick="openSpotForm()">📍 스팟 남기기</button></div>
+
+      <!-- (8) A안: 위치 고르기 모드 — 지도 가운데 핀에 맞추거나 검색 -->
+      <div id="spot-pick">
+        <div class="sp-top">
+          <button class="sp-back" onclick="cancelSpotPick()" title="취소">←</button>
+          <div class="sp-searchcol">
+            <div class="ss-bar">
+              <input
+                id="spot-pick-input"
+                type="text"
+                placeholder="장소·주소 검색 (예: 광안리 해변)"
+                onkeydown="if(event.key==='Enter'){event.preventDefault();runPickSearch();}"
+              />
+              <button class="ss-go" onclick="runPickSearch()">검색</button>
+            </div>
+            <div id="spot-pick-results"></div>
+          </div>
+        </div>
+        <div class="sp-cross">
+          <div class="sp-pin">📍</div>
+          <div class="sp-pindot"></div>
+        </div>
+        <div class="sp-hint">지도를 움직여 가운데 핀을 원하는 곳에 맞춰주세요</div>
+        <div class="sp-bottom">
+          <div class="sp-where" id="spot-pick-where">📍 지도 가운데 지점이 지정돼요</div>
+          <button class="sp-confirm" onclick="confirmSpotPick()">이 위치로 지정</button>
+        </div>
+      </div>
 
       <!-- 공연 모드: 검색 필터 (제목·장르·지역) -->
       <div id="fest-search">
@@ -569,8 +606,10 @@
       <!-- 유튜브 라이브 팝업 -->
       <div id="live-panel">
         <div class="panel-header">
-          <span class="panel-badge" id="lv-badge" style="background: rgba(255,78,69,0.15); color: #ff4e45; border: 1px solid rgba(255,78,69,0.4);">LIVE</span>
-          <a id="lv-link" class="lv-yt-pill" href="#" target="_blank" rel="noopener noreferrer">▶️ 유튜브</a>
+          <span class="lv-head-left">
+            <span class="panel-badge" id="lv-badge" style="background: rgba(255,78,69,0.15); color: #ff4e45; border: 1px solid rgba(255,78,69,0.4);">LIVE</span>
+            <a id="lv-link" class="lv-yt-pill" href="#" target="_blank" rel="noopener noreferrer">▶️ 유튜브</a>
+          </span>
           <div class="lv-sizes">
             <button onclick="setLiveSize('m')" data-s="m">보통</button>
             <button onclick="setLiveSize('l')" data-s="l">크게</button>
@@ -628,12 +667,8 @@
           </div>
         </div>
       </div>
-      <button
-        id="upload-btn"
-        disabled
-        style="opacity: 0.45; cursor: not-allowed; box-shadow: none"
-      >
-        <span>📸</span> 준비 중이에요
+      <button id="upload-btn" onclick="startNewSpot()">
+        <span>📸</span> 스팟 남기기
       </button>
     </div>
 
@@ -687,7 +722,15 @@
       <div class="spot-sheet">
         <h3>📍 스팟 남기기</h3>
         <div class="sheet-sub">이 위치에 명소·풍경·맛집을 공유해요</div>
-        <div class="spot-place-label" id="spot-place-label">📍 위치</div>
+        <!-- (8) 위치 확인하기: 강조된 버튼. 누르면 지도에서 핀으로 위치 지정 -->
+        <div class="spot-locrow" id="spot-locrow" onclick="enterSpotPickMode()">
+          <span class="slr-ic">🎯</span>
+          <span class="slr-txt">
+            <b id="spot-loc-title">위치 확인하기</b>
+            <span id="spot-loc-sub">지도에서 위치를 지정해주세요</span>
+          </span>
+          <span class="slr-go" id="spot-loc-go">지정</span>
+        </div>
 
         <div class="spot-field">
           <label>사진 (필수, 최대 5장)</label>
