@@ -1,9 +1,16 @@
 <!DOCTYPE html>
 <!-- ============================================
      Flare(V) 홈페이지
-     버전: v2.7.0 (현지 뉴스 카테고리+초록 NEWS 핀)
-     수정일: 2026-06-15
+     버전: v2.8.0 (1차: 영상팝업 유튜브버튼 상단 이동 + 공연핀 묶음 + 상시 토글 + 레이아웃 손질)
+     수정일: 2026-06-17
      ※ 파일 분리: index.html(뼈대) + style.css(디자인) + app.js(동작)
+     수정사항(v2.8.0):
+       - (영상) '유튜브에서 보기'를 팝업 위 LIVE 배지 옆 알약(▶️ 유튜브)으로 이동
+       - (영상) 모바일에서 팝업이 길어도 아래가 안 잘리게(100dvh) + 모바일 크기버튼 숨김
+       - (공연) 공연 핀도 가까우면 숫자 뭉치로 묶이고, 누르면 흩어짐(축제와 동일)
+       - (카테고리) 축제 아래 초록 '상시 행사' 토글 추가(기본 꺼짐, 축제·공연 함께)
+       - (레이아웃) 좌측 메뉴 스크롤 얇게 + 로고/섹션 겹침 방지
+       - (레이아웃) 상단 검색창이 나침반·메뉴 버튼과 안 겹치게 좌우 여백 확보
      수정사항(v2.5.0) — UX 다듬기:
        - 사이드바 순서: 개발자메시지 → 보기모드 → 날짜 → 카테고리
        - 보기모드 탭 '축제·공연' → '공연'
@@ -285,6 +292,12 @@
             <span class="filter-text">🎪 축제</span>
             <span class="filter-count" id="cnt-festival">0</span>
           </div>
+          <!-- 상시 행사 토글(초록) — 기본 꺼짐, 켜면 축제·공연의 장기/상시 행사 표시 -->
+          <div class="filter-item" onclick="toggleSangsi(this)">
+            <div class="filter-dot dot-sangsi"></div>
+            <span class="filter-text">♾️ 상시 행사</span>
+            <span class="filter-count" id="cnt-sangsi">0</span>
+          </div>
           <!-- 공연 장르(노란색) — 데이터에서 자동 생성 -->
           <div id="cat-perf-genres"></div>
         </div>
@@ -557,6 +570,7 @@
       <div id="live-panel">
         <div class="panel-header">
           <span class="panel-badge" id="lv-badge" style="background: rgba(255,78,69,0.15); color: #ff4e45; border: 1px solid rgba(255,78,69,0.4);">LIVE</span>
+          <a id="lv-link" class="lv-yt-pill" href="#" target="_blank" rel="noopener noreferrer">▶️ 유튜브</a>
           <div class="lv-sizes">
             <button onclick="setLiveSize('m')" data-s="m">보통</button>
             <button onclick="setLiveSize('l')" data-s="l">크게</button>
@@ -578,7 +592,6 @@
             <div class="desc-text" id="lv-desc-text"></div>
             <span class="desc-more" id="lv-desc-more" onclick="lvToggleDesc()">더보기</span>
           </div>
-          <a id="lv-link" class="lv-link" href="#" target="_blank" rel="noopener noreferrer">▶️ 유튜브에서 보기</a>
 
           <!-- 한줄평 (별점 + 글) -->
           <div class="lv-reviews" id="lv-reviews">

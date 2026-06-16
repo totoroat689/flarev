@@ -1,3 +1,9 @@
+/* ============================================
+   Flare(V) 스타일 — 버전 v2.8.0 (2026-06-17)
+   변경: 유튜브 알약 버튼(.lv-yt-pill) / 상시 토글(.dot-sangsi, .active-sangsi)
+        / 공연핀 묶음 spider(.perf-pin.spider) / 모바일 팝업 100dvh
+        / 사이드바 얇은 스크롤 / 상단 검색창 좌우 여백 확보
+   ============================================ */
 :root {
   --bg: #0a0a0f;
   --sidebar: #10101a;
@@ -61,7 +67,19 @@ body {
   position: relative;
   overflow-y: auto;
   transition: transform 0.3s ease;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
 }
+/* 보기 싫은 굵은 스크롤 → 얇고 은은하게 */
+#sidebar::-webkit-scrollbar { width: 8px; }
+#sidebar::-webkit-scrollbar-track { background: transparent; }
+#sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+}
+#sidebar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.22); }
+/* 확대/축소해도 로고·섹션이 서로 안 먹고 들어가게(찌그러짐 방지) */
+.logo-wrap, .section, .login-wrap { flex-shrink: 0; }
 
 .logo-wrap {
   padding: 28px 24px 20px;
@@ -289,7 +307,7 @@ body {
   border-color: rgba(255, 78, 69, 0.3);
 }
 
-.filter-item:not(.active-festival):not(.active-spot):not(.active-cctv):not(.active-yt):not(.active-tag):not(.active-perf):hover {
+.filter-item:not(.active-festival):not(.active-spot):not(.active-cctv):not(.active-yt):not(.active-tag):not(.active-perf):not(.active-sangsi):hover {
   background: rgba(255, 255, 255, 0.04);
 }
 
@@ -320,6 +338,10 @@ body {
   background: var(--perf);
   box-shadow: 0 0 8px rgba(255, 217, 61, 0.8);
 }
+.dot-sangsi {
+  background: #22c55e;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.85);
+}
 
 /* 스팟 태그 카테고리(민트) / 공연 장르 카테고리(노랑) 활성색 */
 .filter-item.active-tag {
@@ -329,6 +351,11 @@ body {
 .filter-item.active-perf {
   background: var(--perf-bg);
   border-color: rgba(255, 217, 61, 0.3);
+}
+/* 상시 행사 토글 켜짐(초록) */
+.filter-item.active-sangsi {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.4);
 }
 
 .filter-text {
@@ -771,7 +798,7 @@ body[data-mode='live'] #live-notice {
   border: 1px solid var(--border);
   border-radius: 16px;
   overflow: hidden auto; /* 내용 길면 안에서 스크롤 */
-  max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px);
   z-index: 200;
   display: none;
   backdrop-filter: blur(20px);
@@ -1625,7 +1652,7 @@ body[data-mode='live'] #live-notice {
     left: 12px;
     width: auto;
     top: 70px;
-    max-height: calc(100vh - 88px);
+    max-height: calc(100dvh - 88px);
   }
 
   #upload-btn {
@@ -1642,7 +1669,7 @@ body[data-mode='live'] #live-notice {
   top: 14px;
   left: 50%;
   transform: translateX(-50%);
-  width: min(440px, calc(100% - 90px));
+  width: min(440px, calc(100% - 150px));
   z-index: 240;
 }
 .ss-bar {
@@ -2146,6 +2173,11 @@ body[data-mode='live'] #live-notice {
   pointer-events: none;
 }
 .perf-pin:hover .perf-label { opacity: 1; }
+/* (C) 묶음에서 흩어졌을 때: 이름표 항상 표시 + 살짝 밝게 */
+.perf-pin.spider { z-index: 997 !important; }
+.perf-pin.spider .perf-label { opacity: 1; }
+.perf-pin.spider .perf-drop { filter: brightness(1.25) saturate(1.1); }
+.perf-pin.label-left .perf-label { left: auto; right: 22px; }
 
 /* 공연 상세 팝업 */
 #perf-panel {
@@ -2157,7 +2189,7 @@ body[data-mode='live'] #live-notice {
   border: 1px solid var(--border);
   border-radius: 16px;
   overflow: hidden auto;
-  max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px);
   z-index: 200;
   display: none;
   backdrop-filter: blur(20px);
@@ -2228,7 +2260,7 @@ body[data-mode='live'] #live-notice {
   top: 14px;
   left: 50%;
   transform: translateX(-50%);
-  width: min(440px, calc(100% - 90px));
+  width: min(440px, calc(100% - 150px));
   z-index: 240;
   display: none;
 }
@@ -2348,7 +2380,7 @@ body[data-mode='festival'] #fest-search { display: block; }
 #live-panel {
   position: absolute; right: 24px; top: 24px; width: 360px;
   background: var(--panel); border: 1px solid var(--border);
-  border-radius: 16px; overflow: hidden auto; max-height: calc(100vh - 48px);
+  border-radius: 16px; overflow: hidden auto; max-height: calc(100dvh - 48px);
   z-index: 200; display: none; backdrop-filter: blur(20px);
 }
 #live-panel.show { display: block; animation: panel-pop 0.4s cubic-bezier(0.34, 1.8, 0.5, 1); }
@@ -2373,11 +2405,28 @@ body[data-mode='festival'] #fest-search { display: block; }
 }
 .lv-link:hover { background: rgba(255, 78, 69, 0.28); }
 
+/* (1) LIVE 옆 유튜브 알약 버튼 — 배지와 비슷한 모양 */
+.lv-yt-pill {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: rgba(255, 78, 69, 0.18);
+  color: #ff6b62;
+  border: 1px solid rgba(255, 78, 69, 0.45);
+  text-decoration: none;
+  white-space: nowrap;
+  margin-left: 8px;
+  transition: background 0.15s;
+}
+.lv-yt-pill:hover { background: rgba(255, 78, 69, 0.3); }
+
 /* 라이브가 있으면 "곧 추가됩니다" 안내 숨김 */
 #live-notice.has-live { display: none !important; }
 
 @media (max-width: 600px) {
-  #live-panel { top: 76px; left: 12px; right: 12px; width: auto; max-height: calc(100vh - 96px); }
+  #live-panel { top: 76px; left: 12px; right: 12px; width: auto; max-height: calc(100dvh - 96px); }
 }
 
 /* ============================================
@@ -2428,6 +2477,8 @@ body[data-mode='festival'] #fest-search { display: block; }
   /* 모바일은 항상 가로 꽉 차게 — 크기 단계/드래그 폭 무시 */
   #live-panel.size-m, #live-panel.size-l, #live-panel.size-xl { width: auto !important; }
   .lv-resize { display: none; }
+  /* 모바일에선 폭 고정이라 크기버튼이 의미 없음 → 숨겨서 헤더 여유 확보 */
+  .lv-sizes { display: none; }
 }
 
 /* 라이브 설명: 한 줄만 보이고 더보기 (축제 .panel-desc 재활용 + 줄수만 1로) */
@@ -2448,7 +2499,7 @@ body[data-mode='festival'] #fest-search { display: block; }
   box-shadow: 0 0 8px rgba(43, 209, 108, 0.8);
 }
 /* 비활성 hover 예외에 news도 포함 */
-.filter-item:not(.active-festival):not(.active-spot):not(.active-cctv):not(.active-yt):not(.active-news):not(.active-tag):not(.active-perf):hover {
+.filter-item:not(.active-festival):not(.active-spot):not(.active-cctv):not(.active-yt):not(.active-news):not(.active-tag):not(.active-perf):not(.active-sangsi):hover {
   background: rgba(255, 255, 255, 0.04);
 }
 
