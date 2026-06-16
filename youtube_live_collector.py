@@ -1,6 +1,6 @@
 # ============================================
 # Flare(V) 유튜브 라이브 웹캠 수집기  (youtube_live_collector.py)
-# 버전: 1.2  /  수정일: 2026-06-16  (검색어 여러 개 순회로 후보 대폭 확대)
+# 버전: 1.4  /  수정일: 2026-06-16  (뉴스 kind 분류 추가)
 # 역할: "webcam live" 라이브 검색 → 외부재생 가능 + 라이브 중 + 신규만 추려서
 #       Claude로 위치/좌표/카테고리/설명을 정제한 뒤 live_videos에 바로 공개 저장
 # 실행: 수동 (GitHub Actions의 "Run workflow" 버튼)
@@ -53,7 +53,7 @@ SEARCH_QUERIES = [
     "live webcam 24/7",
 ]
 SEARCH_PAGES = 2               # 검색어당 페이지 수 (1페이지=50개, 100유닛). 2 = 검색어당 약 200유닛
-MAX_TO_REFINE = 60             # Claude로 정제할 최대 후보 수 (비용 통제, 인기순 상위부터)
+MAX_TO_REFINE = 500            # Claude로 정제할 최대 후보 수 (인기순 상위부터). 500=사실상 전부
 CLAUDE_MODEL = "claude-sonnet-4-6"  # 위치 추론 정확도 위해 Sonnet. 더 싸게는 haiku로 교체 가능
 
 YT_SEARCH = "https://www.googleapis.com/youtube/v3/search"
@@ -195,10 +195,13 @@ def _refine_batch(chunk, by_id):
         '  "latitude": 위도 숫자, "longitude": 경도 숫자,\n'
         '  "timezone": IANA 시간대 (예: "Asia/Seoul", "Europe/Rome"),\n'
         '  "category": ["도심","자연","바다","해외"] 중 하나,\n'
+        '  "kind": 뉴스 채널/뉴스 생방송이면 "news", 일반 풍경·웹캠이면 "stream",\n'
         '  "description": 한국어 한 줄 설명 (40자 이내),\n'
         '  "skip": 위치를 도저히 알 수 없으면 true, 아니면 false\n'
         "}\n\n"
         "위치가 분명하지 않으면 추측하지 말고 skip=true. "
+        "뉴스 방송국 라이브(예: 24시간 뉴스 채널, 보도 생중계)는 kind=\"news\", "
+        "거리·해변·자연 등 풍경 웹캠은 kind=\"stream\". "
         "국내는 category를 도심/자연/바다 중에서, 해외는 모두 해외로.\n\n"
         "목록:\n" + json.dumps(brief, ensure_ascii=False)
     )
@@ -238,6 +241,7 @@ def _refine_batch(chunk, by_id):
             "longitude": float(lng),
             "timezone": p.get("timezone") or None,
             "category": p.get("category") or None,
+            "kind": "news" if p.get("kind") == "news" else "stream",
             "channel_id": by_id[vid]["channel_id"],
         })
     return out
@@ -276,6 +280,7 @@ def save_rows(rows):
             "longitude": r["longitude"],
             "place_name": r["place_name"],
             "category": r["category"],
+            "kind": r["kind"],
             "timezone": r["timezone"],
             "channel_id": r["channel_id"],
             "is_live": True,

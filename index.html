@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!-- ============================================
      Flare(V) 홈페이지
-     버전: v2.6.2 (라이브 팝업 설명 한줄+더보기)
+     버전: v2.7.0 (현지 뉴스 카테고리+초록 NEWS 핀)
      수정일: 2026-06-15
      ※ 파일 분리: index.html(뼈대) + style.css(디자인) + app.js(동작)
      수정사항(v2.5.0) — UX 다듬기:
@@ -311,6 +311,14 @@
             <span class="filter-text">▶️ 유튜브 스트리밍</span>
             <span class="filter-count" id="cnt-yt">0</span>
           </div>
+          <div
+            class="filter-item active-news"
+            onclick="toggleFilter(this,'news')"
+          >
+            <div class="filter-dot dot-news"></div>
+            <span class="filter-text">📰 현지 뉴스</span>
+            <span class="filter-count" id="cnt-news">0</span>
+          </div>
         </div>
       </div>
 
@@ -548,7 +556,7 @@
       <!-- 유튜브 라이브 팝업 -->
       <div id="live-panel">
         <div class="panel-header">
-          <span class="panel-badge" style="background: rgba(255,78,69,0.15); color: #ff4e45; border: 1px solid rgba(255,78,69,0.4);">LIVE</span>
+          <span class="panel-badge" id="lv-badge" style="background: rgba(255,78,69,0.15); color: #ff4e45; border: 1px solid rgba(255,78,69,0.4);">LIVE</span>
           <div class="lv-sizes">
             <button onclick="setLiveSize('m')" data-s="m">보통</button>
             <button onclick="setLiveSize('l')" data-s="l">크게</button>
