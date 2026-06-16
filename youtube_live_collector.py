@@ -1,6 +1,6 @@
 # ============================================
 # Flare(V) 유튜브 라이브 웹캠 수집기  (youtube_live_collector.py)
-# 버전: 1.0  /  수정일: 2026-06-16
+# 버전: 1.2  /  수정일: 2026-06-16  (검색어 여러 개 순회로 후보 대폭 확대)
 # 역할: "webcam live" 라이브 검색 → 외부재생 가능 + 라이브 중 + 신규만 추려서
 #       Claude로 위치/좌표/카테고리/설명을 정제한 뒤 live_videos에 바로 공개 저장
 # 실행: 수동 (GitHub Actions의 "Run workflow" 버튼)
@@ -40,9 +40,20 @@ claude = Anthropic(api_key=ANTHROPIC_KEY)
 # ============================================
 # 설정값 (여기만 바꾸면 동작 조절됨)
 # ============================================
-SEARCH_QUERY = "webcam live"   # 검색어
-SEARCH_PAGES = 3               # 검색 페이지 수 (1페이지=50개, 100유닛). 3 = 약 300유닛
-MAX_TO_REFINE = 40             # Claude로 정제할 최대 후보 수 (비용 통제)
+# 검색어 목록 — 여기에 추가/삭제만 하면 됨 (검색어 1개당 약 100~150유닛)
+# 검색어마다 다른 웹캠이 잡혀서, 합치면 수백 개 후보가 모임
+SEARCH_QUERIES = [
+    "webcam live",
+    "live cam 4k",
+    "live camera",
+    "beach live cam",
+    "city live stream",
+    "라이브 캠",
+    "실시간 라이브 캠",
+    "live webcam 24/7",
+]
+SEARCH_PAGES = 2               # 검색어당 페이지 수 (1페이지=50개, 100유닛). 2 = 검색어당 약 200유닛
+MAX_TO_REFINE = 60             # Claude로 정제할 최대 후보 수 (비용 통제, 인기순 상위부터)
 CLAUDE_MODEL = "claude-sonnet-4-6"  # 위치 추론 정확도 위해 Sonnet. 더 싸게는 haiku로 교체 가능
 
 YT_SEARCH = "https://www.googleapis.com/youtube/v3/search"
@@ -50,16 +61,17 @@ YT_VIDEOS = "https://www.googleapis.com/youtube/v3/videos"
 
 
 # ============================================
-# 1) 유튜브에서 "webcam live" 라이브 검색 → video_id 목록
+# 1) 유튜브에서 여러 검색어로 라이브 검색 → video_id 목록 (합쳐서 중복 제거)
 # ============================================
-def search_live_video_ids():
+def _search_one_query(query):
+    """검색어 하나를 SEARCH_PAGES 만큼 페이지 넘기며 video_id 모으기"""
     ids = []
     page_token = None
     for _ in range(SEARCH_PAGES):
         params = {
             "key": YOUTUBE_KEY,
             "part": "snippet",
-            "q": SEARCH_QUERY,
+            "q": query,
             "type": "video",
             "eventType": "live",   # 지금 라이브 중인 영상만
             "order": "viewCount",  # (라이브에선 무시될 수 있어 뒤에서 다시 정렬)
@@ -69,7 +81,7 @@ def search_live_video_ids():
             params["pageToken"] = page_token
         r = requests.get(YT_SEARCH, params=params, timeout=20)
         if r.status_code != 200:
-            print("검색 오류:", r.status_code, r.text[:300])
+            print(f"  검색 오류({query}):", r.status_code, r.text[:200])
             break
         data = r.json()
         for it in data.get("items", []):
@@ -80,14 +92,24 @@ def search_live_video_ids():
         if not page_token:
             break
         time.sleep(0.3)
+    return ids
+
+
+def search_live_video_ids():
+    all_ids = []
+    for q in SEARCH_QUERIES:
+        got = _search_one_query(q)
+        print(f"  🔎 '{q}' → {len(got)}개")
+        all_ids.extend(got)
+        time.sleep(0.3)
     # 중복 제거 (순서 유지)
     seen = set()
     uniq = []
-    for v in ids:
+    for v in all_ids:
         if v not in seen:
             seen.add(v)
             uniq.append(v)
-    print(f"🔎 검색으로 {len(uniq)}개 영상 ID 수집")
+    print(f"🔎 검색어 {len(SEARCH_QUERIES)}개 합산 → 중복 제거 후 {len(uniq)}개 영상 ID")
     return uniq
 
 
@@ -149,19 +171,19 @@ def filter_and_sort(items, existing_ids):
 
 
 # ============================================
-# 3) Claude로 위치/좌표/카테고리/설명 정제 (한 번에 묶어서)
+# 3) Claude로 위치/좌표/카테고리/설명 정제
+#    - 20개씩 나눠서 호출 (출력이 잘리지 않게)
 #    - 24시간 웹캠 여부 판단은 하지 않음 (요청대로 제외)
 #    - 위치를 못 잡으면 skip=true 로 표시해 건너뜀
 # ============================================
-def refine_with_claude(candidates):
-    if not candidates:
-        return []
+BATCH_SIZE = 20  # 한 번에 정제할 개수 (작게 나눠 JSON 잘림 방지)
 
+
+def _refine_batch(chunk, by_id):
     brief = [
         {"video_id": c["video_id"], "title": c["title"], "description": c["description"][:300]}
-        for c in candidates
+        for c in chunk
     ]
-
     prompt = (
         "다음은 유튜브 라이브 영상 목록이다. 각 영상의 제목·설명을 보고 "
         "촬영 위치를 추론해 아래 JSON 배열만 출력하라. 설명/코드블록/그 외 텍스트는 절대 쓰지 말 것.\n\n"
@@ -183,12 +205,10 @@ def refine_with_claude(candidates):
 
     msg = claude.messages.create(
         model=CLAUDE_MODEL,
-        max_tokens=4000,
+        max_tokens=8000,
         messages=[{"role": "user", "content": prompt}],
     )
-    text = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
-    text = text.strip()
-    # 혹시 코드펜스가 붙어오면 제거
+    text = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text").strip()
     if text.startswith("```"):
         text = text.strip("`")
         if text.startswith("json"):
@@ -196,12 +216,9 @@ def refine_with_claude(candidates):
     try:
         parsed = json.loads(text)
     except Exception as e:
-        print("Claude JSON 파싱 실패:", e)
-        print("원문 일부:", text[:300])
+        print("  배치 JSON 파싱 실패:", e)
         return []
 
-    # 원본 인기지표 매핑 (정렬/참고용)
-    by_id = {c["video_id"]: c for c in candidates}
     out = []
     for p in parsed:
         if p.get("skip"):
@@ -223,6 +240,21 @@ def refine_with_claude(candidates):
             "category": p.get("category") or None,
             "channel_id": by_id[vid]["channel_id"],
         })
+    return out
+
+
+def refine_with_claude(candidates):
+    if not candidates:
+        return []
+    by_id = {c["video_id"]: c for c in candidates}
+    out = []
+    total_batches = (len(candidates) + BATCH_SIZE - 1) // BATCH_SIZE
+    for i in range(0, len(candidates), BATCH_SIZE):
+        chunk = candidates[i:i + BATCH_SIZE]
+        n = i // BATCH_SIZE + 1
+        print(f"  🤖 정제 배치 {n}/{total_batches} ({len(chunk)}개)…")
+        out.extend(_refine_batch(chunk, by_id))
+        time.sleep(0.5)
     print(f"🤖 Claude 정제 후 {len(out)}개 등록 대상")
     return out
 
