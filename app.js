@@ -3062,6 +3062,7 @@ function openLivePanel(item) {
 
   document.getElementById('lv-title').textContent = item.title || '라이브';
   setPerfMeta('lv-place', item.place_name, '📍 ');
+  lvSetupDesc(item.description);
   const link = document.getElementById('lv-link');
   link.href = 'https://www.youtube.com/watch?v=' + item.video_id;
 
@@ -3080,6 +3081,7 @@ function openLivePanel(item) {
   void panel.offsetWidth;
   panel.classList.add('show');
   panel.scrollTop = 0;
+  lvMeasureDesc(); // 설명이 한 줄 넘치면 더보기 노출
   pushPopupState();
 }
 
@@ -3358,6 +3360,38 @@ async function lvDoDelete(id) {
   lvReviews = lvReviews.filter((x) => x.id !== id);
   renderLvReviews();
   renderLvRating();
+}
+
+// ── 라이브 설명 (한 줄 + 더보기) ──
+function lvSetupDesc(raw) {
+  const wrap = document.getElementById('lv-desc');
+  const textEl = document.getElementById('lv-desc-text');
+  const moreBtn = document.getElementById('lv-desc-more');
+  if (!raw || !String(raw).trim()) {
+    wrap.style.display = 'none';
+    return;
+  }
+  wrap.style.display = 'block';
+  wrap.classList.remove('expanded');
+  textEl.textContent = cleanText(raw);
+  moreBtn.textContent = '더보기';
+  moreBtn.style.display = 'none';
+}
+function lvMeasureDesc() {
+  const wrap = document.getElementById('lv-desc');
+  if (!wrap || wrap.style.display === 'none') return;
+  const textEl = document.getElementById('lv-desc-text');
+  const moreBtn = document.getElementById('lv-desc-more');
+  wrap.classList.remove('expanded');
+  const overflowing = textEl.scrollHeight > textEl.clientHeight + 2;
+  moreBtn.style.display = overflowing ? 'inline-block' : 'none';
+  moreBtn.textContent = '더보기';
+}
+function lvToggleDesc() {
+  const wrap = document.getElementById('lv-desc');
+  const moreBtn = document.getElementById('lv-desc-more');
+  const expanded = wrap.classList.toggle('expanded');
+  moreBtn.textContent = expanded ? '접기' : '더보기';
 }
 
 // ── 팝업 크기 조절 (A: 모서리 드래그) ──

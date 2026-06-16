@@ -2429,3 +2429,8 @@ body[data-mode='festival'] #fest-search { display: block; }
   #live-panel.size-m, #live-panel.size-l, #live-panel.size-xl { width: auto !important; }
   .lv-resize { display: none; }
 }
+
+/* 라이브 설명: 한 줄만 보이고 더보기 (축제 .panel-desc 재활용 + 줄수만 1로) */
+.lv-desc { margin: 8px 0 4px; }
+.lv-desc .desc-text { -webkit-line-clamp: 1; }
+.lv-desc.expanded .desc-text { -webkit-line-clamp: unset; }
