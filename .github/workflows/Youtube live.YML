@@ -1,0 +1,31 @@
+# ============================================
+# Flare(V) 유튜브 라이브 웹캠 수집 (수동 실행)
+# 위치: .github/workflows/youtube_live.yml
+# 실행: GitHub → Actions 탭 → "YouTube Live Collector" → Run workflow 버튼
+# 필요한 Secrets: GOOGLE_API_KEY, ANTHROPIC_API_KEY (이미 등록돼 있음)
+# ============================================
+name: YouTube Live Collector
+
+on:
+  workflow_dispatch: # 수동 실행 전용 (버튼)
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: 파이썬 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 라이브러리 설치
+        run: pip install requests supabase anthropic
+
+      - name: 수집 실행
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python youtube_live_collector.py
