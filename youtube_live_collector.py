@@ -1,8 +1,12 @@
 # ============================================
 # Flare[V] 유튜브 라이브 웹캠 수집기  (youtube_live_collector.py)
-# 버전: 1.7 / 2026-06-17 (상세페이지용: country/seo_intro/seo_highlights/channel_title/slug 추가)
+# 버전: 1.8 / 2026-06-17 (단계별 로그 + 타임아웃/재시도 + 저장 분할 — 멈춤 방지)
 # 역할: "webcam live" 라이브 검색 → 외부재생 가능 + 라이브 중 + 신규만 추려서
 #       Claude로 위치/좌표/kind/설명/소개글/볼거리/국가를 정제(전부 영어)한 뒤 live_videos에 저장
+# 변경(1.8):
+#   - 단계마다 진행 로그를 실시간 출력 (어디까지 갔는지 눈으로 보임)
+#   - 유튜브/Claude 요청에 타임아웃 + 재시도 (한 요청이 무한정 매달려 러너가 죽는 것 방지)
+#   - 저장을 100개씩 분할 (큰 한 방 저장이 멈추는 것 방지)
 # 변경(1.7):
 #   - 상세페이지(/cam/<slug>/)용 필드 추가 생성: country, seo_intro(소개 문단),
 #     seo_highlights(볼거리 목록), channel_title(채널명), slug(주소)
@@ -21,6 +25,7 @@
 
 import os
 import re
+import sys
 import json
 import time
 
@@ -41,6 +46,28 @@ ANTHROPIC_KEY = os.environ["ANTHROPIC_API_KEY"]
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 claude = Anthropic(api_key=ANTHROPIC_KEY)
+
+# 로그가 모였다가 한꺼번에 나오지 않고 실시간으로 보이게 (멈춤처럼 보이는 것 방지)
+try:
+    sys.stdout.reconfigure(line_buffering=True)
+except Exception:
+    pass
+
+
+def log(msg):
+    print(msg, flush=True)
+
+
+# 유튜브 요청: 타임아웃 + 재시도 (한 요청이 무한정 매달리는 것 방지)
+def yt_get(url, params, tries=3):
+    for attempt in range(1, tries + 1):
+        try:
+            r = requests.get(url, params=params, timeout=15)
+            return r
+        except Exception as e:
+            log(f"    요청 실패({attempt}/{tries}): {e}")
+            time.sleep(2 * attempt)
+    return None
 
 # ============================================
 # 설정값 (여기만 바꾸면 동작 조절됨)
@@ -110,9 +137,12 @@ def _search_one_query(query):
         }
         if page_token:
             params["pageToken"] = page_token
-        r = requests.get(YT_SEARCH, params=params, timeout=20)
+        r = yt_get(YT_SEARCH, params)
+        if r is None:
+            log(f"  검색 건너뜀({query}): 응답 없음")
+            break
         if r.status_code != 200:
-            print(f"  검색 오류({query}):", r.status_code, r.text[:200])
+            log(f"  검색 오류({query}): {r.status_code} {r.text[:200]}")
             break
         data = r.json()
         for it in data.get("items", []):
@@ -128,9 +158,10 @@ def _search_one_query(query):
 
 def search_live_video_ids():
     all_ids = []
-    for q in SEARCH_QUERIES:
+    log(f"🔎 검색 시작 (검색어 {len(SEARCH_QUERIES)}개)")
+    for n, q in enumerate(SEARCH_QUERIES, 1):
         got = _search_one_query(q)
-        print(f"  🔎 '{q}' → {len(got)}개")
+        log(f"  🔎 [{n}/{len(SEARCH_QUERIES)}] '{q}' → {len(got)}개")
         all_ids.extend(got)
         time.sleep(0.3)
     # 중복 제거 (순서 유지)
@@ -149,6 +180,8 @@ def search_live_video_ids():
 # ============================================
 def fetch_video_details(video_ids):
     rows = []
+    total = (len(video_ids) + 49) // 50
+    log(f"📥 상세 정보 받기 ({len(video_ids)}개, {total}묶음)")
     for i in range(0, len(video_ids), 50):
         chunk = video_ids[i:i + 50]
         params = {
@@ -157,12 +190,16 @@ def fetch_video_details(video_ids):
             "id": ",".join(chunk),
             "maxResults": 50,
         }
-        r = requests.get(YT_VIDEOS, params=params, timeout=20)
+        r = yt_get(YT_VIDEOS, params)
+        if r is None:
+            log(f"  상세 건너뜀 묶음 {i//50+1}/{total}: 응답 없음")
+            continue
         if r.status_code != 200:
-            print("상세 오류:", r.status_code, r.text[:300])
+            log(f"  상세 오류 {i//50+1}/{total}: {r.status_code} {r.text[:200]}")
             continue
         for it in r.json().get("items", []):
             rows.append(it)
+        log(f"  📥 묶음 {i//50+1}/{total} 완료 (누적 {len(rows)})")
         time.sleep(0.3)
     return rows
 
@@ -249,11 +286,22 @@ def _refine_batch(chunk, by_id):
         "List:\n" + json.dumps(brief, ensure_ascii=False)
     )
 
-    msg = claude.messages.create(
-        model=CLAUDE_MODEL,
-        max_tokens=8000,
-        messages=[{"role": "user", "content": prompt}],
-    )
+    msg = None
+    for attempt in range(1, 4):
+        try:
+            msg = claude.messages.create(
+                model=CLAUDE_MODEL,
+                max_tokens=8000,
+                messages=[{"role": "user", "content": prompt}],
+                timeout=120,
+            )
+            break
+        except Exception as e:
+            log(f"    Claude 호출 실패({attempt}/3): {e}")
+            time.sleep(3 * attempt)
+    if msg is None:
+        log("    이 배치 건너뜀 (Claude 응답 없음)")
+        return []
     text = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text").strip()
     if text.startswith("```"):
         text = text.strip("`")
@@ -306,13 +354,14 @@ def refine_with_claude(candidates):
     by_id = {c["video_id"]: c for c in candidates}
     out = []
     total_batches = (len(candidates) + BATCH_SIZE - 1) // BATCH_SIZE
+    log(f"🤖 Claude 정제 시작 ({len(candidates)}개, {total_batches}배치)")
     for i in range(0, len(candidates), BATCH_SIZE):
         chunk = candidates[i:i + BATCH_SIZE]
         n = i // BATCH_SIZE + 1
-        print(f"  🤖 정제 배치 {n}/{total_batches} ({len(chunk)}개)…")
+        log(f"  🤖 정제 배치 {n}/{total_batches} ({len(chunk)}개)…")
         out.extend(_refine_batch(chunk, by_id))
         time.sleep(0.5)
-    print(f"🤖 Claude 정제 후 {len(out)}개 등록 대상")
+    log(f"🤖 Claude 정제 후 {len(out)}개 등록 대상")
     return out
 
 
@@ -321,7 +370,7 @@ def refine_with_claude(candidates):
 # ============================================
 def save_rows(rows):
     if not rows:
-        print("저장할 항목 없음")
+        log("저장할 항목 없음")
         return
     payload = []
     for r in rows:
@@ -347,20 +396,29 @@ def save_rows(rows):
             "is_active": True,
             "source": "auto",
         })
-    # video_id 중복이면 무시 (unique 제약). upsert ignore.
-    try:
-        supabase.table("live_videos").upsert(
-            payload, on_conflict="video_id", ignore_duplicates=True
-        ).execute()
-        print(f"💾 {len(payload)}개 저장 시도 완료 (중복은 자동 무시)")
-    except Exception as e:
-        print("저장 오류:", e)
+    # video_id 중복이면 무시 (unique 제약). 100개씩 나눠 저장 (큰 한 방 멈춤 방지)
+    saved = 0
+    total = (len(payload) + 99) // 100
+    log(f"💾 저장 시작 ({len(payload)}개, {total}묶음)")
+    for i in range(0, len(payload), 100):
+        part = payload[i:i + 100]
+        try:
+            supabase.table("live_videos").upsert(
+                part, on_conflict="video_id", ignore_duplicates=True
+            ).execute()
+            saved += len(part)
+            log(f"  💾 묶음 {i//100+1}/{total} 저장 완료 (누적 {saved})")
+        except Exception as e:
+            log(f"  저장 오류 묶음 {i//100+1}/{total}: {e}")
+    log(f"💾 저장 끝 ({saved}개 시도, 중복은 자동 무시)")
 
 
 # ============================================
 # 메인
 # ============================================
 def main():
+    t0 = time.time()
+    log("===== 수집기 v1.8 시작 =====")
     # 이미 있는 video_id 모으기 (신규만 정제하려고)
     existing = set()
     existing_slugs = set()
@@ -372,22 +430,27 @@ def main():
             if row.get("slug"):
                 existing_slugs.add(row["slug"])
     except Exception as e:
-        print("기존 목록 조회 오류:", e)
-    print(f"📂 기존 등록 {len(existing)}개")
+        log(f"기존 목록 조회 오류: {e}")
+    log(f"📂 기존 등록 {len(existing)}개")
 
+    log("[1단계] 검색")
     ids = search_live_video_ids()
     if not ids:
-        print("검색 결과 없음 — 종료")
+        log("검색 결과 없음 — 종료")
         return
 
+    log("[2단계] 상세 받기 + 거르기")
     details = fetch_video_details(ids)
     candidates = filter_and_sort(details, existing)
     candidates = candidates[:MAX_TO_REFINE]  # 비용 통제
 
+    log("[3단계] Claude 정제")
     rows = refine_with_claude(candidates)
     assign_slugs(rows, existing_slugs)  # 주소(slug) 배정 (중복 방지)
+
+    log("[4단계] 저장")
     save_rows(rows)
-    print("🎉 완료")
+    log(f"🎉 완료 (총 {int(time.time()-t0)}초)")
 
 
 if __name__ == "__main__":
