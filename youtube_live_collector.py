@@ -1,12 +1,12 @@
 # ============================================
 # Flare[V] 유튜브 라이브 웹캠 수집기  (youtube_live_collector.py)
-# 버전: 1.6 / 2026-06-17 (전체 영어화 + 미사용 category 제거)
+# 버전: 1.7 / 2026-06-17 (상세페이지용: country/seo_intro/seo_highlights/channel_title/slug 추가)
 # 역할: "webcam live" 라이브 검색 → 외부재생 가능 + 라이브 중 + 신규만 추려서
-#       Claude로 위치/좌표/kind/설명을 정제(전부 영어)한 뒤 live_videos에 바로 공개 저장
-# 변경(1.6):
-#   - 출력(title, place_name, description)을 모두 영어로 통일 (앱이 영어)
-#   - category(도심/자연/바다/해외) 제거 — 프론트에서 안 쓰는 필드라 토큰만 낭비
-#   - 제목 길이 한국어 30자 → 영어 ~60자
+#       Claude로 위치/좌표/kind/설명/소개글/볼거리/국가를 정제(전부 영어)한 뒤 live_videos에 저장
+# 변경(1.7):
+#   - 상세페이지(/cam/<slug>/)용 필드 추가 생성: country, seo_intro(소개 문단),
+#     seo_highlights(볼거리 목록), channel_title(채널명), slug(주소)
+#   - 근거가 부족하면 억지로 지어내지 말고 빈 값으로 (가짜 정보 방지)
 # 실행: 수동 (GitHub Actions의 "Run workflow" 버튼)
 # 비용:
 #   - 유튜브: search.list 100유닛/회, videos.list 1유닛/회(50개 묶음)
@@ -20,6 +20,7 @@
 # ============================================
 
 import os
+import re
 import json
 import time
 
@@ -64,6 +65,30 @@ CLAUDE_MODEL = "claude-sonnet-4-6"  # 위치 추론 정확도 위해 Sonnet. 더
 
 YT_SEARCH = "https://www.googleapis.com/youtube/v3/search"
 YT_VIDEOS = "https://www.googleapis.com/youtube/v3/videos"
+
+
+# ============================================
+# 주소(slug) 만들기: 제목 → 영어 소문자-하이픈, 중복이면 -2, -3 …
+# ============================================
+def slugify(text, fallback="cam"):
+    s = (text or "").lower()
+    s = re.sub(r"[^a-z0-9]+", "-", s)
+    s = re.sub(r"-{2,}", "-", s).strip("-")
+    if len(s) > 60:
+        s = s[:60].rstrip("-")
+    return s or fallback
+
+
+def assign_slugs(rows, used):
+    for r in rows:
+        base = slugify(r.get("title") or r.get("place_name"))
+        slug = base
+        i = 2
+        while slug in used:
+            slug = base + "-" + str(i)
+            i += 1
+        used.add(slug)
+        r["slug"] = slug
 
 
 # ============================================
@@ -167,6 +192,7 @@ def filter_and_sort(items, existing_ids):
             "title": snip.get("title", ""),
             "description": (snip.get("description") or "")[:600],
             "channel_id": snip.get("channelId", ""),
+            "channel_title": snip.get("channelTitle", ""),
             "concurrent": concurrent,
             "views": views,
             "likes": likes,
@@ -201,15 +227,22 @@ def _refine_batch(chunk, by_id):
         '  "video_id": keep the original exactly,\n'
         '  "title": a short clean English title including the place name (max 60 chars),\n'
         '  "place_name": human-readable location in English (e.g. "Hongdae, Seoul", "Kabukicho, Tokyo"),\n'
+        '  "country": English country name (e.g. "United States", "Japan"),\n'
         '  "latitude": number, "longitude": number,\n'
         '  "timezone": IANA timezone (e.g. "Asia/Seoul", "Europe/Rome"),\n'
         '  "kind": one of "news" (news channel / live news broadcast), '
         '"resort" (holiday resort / ski resort / beach resort cam), '
         '"hotel" (hotel cam), or "stream" (general scenery / city / nature webcam),\n'
         '  "description": one short English sentence (max 80 chars),\n'
+        '  "seo_intro": 2-3 English sentences describing what this cam shows and where '
+        "(only if the title/description give enough to say something true; otherwise \"\"),\n"
+        '  "seo_highlights": array of 2-5 short English bullet strings of what viewers can see '
+        '(only if you genuinely know; otherwise []),\n'
         '  "skip": true if the location cannot be determined, otherwise false\n'
         "}\n\n"
-        "If the location is not clear, do not guess: set skip=true. "
+        "Important: do NOT invent facts. If the title/description do not give enough to "
+        'write a truthful seo_intro or highlights, leave them empty ("" or []). '
+        "If the location itself is unclear, set skip=true.\n"
         'A news-station live (e.g. 24h news channel) is kind="news"; '
         'a resort cam is kind="resort"; a hotel cam is kind="hotel"; '
         'general street/beach/nature scenery cams are kind="stream".\n\n'
@@ -242,16 +275,24 @@ def _refine_batch(chunk, by_id):
         lat, lng = p.get("latitude"), p.get("longitude")
         if lat is None or lng is None:
             continue
+        hl = p.get("seo_highlights") or []
+        if not isinstance(hl, list):
+            hl = []
+        hl = [str(x)[:120] for x in hl][:5]
         out.append({
             "video_id": vid,
             "title": (p.get("title") or by_id[vid]["title"])[:80],
             "description": (p.get("description") or "")[:200],
             "place_name": p.get("place_name") or "",
+            "country": p.get("country") or None,
             "latitude": float(lat),
             "longitude": float(lng),
             "timezone": p.get("timezone") or None,
             "kind": (p.get("kind") if p.get("kind") in ("news", "resort", "hotel") else "stream"),
             "channel_id": by_id[vid]["channel_id"],
+            "channel_title": by_id[vid].get("channel_title") or None,
+            "seo_intro": (p.get("seo_intro") or "").strip()[:600] or None,
+            "seo_highlights": hl,
             "view_count": by_id[vid].get("views", 0),
             "like_count": by_id[vid].get("likes", 0),
             "concurrent_viewers": by_id[vid].get("concurrent", 0),
@@ -291,9 +332,14 @@ def save_rows(rows):
             "latitude": r["latitude"],
             "longitude": r["longitude"],
             "place_name": r["place_name"],
+            "country": r.get("country"),
             "kind": r["kind"],
             "timezone": r["timezone"],
             "channel_id": r["channel_id"],
+            "channel_title": r.get("channel_title"),
+            "slug": r.get("slug"),
+            "seo_intro": r.get("seo_intro"),
+            "seo_highlights": r.get("seo_highlights", []),
             "view_count": r.get("view_count", 0),
             "like_count": r.get("like_count", 0),
             "concurrent_viewers": r.get("concurrent_viewers", 0),
@@ -317,9 +363,14 @@ def save_rows(rows):
 def main():
     # 이미 있는 video_id 모으기 (신규만 정제하려고)
     existing = set()
+    existing_slugs = set()
     try:
-        res = supabase.table("live_videos").select("video_id").execute()
-        existing = {row["video_id"] for row in (res.data or [])}
+        res = supabase.table("live_videos").select("video_id, slug").execute()
+        for row in (res.data or []):
+            if row.get("video_id"):
+                existing.add(row["video_id"])
+            if row.get("slug"):
+                existing_slugs.add(row["slug"])
     except Exception as e:
         print("기존 목록 조회 오류:", e)
     print(f"📂 기존 등록 {len(existing)}개")
@@ -334,6 +385,7 @@ def main():
     candidates = candidates[:MAX_TO_REFINE]  # 비용 통제
 
     rows = refine_with_claude(candidates)
+    assign_slugs(rows, existing_slugs)  # 주소(slug) 배정 (중복 방지)
     save_rows(rows)
     print("🎉 완료")
 
