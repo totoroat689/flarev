@@ -1,11 +1,4 @@
-/* ============================================
-   Flare(V) 스타일 — 버전 v2.9.0 (2026-06-17)
-   v2.9.0: 스팟 남기기 버튼(민트, 스팟모드 전용) / 위치 확인하기 행(.spot-locrow)
-        / A안 위치 고르기 모드(#spot-pick) — 가운데 핀 + 검색
-   v2.8.1: 모바일 메뉴 열림 시 검색창 숨김 / 상시 맨위 / LIVE+유튜브 묶음(.lv-head-left)
-   v2.8.0: 유튜브 알약 / 상시 토글 / 공연핀 묶음 spider / 모바일 팝업 100dvh
-        / 사이드바 얇은 스크롤 / 상단 검색창 좌우 여백 확보
-   ============================================ */
+/* Flare[V] v3.0.0 / 2026-06-17 */
 :root {
   --bg: #0a0a0f;
   --sidebar: #10101a;
@@ -19,12 +12,12 @@
   --festival-bg: rgba(255, 107, 107, 0.12);
   --discount-bg: rgba(255, 217, 61, 0.12);
   --live-bg: rgba(107, 255, 184, 0.12);
-  /* 실시간 영상 모드 색 */
+  
   --cctv: #5ab9ff;
   --cctv-bg: rgba(90, 185, 255, 0.12);
   --yt: #ff4e45;
   --yt-bg: rgba(255, 78, 69, 0.12);
-  /* 공연 = 노란색 (살짝 어둡게) */
+  
   --perf: #f0c419;
   --perf-bg: rgba(240, 196, 25, 0.12);
 }
@@ -35,7 +28,6 @@
   box-sizing: border-box;
 }
 
-/* 검색엔진/스크린리더용 (화면엔 안 보임) */
 .sr-only {
   position: absolute;
   width: 1px;
@@ -57,7 +49,6 @@ body {
   display: flex;
 }
 
-/* ── SIDEBAR ── */
 #sidebar {
   width: 280px;
   min-width: 280px;
@@ -69,19 +60,7 @@ body {
   position: relative;
   overflow-y: auto;
   transition: transform 0.3s ease;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
 }
-/* 보기 싫은 굵은 스크롤 → 얇고 은은하게 */
-#sidebar::-webkit-scrollbar { width: 8px; }
-#sidebar::-webkit-scrollbar-track { background: transparent; }
-#sidebar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-}
-#sidebar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.22); }
-/* 확대/축소해도 로고·섹션이 서로 안 먹고 들어가게(찌그러짐 방지) */
-.logo-wrap, .section, .login-wrap { flex-shrink: 0; }
 
 .logo-wrap {
   padding: 28px 24px 20px;
@@ -100,7 +79,6 @@ body {
   z-index: 2;
 }
 
-/* (V) 은은한 호흡 글로우 */
 .logo span {
   color: var(--festival);
   animation: logo-breath 3.5s ease-in-out infinite;
@@ -115,7 +93,6 @@ body {
   }
 }
 
-/* 조명탄: (V) 오른쪽에서 수직으로 발사 → 정점에서 사라짐 (15초마다) */
 .logo-flare {
   position: absolute;
   left: 96px;
@@ -138,7 +115,6 @@ body {
   100% { transform: translateY(-40px) scale(0.2); opacity: 0; }
 }
 
-/* 터진 뒤 노란 불빛 하나가 곧게 천천히 낙하 */
 .logo-light {
   position: absolute;
   left: 98px;
@@ -184,7 +160,6 @@ body {
   margin-bottom: 10px;
 }
 
-/* 날짜 버튼 (4개: 오늘/이번주/이번달/직접입력) - 한 줄 배치 */
 .date-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -216,7 +191,6 @@ body {
   color: var(--text);
 }
 
-/* 기간 설정 (달력) - 평소엔 숨김, '직접 입력' 누르면 뿅 / 좌우 2칸 */
 .date-range {
   margin-top: 10px;
   display: none;
@@ -261,7 +235,7 @@ body {
   color: var(--text);
   font-size: 0.66rem;
   font-family: 'Noto Sans KR', sans-serif;
-  color-scheme: dark; /* 달력 팝업도 다크로 */
+  color-scheme: dark; 
   min-width: 0;
 }
 
@@ -270,7 +244,6 @@ body {
   border-color: var(--festival);
 }
 
-/* 카테고리 필터 */
 .filter-list {
   display: flex;
   flex-direction: column;
@@ -309,7 +282,7 @@ body {
   border-color: rgba(255, 78, 69, 0.3);
 }
 
-.filter-item:not(.active-festival):not(.active-spot):not(.active-cctv):not(.active-yt):not(.active-tag):not(.active-perf):not(.active-sangsi):hover {
+.filter-item:not(.active-festival):not(.active-spot):not(.active-cctv):not(.active-yt):not(.active-tag):not(.active-perf):hover {
   background: rgba(255, 255, 255, 0.04);
 }
 
@@ -340,12 +313,7 @@ body {
   background: var(--perf);
   box-shadow: 0 0 8px rgba(255, 217, 61, 0.8);
 }
-.dot-sangsi {
-  background: #22c55e;
-  box-shadow: 0 0 8px rgba(34, 197, 94, 0.85);
-}
 
-/* 스팟 태그 카테고리(민트) / 공연 장르 카테고리(노랑) 활성색 */
 .filter-item.active-tag {
   background: var(--live-bg);
   border-color: rgba(107, 255, 184, 0.3);
@@ -353,11 +321,6 @@ body {
 .filter-item.active-perf {
   background: var(--perf-bg);
   border-color: rgba(255, 217, 61, 0.3);
-}
-/* 상시 행사 토글 켜짐(초록) */
-.filter-item.active-sangsi {
-  background: rgba(34, 197, 94, 0.12);
-  border-color: rgba(34, 197, 94, 0.4);
 }
 
 .filter-text {
@@ -373,7 +336,6 @@ body {
   border-radius: 20px;
 }
 
-/* ── 보기 모드 토글 (A안 3칸 세그먼트) ── */
 .seg3 {
   position: relative;
   display: flex;
@@ -434,7 +396,6 @@ body {
   color: var(--cctv);
 }
 
-/* ── 모드별 표시/숨김 (body[data-mode]로 제어) ── */
 .cat-group {
   display: none;
 }
@@ -447,17 +408,16 @@ body[data-mode='festival'] #cat-festival {
 body[data-mode='live'] #cat-live {
   display: flex;
 }
-/* 영상 모드: 날짜 필터 숨김(실시간이라 의미 없음) */
+
 body[data-mode='live'] #date-section {
   display: none;
 }
-/* 스팟 남기기(검색·우클릭 메뉴)는 스팟 모드에서만 */
+
 body:not([data-mode='spot']) #spot-search,
 body:not([data-mode='spot']) #spot-ctx {
   display: none !important;
 }
 
-/* ── 영상 모드 안내 문구 (지도 중앙) ── */
 #live-notice {
   display: none;
   position: absolute;
@@ -521,7 +481,6 @@ body[data-mode='live'] #live-notice {
   color: var(--festival);
 }
 
-/* ── 햄버거 메뉴 버튼 (모바일 전용) ── */
 #menu-toggle {
   position: absolute;
   top: 16px;
@@ -536,13 +495,12 @@ body[data-mode='live'] #live-notice {
   font-size: 1.2rem;
   cursor: pointer;
   z-index: 400;
-  display: none; /* PC에선 숨김 */
+  display: none; 
   align-items: center;
   justify-content: center;
-  transition: transform 0.3s ease; /* 메뉴 따라 부드럽게 이동 */
+  transition: transform 0.3s ease; 
 }
 
-/* 사이드바 바깥 어두운 배경 (모바일에서 열렸을 때) */
 #sidebar-overlay {
   position: fixed;
   inset: 0;
@@ -554,7 +512,6 @@ body[data-mode='live'] #live-notice {
   display: block;
 }
 
-/* ── MAP AREA ── */
 #map-container {
   flex: 1;
   position: relative;
@@ -566,13 +523,11 @@ body[data-mode='live'] #live-notice {
   background: #0d1117;
 }
 
-/* ── 커스텀 축제 핀 ── */
 .flare-pin {
   position: relative;
   cursor: pointer;
 }
 
-/* 기본 핀(예정·오늘 아님) = 핑크 물방울(위치핀) + 커졌다작아졌다 + 파동 */
 .flare-dot {
   width: 16px;
   height: 16px;
@@ -600,27 +555,25 @@ body[data-mode='live'] #live-notice {
   animation: ring-pulse 2.5s ease-in-out infinite;
 }
 
-/* 지난 축제 핀 (종료일이 어제 이하): 어두운 회보라 + 퍼짐 효과 제거 */
 .flare-pin.past .flare-dot {
-  animation: none; /* 두근거림(pulse) 제거 */
+  animation: none; 
 }
 .flare-pin.past .flare-dot::before {
   background: radial-gradient(circle at 35% 35%, #6a5a7e, #3e3450);
   box-shadow: 0 0 6px rgba(90, 75, 110, 0.5);
 }
 .flare-pin.past .flare-dot::after {
-  display: none; /* 퍼지는 링 제거 */
+  display: none; 
 }
 .flare-pin.past .flare-label {
   border-color: rgba(120, 105, 140, 0.5);
   color: #d8d0e0;
 }
 
-/* 진행 중 축제 핀 (빛 강하게 + 크게, 빨강) */
 .flare-pin.ongoing .flare-dot {
   width: 18px;
   height: 18px;
-  margin: -1px; /* 16→18px 커진 만큼 중심 보정 */
+  margin: -1px; 
 }
 .flare-pin.ongoing .flare-dot::before {
   background: radial-gradient(circle at 35% 35%, #ffd9cc, #ff5577);
@@ -639,7 +592,6 @@ body[data-mode='live'] #live-notice {
   z-index: 996;
 }
 
-/* NOW 뱃지 (진행 중·단기): 화이트 배경 + 핑크 글자 */
 .now-badge {
   position: absolute;
   bottom: 20px;
@@ -657,7 +609,6 @@ body[data-mode='live'] #live-notice {
   pointer-events: none;
 }
 
-/* 상시 뱃지 (진행 중·장기): 밝은초록 배경 + 검정 글자 */
 .sangsi-badge {
   position: absolute;
   bottom: 20px;
@@ -675,7 +626,6 @@ body[data-mode='live'] #live-notice {
   pointer-events: none;
 }
 
-/* 이름표를 왼쪽으로 빼는 경우 (흩어질 때 왼쪽 핀) */
 .flare-pin.label-left .flare-label {
   left: auto;
   right: 20px;
@@ -687,7 +637,6 @@ body[data-mode='live'] #live-notice {
   transform: translateY(-50%) translateX(0) scale(1);
 }
 
-/* 선택된(팝업 열린) 핀 → 하얀색 (공연 노랑과 구분) */
 .flare-pin.selected .flare-dot::before {
   background: radial-gradient(circle at 35% 35%, #ffffff, #e8e8f0);
   box-shadow: 0 0 14px rgba(255, 255, 255, 0.95),
@@ -703,7 +652,6 @@ body[data-mode='live'] #live-notice {
   z-index: 998 !important;
 }
 
-/* 흩어진(스파이더) 핀: 이름표 항상 보이기 + 살짝 밝아짐 */
 .flare-pin.spider {
   z-index: 997 !important;
 }
@@ -711,12 +659,11 @@ body[data-mode='live'] #live-notice {
   opacity: 1;
   transform: translateY(-50%) translateX(0) scale(1);
 }
-/* 흩어졌을 때 일반 핀들과 구분되게 살짝 밝게 */
+
 .flare-pin.spider .flare-dot {
   filter: brightness(1.35) saturate(1.15);
 }
 
-/* 숫자 뭉치 마커 */
 .flare-cluster {
   position: absolute;
   width: 36px;
@@ -790,7 +737,6 @@ body[data-mode='live'] #live-notice {
   border-color: var(--festival);
 }
 
-/* ── INFO PANEL ── */
 #info-panel {
   position: absolute;
   right: 24px;
@@ -799,15 +745,14 @@ body[data-mode='live'] #live-notice {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 16px;
-  overflow: hidden auto; /* 내용 길면 안에서 스크롤 */
-  max-height: calc(100dvh - 48px);
+  overflow: hidden auto; 
+  max-height: calc(100vh - 48px);
   z-index: 200;
   display: none;
   backdrop-filter: blur(20px);
   transform-origin: top right;
 }
 
-/* 팝업 등장 애니메이션 (슉 튀어나오기) */
 #info-panel.show {
   display: block;
   animation: panel-pop 0.4s cubic-bezier(0.34, 1.8, 0.5, 1);
@@ -867,7 +812,6 @@ body[data-mode='live'] #live-notice {
   color: var(--text);
 }
 
-/* ── 팝업 사진 영역 ── */
 .panel-img {
   position: relative;
   width: 100%;
@@ -885,10 +829,10 @@ body[data-mode='live'] #live-notice {
   height: 100%;
   object-fit: cover;
   object-position: center;
-  display: none; /* 사진 있을 때만 보임 */
+  display: none; 
   cursor: zoom-in;
 }
-/* 사진 있을 때: 이미지 표시 + 이모지 숨김 + 클릭(돋보기) */
+
 .panel-img.has-photo {
   cursor: zoom-in;
 }
@@ -898,7 +842,7 @@ body[data-mode='live'] #live-notice {
 .panel-img.has-photo .panel-img-emoji {
   display: none;
 }
-/* 사진 비네팅 (살짝) */
+
 .panel-img.has-photo::after {
   content: '';
   position: absolute;
@@ -910,7 +854,7 @@ body[data-mode='live'] #live-notice {
     rgba(0, 0, 0, 0.32) 100%
   );
 }
-/* 잘리는 쪽으로 천천히 훑기 (9초, 왕복) */
+
 .panel-img.pan-v img {
   animation: img-pan-v 9s ease-in-out infinite alternate;
 }
@@ -930,7 +874,6 @@ body[data-mode='live'] #live-notice {
   padding: 16px 18px;
 }
 
-/* 제목 + 링크 아이콘 한 줄 */
 .panel-title-row {
   display: flex;
   align-items: center;
@@ -943,7 +886,7 @@ body[data-mode='live'] #live-notice {
   font-weight: 700;
   line-height: 1.3;
   color: #fff;
-  /* 2줄 방지: 한 줄로 유지하고 넘치면 ... (JS가 글자크기 먼저 줄임) */
+  
   flex: 1;
   min-width: 0;
   white-space: nowrap;
@@ -951,7 +894,6 @@ body[data-mode='live'] #live-notice {
   text-overflow: ellipsis;
 }
 
-/* 제목 옆 구글 검색 링크 버튼 */
 .title-link-btn {
   flex-shrink: 0;
   background: rgba(255, 217, 61, 0.14);
@@ -966,7 +908,7 @@ body[data-mode='live'] #live-notice {
   font-family: 'Noto Sans KR', sans-serif;
   white-space: nowrap;
   transition: all 0.25s;
-  /* 은은한 노란 빛 */
+  
   box-shadow: 0 0 8px rgba(255, 217, 61, 0.35);
   animation: link-glow 2.8s ease-in-out infinite;
 }
@@ -1015,7 +957,6 @@ body[data-mode='live'] #live-notice {
   color: var(--festival);
 }
 
-/* ── 별점 합산 표시(조명탄 자리) ── */
 .rating-box {
   color: var(--discount);
   font-weight: 700;
@@ -1027,7 +968,6 @@ body[data-mode='live'] #live-notice {
   font-size: 0.72rem;
 }
 
-/* 한줄평 버튼: 살짝 흔들 + 은은한 글로우 */
 .talk-btn {
   color: var(--festival);
   border-color: rgba(255, 107, 107, 0.35);
@@ -1049,7 +989,7 @@ body[data-mode='live'] #live-notice {
   0%, 100% { box-shadow: 0 0 4px rgba(255, 107, 107, 0.25); }
   50% { box-shadow: 0 0 14px rgba(255, 107, 107, 0.55); }
 }
-/* 열린 상태(한줄평 닫기) */
+
 .talk-btn.open {
   color: var(--muted);
   border-color: var(--border);
@@ -1058,7 +998,6 @@ body[data-mode='live'] #live-notice {
 }
 .talk-btn.open .ic { animation: none; }
 
-/* ── 한줄평 목록/폼 (사진 자리에 펼침) ── */
 .panel-img.reviews-open { height: 320px; cursor: default; }
 .panel-img.reviews-open img,
 .panel-img.reviews-open .panel-img-emoji { display: none; }
@@ -1174,7 +1113,6 @@ body[data-mode='live'] #live-notice {
 .dc-ok { background: #ff5577; color: #fff; }
 .dc-no { background: rgba(255, 255, 255, 0.08); color: var(--muted); }
 
-/* 쓰기 폼 */
 .rv-form { padding: 14px; }
 .rv-form h4 { font-size: 0.82rem; margin-bottom: 10px; flex-shrink: 0; }
 .rv-form-scroll { flex: 1; overflow-y: auto; min-height: 0; }
@@ -1221,7 +1159,6 @@ body[data-mode='live'] #live-notice {
   margin-bottom: 14px;
 }
 
-/* 팝업 정보 글자 흰색으로 */
 .meta-row {
   display: flex;
   align-items: flex-start;
@@ -1236,7 +1173,6 @@ body[data-mode='live'] #live-notice {
   flex-shrink: 0;
 }
 
-/* 설명 */
 .panel-desc {
   font-size: 0.78rem;
   line-height: 1.65;
@@ -1245,10 +1181,10 @@ body[data-mode='live'] #live-notice {
 }
 .panel-desc .desc-text {
   display: -webkit-box;
-  -webkit-line-clamp: 2; /* 기본 2줄 */
+  -webkit-line-clamp: 2; 
   -webkit-box-orient: vertical;
   overflow: hidden;
-  white-space: pre-line; /* 줄바꿈 반영 */
+  white-space: pre-line; 
 }
 .panel-desc.expanded .desc-text {
   display: block;
@@ -1256,7 +1192,7 @@ body[data-mode='live'] #live-notice {
   overflow: visible;
 }
 .desc-more {
-  display: none; /* 넘칠 때만 JS가 표시 */
+  display: none; 
   margin-top: 6px;
   font-size: 0.72rem;
   color: var(--festival);
@@ -1267,7 +1203,6 @@ body[data-mode='live'] #live-notice {
   text-decoration: underline;
 }
 
-/* 프로그램 */
 .panel-program {
   margin-bottom: 14px;
 }
@@ -1285,7 +1220,7 @@ body[data-mode='live'] #live-notice {
   line-height: 1.6;
   color: #c2c2d0;
   display: -webkit-box;
-  -webkit-line-clamp: 2; /* 기본 2줄 */
+  -webkit-line-clamp: 2; 
   -webkit-box-orient: vertical;
   overflow: hidden;
   white-space: pre-line;
@@ -1296,7 +1231,7 @@ body[data-mode='live'] #live-notice {
   overflow: visible;
 }
 .program-more {
-  display: none; /* 넘칠 때만 JS가 표시 */
+  display: none; 
   margin-top: 6px;
   font-size: 0.72rem;
   color: var(--festival);
@@ -1337,27 +1272,20 @@ body[data-mode='live'] #live-notice {
   padding: 14px 24px;
   border-radius: 50px;
   border: none;
-  background: var(--live);
-  color: #06231a;
+  background: var(--festival);
+  color: #0a0a0f;
   font-size: 0.85rem;
   font-family: 'Noto Sans KR', sans-serif;
   font-weight: 700;
   cursor: pointer;
   z-index: 100;
-  display: none; /* 스팟 모드에서만 표시 */
+  display: flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 0 24px rgba(107, 255, 184, 0.45);
+  box-shadow: 0 0 24px rgba(255, 107, 107, 0.5);
   transition: all 0.25s;
   letter-spacing: 0.5px;
 }
-#upload-btn:hover { filter: brightness(1.05); }
-/* 스팟 모드에서만 노출 (위치 고르기 중에는 숨김) */
-body[data-mode='spot'] #upload-btn { display: flex; }
-body.spot-picking #upload-btn,
-body.spot-picking #spot-search,
-body.spot-picking #locate-btn,
-body.spot-picking #menu-toggle { display: none !important; }
 
 #loading {
   position: absolute;
@@ -1374,7 +1302,6 @@ body.spot-picking #menu-toggle { display: none !important; }
   display: none;
 }
 
-/* 내 위치 버튼 (나침반) - 우측 상단 */
 #locate-btn {
   position: absolute;
   top: 24px;
@@ -1407,7 +1334,6 @@ body.spot-picking #menu-toggle { display: none !important; }
   to { transform: rotate(360deg); }
 }
 
-/* 내 위치 표시 점 (파란 점) */
 .my-location-dot {
   width: 16px;
   height: 16px;
@@ -1418,7 +1344,6 @@ body.spot-picking #menu-toggle { display: none !important; }
     0 0 12px rgba(66, 133, 244, 0.6);
 }
 
-/* 길찾기 지도 선택 팝업 */
 .map-picker {
   display: none;
   margin-top: 10px;
@@ -1536,7 +1461,6 @@ body.spot-picking #menu-toggle { display: none !important; }
   color: var(--text);
 }
 
-/* 개발자에게 메시지 보내기 버튼 (사이드바) */
 .contact-btn {
   width: 100%;
   padding: 11px;
@@ -1559,7 +1483,6 @@ body.spot-picking #menu-toggle { display: none !important; }
   color: var(--festival);
 }
 
-/* 메시지 모달 오버레이 (로그인 모달과 동일 스타일) */
 #contact-overlay {
   position: fixed;
   inset: 0;
@@ -1574,7 +1497,6 @@ body.spot-picking #menu-toggle { display: none !important; }
   display: flex;
 }
 
-/* 입력 필드 */
 .contact-field {
   text-align: left;
   margin-bottom: 14px;
@@ -1618,7 +1540,6 @@ body.spot-picking #menu-toggle { display: none !important; }
   cursor: not-allowed;
 }
 
-/* 전송 상태 메시지 */
 .contact-status {
   font-size: 0.74rem;
   min-height: 18px;
@@ -1632,7 +1553,6 @@ body.spot-picking #menu-toggle { display: none !important; }
   color: var(--festival);
 }
 
-/* ── 모바일 대응 ── */
 @media (max-width: 768px) {
   #menu-toggle {
     display: flex;
@@ -1643,15 +1563,14 @@ body.spot-picking #menu-toggle { display: none !important; }
     top: 0;
     left: 0;
     height: 100%;
-    transform: translateX(-100%); /* 평소엔 숨김 */
+    transform: translateX(-100%); 
     box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
   }
 
   #sidebar.open {
-    transform: translateX(0); /* 햄버거 누르면 나옴 */
+    transform: translateX(0); 
   }
 
-  /* 메뉴가 열리면 버튼도 메뉴 폭만큼 같이 오른쪽으로 밀려나감 */
   #menu-toggle.menu-open {
     transform: translateX(280px);
   }
@@ -1661,7 +1580,7 @@ body.spot-picking #menu-toggle { display: none !important; }
     left: 12px;
     width: auto;
     top: 70px;
-    max-height: calc(100dvh - 88px);
+    max-height: calc(100vh - 88px);
   }
 
   #upload-btn {
@@ -1671,14 +1590,13 @@ body.spot-picking #menu-toggle { display: none !important; }
     font-size: 0.78rem;
   }
 }
-/* ========== 스팟(사용자 명소) ========== */
-/* 장소 검색창 (지도 상단) */
+
 #spot-search {
   position: absolute;
   top: 14px;
   left: 50%;
   transform: translateX(-50%);
-  width: min(440px, calc(100% - 150px));
+  width: min(440px, calc(100% - 90px));
   z-index: 240;
 }
 .ss-bar {
@@ -1735,7 +1653,6 @@ body.spot-picking #menu-toggle { display: none !important; }
 .sr-ad { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
 .sr-empty { padding: 12px 14px; font-size: 0.76rem; color: var(--muted); }
 
-/* 저장 모달: 저장 위치 라벨 */
 .spot-place-label {
   font-size: 0.74rem;
   color: var(--live);
@@ -1747,98 +1664,6 @@ body.spot-picking #menu-toggle { display: none !important; }
   word-break: keep-all;
 }
 
-/* (8) 위치 확인하기 행 — 평소엔 민트 강조(아직 위치 미지정) */
-.spot-locrow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 13px;
-  border-radius: 13px;
-  background: var(--live-bg);
-  border: 1px solid rgba(107, 255, 184, 0.5);
-  box-shadow: 0 0 0 3px rgba(107, 255, 184, 0.1);
-  margin-bottom: 14px;
-  cursor: pointer;
-  transition: filter 0.15s;
-}
-.spot-locrow:hover { filter: brightness(1.08); }
-.spot-locrow .slr-ic { font-size: 1.15rem; }
-.spot-locrow .slr-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.spot-locrow .slr-txt b {
-  font-size: 0.85rem; font-weight: 700; color: var(--live);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.spot-locrow .slr-txt span { font-size: 0.68rem; color: var(--muted); margin-top: 1px; }
-.spot-locrow .slr-go {
-  font-size: 0.7rem; font-weight: 700; color: #06231a;
-  background: var(--live); padding: 6px 11px; border-radius: 9px; white-space: nowrap;
-}
-/* 위치가 지정된 뒤 — 차분한 회색 톤 + 흰 글씨 */
-.spot-locrow.set {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: var(--border);
-  box-shadow: none;
-}
-.spot-locrow.set .slr-txt b { color: #fff; }
-.spot-locrow.set .slr-go {
-  background: transparent; color: var(--live);
-  border: 1px solid rgba(107, 255, 184, 0.5);
-}
-
-/* (8) A안: 위치 고르기 모드 (지도 위에 떠 있는 컨트롤들) */
-#spot-pick {
-  position: absolute;
-  inset: 0;
-  z-index: 260;
-  display: none;
-  pointer-events: none; /* 지도는 그대로 움직이게, 컨트롤만 클릭 */
-}
-#spot-pick.show { display: block; }
-#spot-pick .sp-top,
-#spot-pick .sp-back,
-#spot-pick .sp-searchcol,
-#spot-pick .sp-bottom,
-#spot-pick .ss-bar,
-#spot-pick .ss-go,
-#spot-pick #spot-pick-results { pointer-events: auto; }
-
-.sp-top { position: absolute; top: 14px; left: 12px; right: 12px; display: flex; gap: 8px; align-items: flex-start; }
-.sp-back {
-  width: 44px; height: 44px; flex: 0 0 44px; border-radius: 12px;
-  border: 1px solid var(--border); background: rgba(20, 20, 31, 0.92);
-  color: var(--text); font-size: 1.2rem; cursor: pointer; backdrop-filter: blur(10px);
-}
-.sp-searchcol { flex: 1; min-width: 0; }
-#spot-pick-results {
-  display: none; margin-top: 6px; background: rgba(20, 20, 31, 0.96);
-  border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
-  backdrop-filter: blur(10px); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-}
-#spot-pick-results.show { display: block; }
-
-/* 가운데 고정 핀 */
-.sp-cross { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -100%); z-index: 261; pointer-events: none; text-align: center; }
-.sp-pin { font-size: 2.3rem; line-height: 1; filter: drop-shadow(0 6px 9px rgba(0, 0, 0, 0.55)); animation: sp-bob 1.6s ease-in-out infinite; }
-.sp-pindot { width: 10px; height: 4px; background: rgba(0, 0, 0, 0.4); border-radius: 50%; margin: 2px auto 0; filter: blur(0.5px); }
-@keyframes sp-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
-
-.sp-hint {
-  position: absolute; left: 50%; top: calc(50% - 64px); transform: translateX(-50%);
-  z-index: 261; pointer-events: none; white-space: nowrap;
-  background: rgba(10, 10, 16, 0.85); border: 1px solid var(--border); color: var(--text);
-  font-size: 0.72rem; padding: 6px 12px; border-radius: 20px;
-}
-.sp-bottom { position: absolute; left: 12px; right: 12px; bottom: 16px; z-index: 261; }
-.sp-where { font-size: 0.74rem; color: var(--muted); margin: 0 0 8px 4px; }
-.sp-where b { color: #fff; font-weight: 600; }
-.sp-confirm {
-  width: 100%; padding: 14px; border: none; border-radius: 13px; cursor: pointer;
-  background: var(--live); color: #06231a; font-weight: 800; font-size: 0.9rem;
-  box-shadow: 0 6px 20px rgba(107, 255, 184, 0.3); font-family: 'Noto Sans KR', sans-serif;
-}
-.sp-confirm:active { transform: scale(0.98); }
-
-/* 지도 우클릭/롱프레스 메뉴 */
 #spot-ctx {
   position: absolute;
   background: #1a1a26;
@@ -1863,9 +1688,8 @@ body.spot-picking #menu-toggle { display: none !important; }
 }
 #spot-ctx button:hover { background: rgba(255, 255, 255, 0.08); }
 
-/* 스팟 핀 (민트 물방울) */
 .spot-pin { position: relative; cursor: pointer; }
-/* 울림(파동) — 축제 핀과 동일한 ring-pulse */
+
 .spot-pin .spot-ring {
   position: absolute;
   left: 8px;
@@ -1897,7 +1721,7 @@ body.spot-picking #menu-toggle { display: none !important; }
   box-shadow: 0 0 10px rgba(107, 255, 184, 0.8),
     0 0 18px rgba(107, 255, 184, 0.4);
 }
-/* 같은 장소 2개 이상일 때 숫자 배지 */
+
 .spot-pin .spot-count {
   position: absolute;
   left: 14px;
@@ -1940,7 +1764,6 @@ body.spot-picking #menu-toggle { display: none !important; }
 }
 .spot-pin:hover .spot-label { opacity: 1; }
 
-/* 스팟 저장 모달 */
 #spot-overlay {
   position: fixed;
   inset: 0;
@@ -2071,7 +1894,6 @@ body.spot-picking #menu-toggle { display: none !important; }
 .spot-ok { background: var(--live); color: #07251a; }
 .spot-no { background: rgba(255, 255, 255, 0.07); color: var(--text); }
 
-/* 스팟 상세 팝업 */
 #spot-panel {
   position: absolute;
   right: 24px;
@@ -2176,7 +1998,6 @@ body.spot-picking #menu-toggle { display: none !important; }
 .sp-date { font-size: 0.68rem; color: var(--live); margin-bottom: 10px; }
 .sp-desc { font-size: 0.8rem; line-height: 1.6; color: #d2d2de; margin-bottom: 10px; white-space: pre-line; }
 
-/* 모바일: 상세 팝업을 검색창 아래로 내려 겹치지 않게 */
 @media (max-width: 600px) {
   #spot-panel {
     top: 76px;
@@ -2191,10 +2012,6 @@ body.spot-picking #menu-toggle { display: none !important; }
 .sp-report { background: none; border: none; color: var(--muted); font-size: 0.68rem; cursor: pointer; text-decoration: underline; padding: 4px; margin-top: 4px; font-family: 'Noto Sans KR', sans-serif; }
 .sp-report:hover { color: #ff5577; }
 
-
-/* ============================================
-   공연 핀 (노란색 물방울) + 공연 팝업  (v2.4.0)
-   ============================================ */
 .perf-pin { position: relative; cursor: pointer; }
 .perf-pin .perf-ring {
   position: absolute;
@@ -2229,7 +2046,6 @@ body.spot-picking #menu-toggle { display: none !important; }
 }
 .perf-pin:hover .perf-drop { filter: brightness(1.12); }
 
-/* 진행 중 공연 (크게 + 빛 강하게) */
 .perf-pin.ongoing .perf-drop { width: 18px; height: 18px; margin: -1px; }
 .perf-pin.ongoing .perf-drop::before {
   box-shadow: 0 0 16px rgba(240, 196, 25, 1),
@@ -2238,7 +2054,6 @@ body.spot-picking #menu-toggle { display: none !important; }
 }
 .perf-pin.ongoing { z-index: 996; }
 
-/* 지난 공연 (어두운 회보라) */
 .perf-pin.past .perf-drop { animation: none; }
 .perf-pin.past .perf-drop::before {
   background: radial-gradient(circle at 35% 35%, #6a5a7e, #3e3450);
@@ -2246,7 +2061,6 @@ body.spot-picking #menu-toggle { display: none !important; }
 }
 .perf-pin.past .perf-ring { display: none; }
 
-/* 선택된 공연 핀 → 하얀색 */
 .perf-pin.selected .perf-drop::before {
   background: radial-gradient(circle at 35% 35%, #ffffff, #e8e8f0);
   box-shadow: 0 0 14px rgba(255, 255, 255, 0.95),
@@ -2273,13 +2087,7 @@ body.spot-picking #menu-toggle { display: none !important; }
   pointer-events: none;
 }
 .perf-pin:hover .perf-label { opacity: 1; }
-/* (C) 묶음에서 흩어졌을 때: 이름표 항상 표시 + 살짝 밝게 */
-.perf-pin.spider { z-index: 997 !important; }
-.perf-pin.spider .perf-label { opacity: 1; }
-.perf-pin.spider .perf-drop { filter: brightness(1.25) saturate(1.1); }
-.perf-pin.label-left .perf-label { left: auto; right: 22px; }
 
-/* 공연 상세 팝업 */
 #perf-panel {
   position: absolute;
   right: 24px;
@@ -2289,7 +2097,7 @@ body.spot-picking #menu-toggle { display: none !important; }
   border: 1px solid var(--border);
   border-radius: 16px;
   overflow: hidden auto;
-  max-height: calc(100dvh - 48px);
+  max-height: calc(100vh - 48px);
   z-index: 200;
   display: none;
   backdrop-filter: blur(20px);
@@ -2335,10 +2143,6 @@ body.spot-picking #menu-toggle { display: none !important; }
   }
 }
 
-/* ============================================
-   카테고리 전체선택/해제 · 공연 검색창 · 스팟 출처 (v2.5.0)
-   ============================================ */
-/* 카테고리 전체 선택/해제 버튼 */
 .cat-tools { display: flex; gap: 6px; margin-bottom: 8px; }
 .cat-tools button {
   flex: 1;
@@ -2354,19 +2158,17 @@ body.spot-picking #menu-toggle { display: none !important; }
 }
 .cat-tools button:hover { color: var(--text); background: rgba(255, 255, 255, 0.08); }
 
-/* 공연 모드 검색창 (지도 상단) — 스팟 검색창과 동일 스타일(.ss-bar 재사용) */
 #fest-search {
   position: absolute;
   top: 14px;
   left: 50%;
   transform: translateX(-50%);
-  width: min(440px, calc(100% - 150px));
+  width: min(440px, calc(100% - 90px));
   z-index: 240;
   display: none;
 }
 body[data-mode='festival'] #fest-search { display: block; }
 
-/* 스팟 팝업 출처 표시 (장소선택 / 직접 좌표) */
 .sp-source {
   display: flex;
   align-items: center;
@@ -2390,11 +2192,6 @@ body[data-mode='festival'] #fest-search { display: block; }
   border: 1px solid var(--border);
 }
 
-/* ============================================
-   v2.5.1 — 검색창 D안(글로우+디밍) · X버튼 · 핀 줌 스케일 · 출처 클릭
-   ============================================ */
-/* 공연 검색창: 글로우 효과는 롤백(기본 .ss-bar 스타일 사용) */
-/* X(검색 해제) 버튼: 검색 버튼(노랑)과 어울리는 노랑 외곽선 */
 #fest-search-clear {
   background: rgba(240, 196, 25, 0.15);
   color: var(--perf);
@@ -2403,20 +2200,12 @@ body[data-mode='festival'] #fest-search { display: block; }
 }
 #fest-search-clear:hover { background: rgba(240, 196, 25, 0.28); }
 
-/* 버튼 누름 효과 — 눌렀다는 걸 알 수 있게 살짝 작아지며 톤 변화 */
 .ss-go { transition: transform 0.08s ease, filter 0.12s ease; }
 .ss-go:active { transform: scale(0.9); filter: brightness(0.85); }
 
-/* (핀 줌 스케일 기능은 위치 어긋남으로 롤백함) */
-
-/* 스팟 팝업 출처(장소) 클릭 가능 표시 */
 .sp-source.clickable { cursor: pointer; transition: filter 0.15s, background 0.15s; }
 .sp-source.clickable:hover { filter: brightness(1.18); }
 
-/* ============================================
-   유튜브 라이브 — 핀(빨강/회색) · 묶음 · 팝업  (v2.6.0)
-   ============================================ */
-/* 라이브 핀 (방송중=빨강 물방울 + 파동, 꺼짐=회색) */
 .live-pin { position: relative; cursor: pointer; }
 .live-pin .live-ring {
   position: absolute; left: 8px; top: 8px;
@@ -2463,7 +2252,6 @@ body[data-mode='festival'] #fest-search { display: block; }
 }
 .live-pin.selected { z-index: 998 !important; }
 
-/* 같은 장소 묶음(숫자) 핀 */
 .live-cluster {
   width: 28px; height: 28px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
@@ -2476,11 +2264,10 @@ body[data-mode='festival'] #fest-search { display: block; }
   box-shadow: 0 0 8px rgba(90, 90, 110, 0.5);
 }
 
-/* 라이브 팝업 */
 #live-panel {
   position: absolute; right: 24px; top: 24px; width: 360px;
   background: var(--panel); border: 1px solid var(--border);
-  border-radius: 16px; overflow: hidden auto; max-height: calc(100dvh - 48px);
+  border-radius: 16px; overflow: hidden auto; max-height: calc(100vh - 48px);
   z-index: 200; display: none; backdrop-filter: blur(20px);
 }
 #live-panel.show { display: block; animation: panel-pop 0.4s cubic-bezier(0.34, 1.8, 0.5, 1); }
@@ -2505,55 +2292,12 @@ body[data-mode='festival'] #fest-search { display: block; }
 }
 .lv-link:hover { background: rgba(255, 78, 69, 0.28); }
 
-/* (3) LIVE + 유튜브를 한 묶음으로 묶어 항상 붙어있게 (모바일 포함) */
-.lv-head-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-/* (1) LIVE 옆 유튜브 알약 버튼 — 배지와 비슷한 모양 */
-.lv-yt-pill {
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.3px;
-  padding: 4px 10px;
-  border-radius: 20px;
-  background: rgba(255, 78, 69, 0.18);
-  color: #ff6b62;
-  border: 1px solid rgba(255, 78, 69, 0.45);
-  text-decoration: none;
-  white-space: nowrap;
-  transition: background 0.15s;
-}
-.lv-yt-pill:hover { background: rgba(255, 78, 69, 0.3); }
-
-/* (모바일) 메뉴를 펼치는 동안엔 검색창을 뿅 숨김 (메뉴와 겹침 방지) */
-@media (max-width: 768px) {
-  #spot-search, #fest-search {
-    transition: opacity 0.22s ease,
-      transform 0.24s cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-  #sidebar.open ~ #map-container #spot-search,
-  #sidebar.open ~ #map-container #fest-search {
-    opacity: 0;
-    transform: translateX(-50%) scale(0.55);
-    pointer-events: none;
-  }
-}
-
-/* 라이브가 있으면 "곧 추가됩니다" 안내 숨김 */
 #live-notice.has-live { display: none !important; }
 
 @media (max-width: 600px) {
-  #live-panel { top: 76px; left: 12px; right: 12px; width: auto; max-height: calc(100dvh - 96px); }
+  #live-panel { top: 76px; left: 12px; right: 12px; width: auto; max-height: calc(100vh - 96px); }
 }
 
-/* ============================================
-   라이브 팝업 — 크기조절 + 현지시간 + 한줄평  (v2.6.1)
-   ============================================ */
-/* 크기 단계 버튼 (B) */
 .lv-sizes { display: flex; gap: 4px; margin-left: auto; margin-right: 8px; }
 .lv-sizes button {
   font-size: 0.66rem; padding: 3px 7px; border-radius: 7px; cursor: pointer;
@@ -2565,12 +2309,10 @@ body[data-mode='festival'] #fest-search { display: block; }
   border-color: rgba(255, 78, 69, 0.5);
 }
 
-/* 크기 단계 폭 (PC) */
 #live-panel.size-m { width: 360px; }
 #live-panel.size-l { width: 480px; }
 #live-panel.size-xl { width: 640px; }
 
-/* 영상 + 드래그 핸들 (A) */
 .lv-videowrap { position: relative; }
 .lv-resize {
   position: absolute; right: 0; bottom: 0; width: 22px; height: 22px;
@@ -2579,7 +2321,6 @@ body[data-mode='festival'] #fest-search { display: block; }
     linear-gradient(135deg, transparent 50%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0.5) 60%, transparent 60%, transparent 72%, rgba(255, 255, 255, 0.5) 72%, rgba(255, 255, 255, 0.5) 82%, transparent 82%);
 }
 
-/* 한줄평 영역 */
 .lv-reviews { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px; }
 .lv-rv-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
 .lv-rating { font-size: 0.82rem; color: #ffd93d; font-weight: 600; }
@@ -2589,28 +2330,21 @@ body[data-mode='festival'] #fest-search { display: block; }
   border: 1px solid rgba(255, 78, 69, 0.4); white-space: nowrap;
 }
 .lv-write-btn:hover { background: rgba(255, 78, 69, 0.24); }
-/* 쓰기 폼: 평소 숨김, form-open이면 표시 */
+
 .lv-rv-form { display: none; margin-top: 10px; }
 .lv-reviews.form-open .lv-rv-form { display: block; }
 .lv-reviews.form-open .lv-rv-head { opacity: 0.5; }
 
 @media (max-width: 600px) {
-  /* 모바일은 항상 가로 꽉 차게 — 크기 단계/드래그 폭 무시 */
+  
   #live-panel.size-m, #live-panel.size-l, #live-panel.size-xl { width: auto !important; }
   .lv-resize { display: none; }
-  /* 모바일에선 폭 고정이라 크기버튼이 의미 없음 → 숨겨서 헤더 여유 확보 */
-  .lv-sizes { display: none; }
 }
 
-/* 라이브 설명: 한 줄만 보이고 더보기 (축제 .panel-desc 재활용 + 줄수만 1로) */
 .lv-desc { margin: 8px 0 4px; }
 .lv-desc .desc-text { -webkit-line-clamp: 1; }
 .lv-desc.expanded .desc-text { -webkit-line-clamp: unset; }
 
-/* ============================================
-   현지 뉴스 라이브 — 초록 핀 + NEWS  (v2.7.0)
-   ============================================ */
-/* 카테고리: 현지 뉴스 */
 .filter-item.active-news {
   background: rgba(43, 209, 108, 0.12);
   border-color: rgba(43, 209, 108, 0.3);
@@ -2619,12 +2353,11 @@ body[data-mode='festival'] #fest-search { display: block; }
   background: #2bd16c;
   box-shadow: 0 0 8px rgba(43, 209, 108, 0.8);
 }
-/* 비활성 hover 예외에 news도 포함 */
-.filter-item:not(.active-festival):not(.active-spot):not(.active-cctv):not(.active-yt):not(.active-news):not(.active-tag):not(.active-perf):not(.active-sangsi):hover {
+
+.filter-item:not(.active-festival):not(.active-spot):not(.active-cctv):not(.active-yt):not(.active-news):not(.active-tag):not(.active-perf):hover {
   background: rgba(255, 255, 255, 0.04);
 }
 
-/* 뉴스 핀: 초록 물방울 + 초록 파동 + NEWS 배지 */
 .live-pin.kind-news .live-ring { border-color: rgba(43, 209, 108, 0.55); }
 .live-pin.kind-news.on .live-drop::before {
   background: radial-gradient(circle at 35% 35%, #8af0b4, #2bd16c);
@@ -2632,9 +2365,7 @@ body[data-mode='festival'] #fest-search { display: block; }
 }
 .live-pin.kind-news .live-badge { background: #2bd16c; }
 .live-pin.kind-news .live-label { border-color: rgba(43, 209, 108, 0.4); }
-/* 뉴스 핀 선택 시에도 흰색 강조 유지(공통 .selected 규칙이 적용됨) */
 
-/* 뉴스 묶음(클러스터): 초록 */
 .live-cluster.kind-news {
   background: rgba(43, 209, 108, 0.9);
   box-shadow: 0 0 12px rgba(43, 209, 108, 0.7);
@@ -2642,4 +2373,90 @@ body[data-mode='festival'] #fest-search { display: block; }
 .live-cluster.kind-news.off {
   background: rgba(90, 90, 110, 0.9);
   box-shadow: 0 0 8px rgba(90, 90, 110, 0.5);
+}
+
+.seg2 {
+  position: relative;
+  display: flex;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 4px;
+}
+.seg2 .seg-thumb {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  height: calc(100% - 8px);
+  border-radius: 9px;
+  background: var(--live-bg);
+  border: 1px solid rgba(107, 255, 184, 0.4);
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), background 0.28s,
+    border-color 0.28s;
+}
+.seg2[data-m='spot'] .seg-thumb {
+  transform: translateX(0%);
+  background: var(--live-bg);
+  border-color: rgba(107, 255, 184, 0.4);
+}
+.seg2[data-m='live'] .seg-thumb {
+  transform: translateX(100%);
+  background: rgba(255, 78, 69, 0.16);
+  border-color: rgba(255, 78, 69, 0.4);
+}
+.seg2 button {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  padding: 9px 2px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+.seg2[data-m='spot'] button.b-spot { color: var(--live); }
+.seg2[data-m='live'] button.b-live { color: #ff6b62; }
+
+.filter-item.active-resort {
+  background: rgba(240, 196, 25, 0.12);
+  border-color: rgba(240, 196, 25, 0.3);
+}
+.filter-item.active-hotel {
+  background: rgba(90, 185, 255, 0.12);
+  border-color: rgba(90, 185, 255, 0.3);
+}
+.dot-resort { background: #f0c419; box-shadow: 0 0 8px rgba(240, 196, 25, 0.8); }
+.dot-hotel { background: #5ab9ff; box-shadow: 0 0 8px rgba(90, 185, 255, 0.8); }
+.filter-item:not(.active-festival):not(.active-spot):not(.active-cctv):not(.active-yt):not(.active-news):not(.active-resort):not(.active-hotel):not(.active-tag):not(.active-perf):hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.live-pin.kind-resort .live-ring { border-color: rgba(240, 196, 25, 0.55); }
+.live-pin.kind-resort.on .live-drop::before {
+  background: radial-gradient(circle at 35% 35%, #ffe680, #f0c419);
+  box-shadow: 0 0 10px rgba(240, 196, 25, 0.85), 0 0 18px rgba(240, 196, 25, 0.4);
+}
+.live-pin.kind-resort .live-badge { background: #f0c419; color: #3a2e00; }
+.live-pin.kind-resort .live-label { border-color: rgba(240, 196, 25, 0.4); }
+.live-cluster.kind-resort {
+  background: rgba(240, 196, 25, 0.92);
+  box-shadow: 0 0 12px rgba(240, 196, 25, 0.7);
+}
+
+.live-pin.kind-hotel .live-ring { border-color: rgba(90, 185, 255, 0.55); }
+.live-pin.kind-hotel.on .live-drop::before {
+  background: radial-gradient(circle at 35% 35%, #b3e0ff, #5ab9ff);
+  box-shadow: 0 0 10px rgba(90, 185, 255, 0.85), 0 0 18px rgba(90, 185, 255, 0.4);
+}
+.live-pin.kind-hotel .live-badge { background: #5ab9ff; color: #04263a; }
+.live-pin.kind-hotel .live-label { border-color: rgba(90, 185, 255, 0.4); }
+.live-cluster.kind-hotel {
+  background: rgba(90, 185, 255, 0.92);
+  box-shadow: 0 0 12px rgba(90, 185, 255, 0.7);
 }

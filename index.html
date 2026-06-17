@@ -1,160 +1,70 @@
 <!DOCTYPE html>
-<!-- ============================================
-     Flare(V) 홈페이지
-     버전: v2.9.0 (2차: 스팟 남기기 버튼 + A안 위치 고르기 모드)
-     수정일: 2026-06-17
-     ※ 파일 분리: index.html(뼈대) + style.css(디자인) + app.js(동작)
-     수정사항(v2.9.0):
-       - (스팟) 우측 하단 버튼 '준비 중' → '📸 스팟 남기기'(스팟 모드에서만 표시)
-       - (스팟) 누르면 스팟 남기기 시트가 위치 없이도 열림
-       - (스팟) '위치 확인하기'(민트 강조) → 전체 지도에서 가운데 핀/검색으로 위치 지정
-       - 나머지(사진·태그·설명·저장)는 기존과 동일
-     수정사항(v2.8.1):
-       - (모바일) 메뉴 펼치면 검색창이 뿅 사라지고, 닫으면 뿅 나타남(겹침 해소)
-       - (카테고리) 상시 행사를 맨 위로 (상시 → 축제 → 장르)
-       - (모바일) 영상 팝업의 유튜브 버튼을 LIVE 바로 옆에 붙임
-     수정사항(v2.8.0):
-       - (영상) '유튜브에서 보기'를 팝업 위 LIVE 배지 옆 알약(▶️ 유튜브)으로 이동
-       - (영상) 모바일에서 팝업이 길어도 아래가 안 잘리게(100dvh) + 모바일 크기버튼 숨김
-       - (공연) 공연 핀도 가까우면 숫자 뭉치로 묶이고, 누르면 흩어짐(축제와 동일)
-       - (카테고리) 축제 아래 초록 '상시 행사' 토글 추가(기본 꺼짐, 축제·공연 함께)
-       - (레이아웃) 좌측 메뉴 스크롤 얇게 + 로고/섹션 겹침 방지
-       - (레이아웃) 상단 검색창이 나침반·메뉴 버튼과 안 겹치게 좌우 여백 확보
-     수정사항(v2.5.0) — UX 다듬기:
-       - 사이드바 순서: 개발자메시지 → 보기모드 → 날짜 → 카테고리
-       - 보기모드 탭 '축제·공연' → '공연'
-       - 핀 모양 통일: 셋 다 물방울(위치핀) + 커졌다작아졌다 + 파동(축제 방식)
-       - 공연 노랑 채도 낮춤 / 선택된 핀 = 하얀색
-       - 공연 핀도 NOW·상시 표시
-       - 첫 화면 기본: 공연 모드 + 카테고리 전체선택 + 날짜 '오늘'(오늘 핀만)
-       - 카테고리 전체 선택/해제 버튼
-       - 스팟 팝업에 출처 표시(장소선택 vs 직접 좌표, 장소명)
-       - 공연 모드 검색 필터(제목·장르·지역, X로 복귀)
-     수정사항(v2.4.0) — 보기 모드 3개 + 공연 데이터:
-       - 보기 모드 3개: 📍스팟 / 🎉축제·공연 / 📡실시간 영상 (A안 3칸 세그먼트)
-       - 사이드바 순서: 개발자메시지 → 날짜 → 보기모드 → 카테고리
-       - 스팟 모드 카테고리: 풍경·맛집·이색·힐링·놀라운·실시간 현장(태그 필터)
-       - 축제·공연 모드: 축제(코랄) + 공연 장르(노란색, 데이터에서 자동 생성)
-       - 공연 핀(노란색) + 공연 팝업(포스터·날짜·장소·가격·장르·예매링크)
-       - 공연/축제는 날짜 필터 적용, 스팟은 태그 필터 적용
-       - 스팟 남기기(검색·우클릭·길게누르기)는 스팟 모드에서만 동작
-     수정사항(v2.3.0) — 보기 모드 전환 추가(뼈대):
-       - 사이드바 상단에 모드 토글(A안 세그먼트): 🎪 축제·스팟 ↔ 📡 실시간 영상
-       - 영상 모드: 카테고리가 🚦 교통정보 CCTV / ▶️ 유튜브 스트리밍 으로 바뀜
-       - 영상 모드에선 날짜 필터·장소 검색·스팟 남기기(우클릭/길게누르기) 숨김
-       - 영상 모드 지도엔 임시 안내 문구 표시 (ITS 키 승인 후 CCTV 핀 채울 예정)
-       - 축제 모드 복귀 시 기존 동작 그대로
-     수정사항(v2.2.2):
-       - 길찾기: 제목 대신 좌표/장소로 이동 (카카오=좌표+이름, 네이버=장소명/좌표, 구글=좌표)
-       - 스팟 사진 여러 장: 팝업에서 좌우 화살표로 넘기기 + n/총 카운터
-       - 스팟도 메뉴의 날짜 필터로 걸러짐 (사진 업로드/촬영 시간 기준, 오늘/최근7일/최근30일/직접)
-     수정사항(v2.2.1):
-       - 지도 테마 다시 다크로
-       - 지명 클릭(PC·모바일) → 바로 팝업 대신 "스팟 남기기" 메뉴 표시
-       - 검색 결과 선택 → 위치 이동 후 "스팟 남기기" 메뉴 표시(PC·모바일 동일)
-       - (모바일) 팝업 바깥 누르면 닫힘 / 뒤로가기로 팝업 닫힘 / 상세팝업을 검색창 아래로
-       - 사진 촬영·업로드 날짜·시간 표시(EXIF→없으면 파일시각, 사용자 입력 아님)
-       - 길찾기: 제목 대신 장소명(지명)으로 카카오·네이버 검색
-     수정사항(v2.2.0) — 스팟 2단계:
-       - 지도 테마: 구글 순정 + 지명(POI) 표시
-       - 장소 검색창(지도 상단): 버튼/엔터 시 1회 검색, 결과 3~5개 목록
-         · 목록 클릭 → 그 위치로 이동 + 스팟 남기기 팝업 (주변 우선, 없으면 전국)
-       - 지도 위 지명 클릭 → 그 장소에 스팟 남기기 (구글 기본창 대신)
-       - 같은 장소 합치기: 검색·지명은 place_id로 자동, 직접 찍기는 50m 내 기존 장소면 "추가할래요?" 확인
-       - 핀 1개 = 장소 1개 (장소 단위로 묶음), 저장 모달에 저장 위치 표시
-     수정사항(v2.1.5):
-       - 스팟 기능 보강
-         · (모바일) 길게 눌러 뜬 "스팟 남기기" 메뉴가 손을 떼도 유지, 다른 곳 누르면 닫힘
-         · 사진 최대 5장 선택, 썸네일로 추가/삭제 가능
-         · 다른 스팟 열 때 이전 사진 잔상 제거 → "사진 불러오는 중…" 표시 후 교체
-         · 스팟 팝업 사진도 크기 확인해 축제 배너처럼 천천히 훑는 움직임 적용
-     수정사항(v2.1.4):
-       - 스팟(사용자 명소) 기능 1단계 추가
-         · 카테고리: 🎪 축제 / 📍 스팟 (할인·실시간현장 카테고리 삭제)
-         · 지도 우클릭(PC)/길게누르기(모바일) → "📍 스팟 남기기"
-         · 저장 모달: 사진(압축 업로드)·닉네임·제목·설명·태그(1개↑)·비번
-         · Supabase places/posts + spot-photos 보관함에 저장, 민트 핀 표시
-         · 스팟 팝업: 사진·제목·설명·태그·길찾기·신고(개발자 메시지)
-         · 실시간 현장 태그=24시간만 노출(현재는 숨김 방식), 저장 10초 제한
-     수정사항(v2.1.3):
-       - 조명탄(🎆) 기능/효과 전체 제거
-       - 한줄평+별점 시스템 추가 (Supabase reviews 테이블, content_id 기준)
-         · 조명탄 자리 → 별점 평균 | N명 (없으면 "아직 평가 없음")
-         · 💬한줄평 버튼(흔들+글로우) → 사진 자리에 목록 펼침 / "한줄평 닫기" 토글
-         · 목록 최신순, 각 항목 좋아요·삭제(비밀번호 확인)
-         · 한줄평 쓰기(아이디·비번·별점·내용 필수, 별점 hover 채움)
-         · 좋아요·쓰기 10초 제한, content_id 없는 축제는 영역 숨김
-     수정사항(v2.1.2):
-       - 검색용 제목/설명 키워드 중심으로 교체(+카카오·트위터 공유 문구)
-       - 검색엔진/스크린리더용 숨은 소개문(h1/p) 추가 (화면 비표시)
-       - 파비콘 등록 태그 추가(최상위 경로) — V 모노그램
-       - Vercel 방문자 집계 코드 추가 (대시보드에서 Analytics Enable 필요)
-       - 클러스터(숫자 뭉친 핀) 채도 낮춰 다른 핀과 통일
-       - NOW 뱃지: 화이트 배경 + 핑크 글자
-       - '상시' 뱃지 신규(밝은초록 #22C55E + 검정 글자)
-       - 장기 축제 자동 분류: 진행중이며 기간 14일 이상이면 '상시', 미만이면 'NOW'
-     수정사항(v2.1.1):
-       - 설명/프로그램 모두 2줄 + 더보기/접기로 축소
-       - 첫 로딩 가속: 현재 필터(이번 주)에 맞는 핀만 생성하도록 변경
-         (필터 바꾸면 해당 핀만 다시 생성 → 전체 핀 로딩 안 함)
-       - 핀 색상 핑크로 복귀 + 오늘(진행중) 아닌 핀은 채도만 살짝 낮춤
-       - 팝업 사진에 은은한 비네팅 추가
-     수정사항(v2.1.0):
-       - 팝업 개편: 공공 데이터(사진/장소/운영시간/요금/설명/프로그램) 표시
-         · 없는 항목은 줄째로 자동 숨김 (빈칸/"정보없음" 표시 안 함)
-       - 팝업 사진: 상단 가로 배너 + 잘리는 쪽으로 자동 훑기(세로↕/가로↔, 9초)
-         · 사진 클릭 시 원본 이미지 새 탭으로 열기 (사진 있을 때만)
-       - 팝업 장소는 place_name(없으면 location_name)만 표시, 주소 줄 제거
-       - 설명 3줄 + 더보기/접기 토글
-       - 예정 핀 색상 핑크 → 주황(#FF7A1A) (진행중 NOW와 구분 강화)
-       - '날짜 미정 축제 보기' 토글 + 회색 핀 관련 코드 전체 제거
-       - 첫 진입 기본 날짜 필터를 '이번 주'로 설정 (사이드바 메뉴도 활성 표시)
-     ============================================ -->
-<html lang="ko">
+<!-- Flare[V] v3.0.0 / 2026-06-17 -->
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <!-- 구글 서치 콘솔 소유권 확인 -->
     <meta name="google-site-verification" content="x6ngt2g2QAOkM5Q0AUwu26mnfngRjdcUBSwXFMrhMA4" />
     <meta name="naver-site-verification" content="83c14292542625aca18f9b83db25c497c3a05711" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- 파비콘 (최상위 경로) -->
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-    <!-- ── 기본 SEO 정보 ── -->
-    <title>Flare(V) — 전국 축제 지도 | 지도로 빠르게 발견하는 신나는 축제!</title>
+    <title>Flare[V] — Live Web Cam Map | Watch Live Cams Around the World</title>
     <meta
       name="description"
-      content="전국 축제 지도 — 무료로 축제를 지도로 빠르게 발견하세요! 계획 없는 사람들을 위한 Flare(V)."
+      content="Flare[V] is a live web cam map. Explore thousands of live cams from around the world — cities, beaches, resorts and hotels — all on one interactive map, in real time."
     />
+    <meta
+      name="keywords"
+      content="live cam, live webcam, webcam map, live camera, beach cam, city cam live, resort webcam, hotel webcam, live streaming cameras, world live cams"
+    />
+    <meta name="robots" content="index, follow" />
     <link rel="canonical" href="https://flarev.co/" />
 
-    <!-- ── 소셜 공유 (Open Graph: 카카오톡·페이스북 등) ── -->
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Flare(V)" />
-    <meta property="og:title" content="Flare(V) — 전국 축제 지도 | 지도로 빠르게 발견하는 신나는 축제!" />
+    <meta property="og:site_name" content="Flare[V]" />
+    <meta property="og:title" content="Flare[V] — Live Web Cam Map | Watch Live Cams Around the World" />
     <meta
       property="og:description"
-      content="전국 축제 지도 — 무료로 축제를 지도로 빠르게 발견하세요! 계획 없는 사람들을 위한 Flare(V)."
+      content="Explore thousands of live cams from around the world — cities, beaches, resorts and hotels — all on one interactive map, in real time."
     />
     <meta property="og:url" content="https://flarev.co/" />
     <meta property="og:image" content="https://flarev.co/og-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:locale" content="ko_KR" />
+    <meta property="og:locale" content="en_US" />
 
-    <!-- ── 트위터(X) 카드 ── -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Flare(V) — 전국 축제 지도 | 지도로 빠르게 발견하는 신나는 축제!" />
+    <meta name="twitter:title" content="Flare[V] — Live Web Cam Map | Watch Live Cams Around the World" />
     <meta
       name="twitter:description"
-      content="전국 축제 지도 — 무료로 축제를 지도로 빠르게 발견하세요! 계획 없는 사람들을 위한 Flare(V)."
+      content="Explore thousands of live cams from around the world — cities, beaches, resorts and hotels — all on one interactive map, in real time."
     />
     <meta name="twitter:image" content="https://flarev.co/og-image.png" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Flare[V] — Live Web Cam Map",
+        "url": "https://flarev.co/",
+        "description": "Explore thousands of live cams from around the world — cities, beaches, resorts and hotels — all on one interactive map, in real time.",
+        "inLanguage": "en"
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Flare[V]",
+        "url": "https://flarev.co/",
+        "logo": "https://flarev.co/og-image.png"
+      }
+    </script>
 
     <link
       href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+KR:wght@300;400;500;700&display=swap"
@@ -162,7 +72,6 @@
     />
     <link rel="stylesheet" href="style.css" />
 
-    <!-- Vercel 방문자 집계 (Vercel 대시보드 → Analytics → Enable 필요) -->
     <script>
       window.va =
         window.va ||
@@ -172,165 +81,138 @@
     </script>
     <script defer src="/_vercel/insights/script.js"></script>
   </head>
-  <body data-mode="festival">
-    <!-- 검색엔진/스크린리더용 소개 (화면 비표시) -->
-    <h1 class="sr-only">전국 축제 지도 Flare(V) — 오늘과 이번 주 전국에서 열리는 축제를 지도에서 한눈에</h1>
+  <body data-mode="live">
+    <h1 class="sr-only">Flare[V] — Live Web Cam Map: watch live cams around the world on one map</h1>
     <p class="sr-only">
-      Flare(V)는 전국의 축제를 지도 위 핀으로 보여주는 무료 서비스입니다. 오늘·이번
-      주·이번 달 열리는 축제의 날짜, 장소, 요금, 프로그램을 지도에서 빠르게 확인하고,
-      내 주변에서 지금 열리는 축제와 상시 운영 축제를 발견할 수 있습니다. 계획 없이도
-      떠나는 축제 여행, 기쁨을 발견하고 순간을 공유하세요.
+      Flare[V] is a free live web cam map. Explore thousands of live cams from
+      around the world — city streets, beaches, ski resorts, hotels and local
+      news channels — placed as pins on an interactive map. Watch live streams in
+      real time, see the local time at each location, and save your favorite
+      live cams and spots.
     </p>
 
-    <!-- 햄버거 메뉴 버튼 (모바일) -->
     <button id="menu-toggle" onclick="toggleSidebar()">☰</button>
-    <!-- 사이드바 바깥 배경 (모바일) -->
     <div id="sidebar-overlay" onclick="closeSidebar()"></div>
 
-    <!-- ── SIDEBAR ── -->
     <nav id="sidebar">
       <div class="logo-wrap">
-        <div class="logo" onclick="location.reload()" style="cursor: pointer;" title="처음 화면으로">FLARE<span>(V)</span></div>
-        <div class="logo-sub">기쁨을 발견하고 순간을 공유하다</div>
+        <div class="logo" onclick="location.reload()" style="cursor: pointer;" title="Back to start">FLARE<span>[V]</span></div>
+        <div class="logo-sub">Live web cams around the world, on a map</div>
         <span class="logo-flare"></span>
         <span class="logo-light"></span>
       </div>
 
-      <!-- 개발자에게 메시지 보내기 -->
       <div class="section">
         <button class="contact-btn" onclick="openContact()">
-          <span>✉️</span> 개발자에게 메시지 보내기
+          <span>✉️</span> Send a message to the developer
         </button>
       </div>
 
-      <!-- 보기 모드 전환 (스팟 / 공연 / 실시간 영상) -->
       <div class="section">
-        <div class="section-label">보기 모드</div>
-        <div class="seg3" id="mode-seg" data-m="festival">
+        <div class="section-label">View mode</div>
+        <div class="seg2" id="mode-seg" data-m="live">
           <div class="seg-thumb"></div>
-          <button class="b-spot" onclick="setViewMode('spot')">📍 스팟</button>
-          <button class="b-fest" onclick="setViewMode('festival')">🎉 공연</button>
-          <button class="b-live" onclick="setViewMode('live')">📡 영상</button>
+          <button class="b-spot" onclick="setViewMode('spot')">📍 Spots</button>
+          <button class="b-live" onclick="setViewMode('live')">📡 Live cams</button>
         </div>
       </div>
 
-      <!-- 날짜 필터 (기본 '오늘' 활성) — 영상 모드에선 숨김 -->
       <div class="section" id="date-section">
-        <div class="section-label">날짜</div>
+        <div class="section-label">Date</div>
         <div class="date-row">
           <button class="date-btn active" onclick="setDate(this,'today')">
-            오늘
+            Today
           </button>
           <button class="date-btn" onclick="setDate(this,'week')">
-            이번 주
+            This week
           </button>
           <button class="date-btn" onclick="setDate(this,'month')">
-            이번 달
+            This month
           </button>
           <button class="date-btn" onclick="setDate(this,'custom')">
-            직접 입력
+            Custom
           </button>
         </div>
 
-        <!-- 기간 직접 설정 (직접 입력 버튼 누르면 뿅) -->
         <div class="date-range" id="date-range">
           <div class="range-col">
-            <span class="range-label">시작일</span>
+            <span class="range-label">Start</span>
             <input type="date" id="range-start" onchange="setCustomRange()" />
           </div>
           <div class="range-col">
-            <span class="range-label">종료일</span>
+            <span class="range-label">End</span>
             <input type="date" id="range-end" onchange="setCustomRange()" />
           </div>
         </div>
       </div>
 
-      <!-- 카테고리 필터 (모드별로 한 묶음만 보임) -->
       <div class="section">
-        <div class="section-label">카테고리</div>
+        <div class="section-label">Categories</div>
 
-        <!-- 스팟 모드 -->
         <div class="filter-list cat-group" id="cat-spot">
           <div class="cat-tools">
-            <button onclick="setAllCategories('spot', true)">전체 선택</button>
-            <button onclick="setAllCategories('spot', false)">전체 해제</button>
+            <button onclick="setAllCategories('spot', true)">Select all</button>
+            <button onclick="setAllCategories('spot', false)">Clear all</button>
           </div>
           <div class="filter-item active-tag" onclick="toggleSpotTag(this,'풍경')">
             <div class="filter-dot dot-spot"></div>
-            <span class="filter-text">🏞️ 풍경</span>
+            <span class="filter-text">🏞️ Scenery</span>
             <span class="filter-count" data-tagcount="풍경">0</span>
           </div>
           <div class="filter-item active-tag" onclick="toggleSpotTag(this,'맛집')">
             <div class="filter-dot dot-spot"></div>
-            <span class="filter-text">🍜 맛집</span>
+            <span class="filter-text">🍜 Food</span>
             <span class="filter-count" data-tagcount="맛집">0</span>
           </div>
           <div class="filter-item active-tag" onclick="toggleSpotTag(this,'이색')">
             <div class="filter-dot dot-spot"></div>
-            <span class="filter-text">✨ 이색</span>
+            <span class="filter-text">✨ Unique</span>
             <span class="filter-count" data-tagcount="이색">0</span>
           </div>
           <div class="filter-item active-tag" onclick="toggleSpotTag(this,'힐링')">
             <div class="filter-dot dot-spot"></div>
-            <span class="filter-text">🌿 힐링</span>
+            <span class="filter-text">🌿 Relaxing</span>
             <span class="filter-count" data-tagcount="힐링">0</span>
           </div>
           <div class="filter-item active-tag" onclick="toggleSpotTag(this,'놀라운')">
             <div class="filter-dot dot-spot"></div>
-            <span class="filter-text">😮 놀라운</span>
+            <span class="filter-text">😮 Amazing</span>
             <span class="filter-count" data-tagcount="놀라운">0</span>
           </div>
           <div class="filter-item active-tag" onclick="toggleSpotTag(this,'실시간 현장')">
             <div class="filter-dot dot-spot"></div>
-            <span class="filter-text">🔴 실시간 현장</span>
+            <span class="filter-text">🔴 Live spot</span>
             <span class="filter-count" data-tagcount="실시간 현장">0</span>
           </div>
         </div>
 
-        <!-- 축제·공연 모드 -->
         <div class="filter-list cat-group" id="cat-festival">
           <div class="cat-tools">
-            <button onclick="setAllCategories('festival', true)">전체 선택</button>
-            <button onclick="setAllCategories('festival', false)">전체 해제</button>
-          </div>
-          <!-- 상시 행사 토글(초록) — 맨 위. 기본 꺼짐, 켜면 축제·공연의 장기/상시 표시 -->
-          <div class="filter-item" onclick="toggleSangsi(this)">
-            <div class="filter-dot dot-sangsi"></div>
-            <span class="filter-text">♾️ 상시 행사</span>
-            <span class="filter-count" id="cnt-sangsi">0</span>
+            <button onclick="setAllCategories('festival', true)">Select all</button>
+            <button onclick="setAllCategories('festival', false)">Clear all</button>
           </div>
           <div
             class="filter-item active-festival"
             onclick="toggleFilter(this,'festival')"
           >
             <div class="filter-dot dot-festival"></div>
-            <span class="filter-text">🎪 축제</span>
+            <span class="filter-text">🎪 Festivals</span>
             <span class="filter-count" id="cnt-festival">0</span>
           </div>
-          <!-- 공연 장르(노란색) — 데이터에서 자동 생성 -->
           <div id="cat-perf-genres"></div>
         </div>
 
-        <!-- 실시간 영상 모드 -->
         <div class="filter-list cat-group" id="cat-live">
           <div class="cat-tools">
-            <button onclick="setAllCategories('live', true)">전체 선택</button>
-            <button onclick="setAllCategories('live', false)">전체 해제</button>
-          </div>
-          <div
-            class="filter-item active-cctv"
-            onclick="toggleFilter(this,'cctv')"
-          >
-            <div class="filter-dot dot-cctv"></div>
-            <span class="filter-text">🚦 교통정보 CCTV</span>
-            <span class="filter-count" id="cnt-cctv">0</span>
+            <button onclick="setAllCategories('live', true)">Select all</button>
+            <button onclick="setAllCategories('live', false)">Clear all</button>
           </div>
           <div
             class="filter-item active-yt"
             onclick="toggleFilter(this,'yt')"
           >
             <div class="filter-dot dot-yt"></div>
-            <span class="filter-text">▶️ 유튜브 스트리밍</span>
+            <span class="filter-text">🔴 Live</span>
             <span class="filter-count" id="cnt-yt">0</span>
           </div>
           <div
@@ -338,164 +220,139 @@
             onclick="toggleFilter(this,'news')"
           >
             <div class="filter-dot dot-news"></div>
-            <span class="filter-text">📰 현지 뉴스</span>
+            <span class="filter-text">📰 Local news</span>
             <span class="filter-count" id="cnt-news">0</span>
+          </div>
+          <div
+            class="filter-item active-resort"
+            onclick="toggleFilter(this,'resort')"
+          >
+            <div class="filter-dot dot-resort"></div>
+            <span class="filter-text">🏝️ Resort</span>
+            <span class="filter-count" id="cnt-resort">0</span>
+          </div>
+          <div
+            class="filter-item active-hotel"
+            onclick="toggleFilter(this,'hotel')"
+          >
+            <div class="filter-dot dot-hotel"></div>
+            <span class="filter-text">🏨 Hotel</span>
+            <span class="filter-count" id="cnt-hotel">0</span>
           </div>
         </div>
       </div>
 
       <div class="login-wrap">
         <button class="login-btn" onclick="openModal()">
-          <span>🔐</span> 로그인 / 회원가입
+          <span>🔐</span> Log in / Sign up
         </button>
       </div>
     </nav>
 
-    <!-- ── MAP ── -->
     <div id="map-container">
       <div id="map"></div>
 
-      <!-- 스팟: 장소 검색 -->
       <div id="spot-search">
         <div class="ss-bar">
           <input
             id="spot-search-input"
             type="text"
-            placeholder="장소·가게 이름 검색 (예: 광안리 해변)"
+            placeholder="Search a place (e.g. Gwangalli Beach)"
             onkeydown="if(event.key==='Enter'){event.preventDefault();runSpotSearch();}"
           />
-          <button class="ss-go" onclick="runSpotSearch()">검색</button>
+          <button class="ss-go" onclick="runSpotSearch()">Search</button>
         </div>
         <div id="spot-search-results"></div>
       </div>
 
-      <!-- 스팟: 우클릭/롱프레스 메뉴 -->
-      <div id="spot-ctx"><button onclick="openSpotForm()">📍 스팟 남기기</button></div>
+      <div id="spot-ctx"><button onclick="openSpotForm()">📍 Add a spot</button></div>
 
-      <!-- (8) A안: 위치 고르기 모드 — 지도 가운데 핀에 맞추거나 검색 -->
-      <div id="spot-pick">
-        <div class="sp-top">
-          <button class="sp-back" onclick="cancelSpotPick()" title="취소">←</button>
-          <div class="sp-searchcol">
-            <div class="ss-bar">
-              <input
-                id="spot-pick-input"
-                type="text"
-                placeholder="장소·주소 검색 (예: 광안리 해변)"
-                onkeydown="if(event.key==='Enter'){event.preventDefault();runPickSearch();}"
-              />
-              <button class="ss-go" onclick="runPickSearch()">검색</button>
-            </div>
-            <div id="spot-pick-results"></div>
-          </div>
-        </div>
-        <div class="sp-cross">
-          <div class="sp-pin">📍</div>
-          <div class="sp-pindot"></div>
-        </div>
-        <div class="sp-hint">지도를 움직여 가운데 핀을 원하는 곳에 맞춰주세요</div>
-        <div class="sp-bottom">
-          <div class="sp-where" id="spot-pick-where">📍 지도 가운데 지점이 지정돼요</div>
-          <button class="sp-confirm" onclick="confirmSpotPick()">이 위치로 지정</button>
-        </div>
-      </div>
-
-      <!-- 공연 모드: 검색 필터 (제목·장르·지역) -->
       <div id="fest-search">
         <div class="ss-bar">
           <input
             id="fest-search-input"
             type="text"
-            placeholder="공연·축제 키워드 검색 (예: EDM, 뮤지컬, 부산)"
+            placeholder="Search festivals (e.g. EDM, musical)"
             onkeydown="if(event.key==='Enter'){event.preventDefault();runFestSearch();}"
             oninput="if(this.value===''){clearFestSearch();}"
           />
-          <button class="ss-go" onclick="runFestSearch()">검색</button>
+          <button class="ss-go" onclick="runFestSearch()">Search</button>
           <button class="ss-go" id="fest-search-clear" style="display:none;" onclick="clearFestSearch()">✕</button>
         </div>
       </div>
 
-      <!-- 내 위치 버튼 (나침반) -->
-      <button id="locate-btn" onclick="goToMyLocation()" title="내 위치로 이동">🧭</button>
+      <button id="locate-btn" onclick="goToMyLocation()" title="Go to my location">🧭</button>
 
-      <div id="loading">🔄 축제 정보를 불러오는 중...</div>
+      <div id="loading">🔄 Loading live cams...</div>
 
-      <!-- 영상 모드 안내 (CCTV 핀 채우기 전 임시) -->
       <div id="live-notice">
-        <div class="ln-emoji">🚦</div>
-        <div class="ln-title">실시간 영상 모드</div>
-        <div class="ln-sub">교통정보 CCTV를 곧 여기 지도에 보여드릴게요.<br />지금은 준비 중이에요.</div>
+        <div class="ln-emoji">📡</div>
+        <div class="ln-title">Live Web Cam Map</div>
+        <div class="ln-sub">Loading live cams from around the world…</div>
       </div>
 
-      <!-- 정보 패널 -->
       <div id="info-panel">
         <div class="panel-header">
-          <span class="panel-badge badge-festival" id="panel-badge">축제</span>
+          <span class="panel-badge badge-festival" id="panel-badge">Festival</span>
           <button class="panel-close" onclick="closePanel()">✕</button>
         </div>
 
-        <!-- 사진 ↔ 한줄평 전환 영역 -->
         <div class="panel-img" id="panel-img">
-          <img id="panel-img-el" alt="축제 사진" onclick="openPhoto()" />
+          <img id="panel-img-el" alt="Festival photo" onclick="openPhoto()" />
           <span class="panel-img-emoji" id="panel-img-emoji">🎪</span>
 
-          <!-- 한줄평 목록 -->
           <div class="reviews" id="reviews-panel">
             <div class="reviews-head">
-              <span class="rv-title">한줄평</span>
-              <button class="write-btn" onclick="openReviewForm()">✏️ 한줄평 쓰기</button>
+              <span class="rv-title">Reviews</span>
+              <button class="write-btn" onclick="openReviewForm()">✏️ Write a review</button>
             </div>
             <div class="rv-list" id="review-list"></div>
           </div>
 
-          <!-- 한줄평 쓰기 폼 -->
           <div class="rv-form" id="review-form">
-            <h4>한줄평 쓰기</h4>
+            <h4>Write a review</h4>
             <div class="rv-form-scroll">
               <div class="rv-field">
-                <label>아이디</label>
-                <input id="rv-author" maxlength="12" placeholder="표시될 이름" />
+                <label>Name</label>
+                <input id="rv-author" maxlength="12" placeholder="Display name" />
               </div>
               <div class="rv-field">
-                <label>비밀번호</label>
-                <input id="rv-pw" maxlength="8" inputmode="numeric" placeholder="삭제용 숫자" />
-                <div class="rv-hint">삭제할 때 쓰는 숫자예요. 실제 비밀번호는 넣지 마세요.</div>
+                <label>Password</label>
+                <input id="rv-pw" maxlength="8" inputmode="numeric" placeholder="Number for deletion" />
+                <div class="rv-hint">A number used only to delete this review. Don't use a real password.</div>
               </div>
               <div class="rv-field">
-                <label>별점</label>
+                <label>Rating</label>
                 <div class="star-pick" id="star-pick">
                   <span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span>
                 </div>
               </div>
               <div class="rv-field">
-                <label>한줄평</label>
-                <textarea id="rv-content" rows="2" maxlength="60" placeholder="짧은 감상을 남겨주세요"></textarea>
+                <label>Review</label>
+                <textarea id="rv-content" rows="2" maxlength="60" placeholder="Leave a short review"></textarea>
               </div>
             </div>
             <div class="rv-form-msg" id="rv-form-msg"></div>
             <div class="rv-form-btns">
-              <button class="rv-no" onclick="closeReviewForm()">취소</button>
-              <button class="rv-ok" onclick="submitReview()">등록</button>
+              <button class="rv-no" onclick="closeReviewForm()">Cancel</button>
+              <button class="rv-ok" onclick="submitReview()">Submit</button>
             </div>
           </div>
         </div>
 
         <div class="panel-body">
-          <!-- 제목 + 검색 -->
           <div class="panel-title-row">
-            <span class="panel-title" id="panel-title">축제명</span>
-            <button class="title-link-btn" id="title-link-btn" onclick="searchFestival()" title="구글에서 검색">⌕ 검색</button>
+            <span class="panel-title" id="panel-title">Festival name</span>
+            <button class="title-link-btn" id="title-link-btn" onclick="searchFestival()" title="Search on Google">⌕ Search</button>
           </div>
 
-          <!-- 별점 합산 / 한줄평 -->
           <div class="reaction-row" id="reaction-row">
             <div class="reaction-btn rating-box" id="rating-box">⭐ –</div>
             <button class="reaction-btn talk-btn" id="talk-btn" onclick="toggleReviews()">
-              <span class="ic">💬</span><span id="talk-label">한줄평</span>
+              <span class="ic">💬</span><span id="talk-label">Reviews</span>
             </button>
           </div>
 
-          <!-- 정보 (없는 줄은 자동 숨김): 📍장소 📅날짜 🕐운영시간 💰요금 -->
           <div class="panel-meta">
             <div class="meta-row" id="row-place">
               <span class="meta-icon">📍</span><span id="panel-place"></span>
@@ -511,48 +368,44 @@
             </div>
           </div>
 
-          <!-- 설명 (3줄 + 더보기) -->
           <div class="panel-desc" id="panel-desc">
             <div class="desc-text" id="panel-desc-text"></div>
-            <span class="desc-more" id="panel-desc-more" onclick="toggleDesc()">더보기</span>
+            <span class="desc-more" id="panel-desc-more" onclick="toggleDesc()">More</span>
           </div>
 
-          <!-- 프로그램 (2줄 + 더보기) -->
           <div class="panel-program" id="panel-program">
-            <div class="program-head"><span class="meta-icon">📋</span><span>프로그램</span></div>
+            <div class="program-head"><span class="meta-icon">📋</span><span>Program</span></div>
             <div class="program-body" id="panel-program-body"></div>
-            <span class="program-more" id="panel-program-more" onclick="toggleProgram()">더보기</span>
+            <span class="program-more" id="panel-program-more" onclick="toggleProgram()">More</span>
           </div>
 
-          <button class="nav-btn nav-festival" id="nav-btn" onclick="toggleMapPicker()">📍 길 찾기</button>
+          <button class="nav-btn nav-festival" id="nav-btn" onclick="toggleMapPicker()">📍 Directions</button>
 
-          <!-- 지도 앱 선택 -->
           <div class="map-picker" id="map-picker">
             <button class="map-app-btn" onclick="openMap('kakao')">
-              <img src="https://t1.kakaocdn.net/kakaocorp/kakaocorp/admin/5f6c93f6017800001bce0024.png" alt="카카오맵" onerror="this.style.background='#FFE000';this.style.borderRadius='10px'"/>
-              카카오맵
+              <img src="https://t1.kakaocdn.net/kakaocorp/kakaocorp/admin/5f6c93f6017800001bce0024.png" alt="Kakao Map" onerror="this.style.background='#FFE000';this.style.borderRadius='10px'"/>
+              Kakao Map
             </button>
             <button class="map-app-btn" onclick="openMap('naver')">
-              <img src="https://ssl.pstatic.net/static/maps/mantle/map-icon/2x/ico_naver_map_logo.png" alt="네이버지도" onerror="this.style.background='#03C75A';this.style.borderRadius='10px'"/>
-              네이버지도
+              <img src="https://ssl.pstatic.net/static/maps/mantle/map-icon/2x/ico_naver_map_logo.png" alt="Naver Map" onerror="this.style.background='#03C75A';this.style.borderRadius='10px'"/>
+              Naver Map
             </button>
             <button class="map-app-btn" onclick="openMap('google')">
-              <img src="https://www.google.com/images/branding/googleg/1x/googleg_standard_color_128dp.png" alt="구글지도" onerror="this.style.background='#4285F4';this.style.borderRadius='10px'"/>
-              구글지도
+              <img src="https://www.google.com/images/branding/googleg/1x/googleg_standard_color_128dp.png" alt="Google Maps" onerror="this.style.background='#4285F4';this.style.borderRadius='10px'"/>
+              Google Maps
             </button>
           </div>
         </div>
       </div>
 
-      <!-- 스팟 상세 팝업 -->
       <div id="spot-panel">
         <div class="panel-header">
-          <span class="panel-badge" style="background: var(--live-bg); color: var(--live); border: 1px solid rgba(107,255,184,0.3);">스팟</span>
+          <span class="panel-badge" style="background: var(--live-bg); color: var(--live); border: 1px solid rgba(107,255,184,0.3);">Spot</span>
           <button class="panel-close" onclick="closeSpotPanel()">✕</button>
         </div>
         <div class="sp-imgbox" id="sp-imgbox">
-          <img id="sp-img" alt="스팟 사진" onclick="openSpotPhoto()" />
-          <div class="sp-img-loading" id="sp-img-loading">사진 불러오는 중…</div>
+          <img id="sp-img" alt="Spot photo" onclick="openSpotPhoto()" />
+          <div class="sp-img-loading" id="sp-img-loading">Loading photos…</div>
           <button class="sp-arrow sp-arrow-prev" id="sp-prev" onclick="spotPhotoPrev(event)">‹</button>
           <button class="sp-arrow sp-arrow-next" id="sp-next" onclick="spotPhotoNext(event)">›</button>
           <div class="sp-counter" id="sp-counter"></div>
@@ -564,33 +417,32 @@
           <div class="sp-date" id="sp-date"></div>
           <div class="sp-desc" id="sp-desc"></div>
           <div class="sp-tags" id="sp-tags"></div>
-          <button class="nav-btn nav-festival" id="sp-nav" onclick="toggleSpotMapPicker()">📍 길 찾기</button>
+          <button class="nav-btn nav-festival" id="sp-nav" onclick="toggleSpotMapPicker()">📍 Directions</button>
           <div class="map-picker" id="sp-map-picker">
             <button class="map-app-btn" onclick="openSpotMap('kakao')">
-              <img src="https://t1.kakaocdn.net/kakaocorp/kakaocorp/admin/5f6c93f6017800001bce0024.png" alt="카카오맵" onerror="this.style.background='#FFE000';this.style.borderRadius='10px'"/>
-              카카오맵
+              <img src="https://t1.kakaocdn.net/kakaocorp/kakaocorp/admin/5f6c93f6017800001bce0024.png" alt="Kakao Map" onerror="this.style.background='#FFE000';this.style.borderRadius='10px'"/>
+              Kakao Map
             </button>
             <button class="map-app-btn" onclick="openSpotMap('naver')">
-              <img src="https://ssl.pstatic.net/static/maps/mantle/map-icon/2x/ico_naver_map_logo.png" alt="네이버지도" onerror="this.style.background='#03C75A';this.style.borderRadius='10px'"/>
-              네이버지도
+              <img src="https://ssl.pstatic.net/static/maps/mantle/map-icon/2x/ico_naver_map_logo.png" alt="Naver Map" onerror="this.style.background='#03C75A';this.style.borderRadius='10px'"/>
+              Naver Map
             </button>
             <button class="map-app-btn" onclick="openSpotMap('google')">
-              <img src="https://www.google.com/images/branding/googleg/1x/googleg_standard_color_128dp.png" alt="구글지도" onerror="this.style.background='#4285F4';this.style.borderRadius='10px'"/>
-              구글지도
+              <img src="https://www.google.com/images/branding/googleg/1x/googleg_standard_color_128dp.png" alt="Google Maps" onerror="this.style.background='#4285F4';this.style.borderRadius='10px'"/>
+              Google Maps
             </button>
           </div>
-          <button class="sp-report" onclick="reportSpot()">🚩 신고하기</button>
+          <button class="sp-report" onclick="reportSpot()">🚩 Report</button>
         </div>
       </div>
 
-      <!-- 공연 상세 팝업 (노란색 계열) -->
       <div id="perf-panel">
         <div class="panel-header">
-          <span class="panel-badge" style="background: var(--perf-bg); color: var(--perf); border: 1px solid rgba(255,217,61,0.35);">공연</span>
+          <span class="panel-badge" style="background: var(--perf-bg); color: var(--perf); border: 1px solid rgba(255,217,61,0.35);">Show</span>
           <button class="panel-close" onclick="closePerfPanel()">✕</button>
         </div>
         <div class="pf-imgbox" id="pf-imgbox">
-          <img id="pf-img" alt="공연 포스터" />
+          <img id="pf-img" alt="Show poster" />
         </div>
         <div class="pf-body">
           <div class="pf-title" id="pf-title"></div>
@@ -599,101 +451,97 @@
           <div class="pf-meta" id="pf-date"></div>
           <div class="pf-meta" id="pf-price"></div>
           <div class="pf-meta" id="pf-cast"></div>
-          <a id="pf-ticket" class="pf-ticket" href="#" target="_blank" rel="noopener noreferrer">🎟️ 예매하러 가기</a>
+          <a id="pf-ticket" class="pf-ticket" href="#" target="_blank" rel="noopener noreferrer">🎟️ Get tickets</a>
         </div>
       </div>
 
-      <!-- 유튜브 라이브 팝업 -->
       <div id="live-panel">
         <div class="panel-header">
-          <span class="lv-head-left">
-            <span class="panel-badge" id="lv-badge" style="background: rgba(255,78,69,0.15); color: #ff4e45; border: 1px solid rgba(255,78,69,0.4);">LIVE</span>
-            <a id="lv-link" class="lv-yt-pill" href="#" target="_blank" rel="noopener noreferrer">▶️ 유튜브</a>
-          </span>
+          <span class="panel-badge" id="lv-badge" style="background: rgba(255,78,69,0.15); color: #ff4e45; border: 1px solid rgba(255,78,69,0.4);">LIVE</span>
           <div class="lv-sizes">
-            <button onclick="setLiveSize('m')" data-s="m">보통</button>
-            <button onclick="setLiveSize('l')" data-s="l">크게</button>
-            <button onclick="setLiveSize('xl')" data-s="xl">아주크게</button>
+            <button onclick="setLiveSize('m')" data-s="m">Normal</button>
+            <button onclick="setLiveSize('l')" data-s="l">Large</button>
+            <button onclick="setLiveSize('xl')" data-s="xl">XL</button>
           </div>
           <button class="panel-close" onclick="closeLivePanel()">✕</button>
         </div>
         <div class="lv-videowrap">
           <div class="lv-videobox" id="lv-videobox"></div>
-          <span class="lv-resize" title="드래그해서 크기 조절"></span>
+          <span class="lv-resize" title="Drag to resize"></span>
         </div>
-        <div class="lv-offline" id="lv-offline">📴 지금은 방송 중이 아니에요</div>
+        <div class="lv-offline" id="lv-offline">📴 This stream is offline right now</div>
         <div class="lv-body">
           <div class="lv-title" id="lv-title"></div>
           <div class="lv-meta" id="lv-time"></div>
           <div class="lv-meta" id="lv-place"></div>
-          <!-- 설명 (한 줄 + 더보기) -->
           <div class="panel-desc lv-desc" id="lv-desc">
             <div class="desc-text" id="lv-desc-text"></div>
-            <span class="desc-more" id="lv-desc-more" onclick="lvToggleDesc()">더보기</span>
+            <span class="desc-more" id="lv-desc-more" onclick="lvToggleDesc()">More</span>
           </div>
+          <a id="lv-link" class="lv-link" href="#" target="_blank" rel="noopener noreferrer">▶️ Watch on YouTube</a>
 
-          <!-- 한줄평 (별점 + 글) -->
           <div class="lv-reviews" id="lv-reviews">
             <div class="lv-rv-head">
               <span class="lv-rating" id="lv-rating">⭐ –</span>
-              <button class="lv-write-btn" onclick="lvOpenForm()">✏️ 한줄평 쓰기</button>
+              <button class="lv-write-btn" onclick="lvOpenForm()">✏️ Write a review</button>
             </div>
             <div class="rv-list" id="lv-review-list"></div>
             <div class="lv-rv-form" id="lv-review-form">
               <div class="rv-field">
-                <label>아이디</label>
-                <input id="lv-rv-author" maxlength="12" placeholder="표시될 이름" />
+                <label>Name</label>
+                <input id="lv-rv-author" maxlength="12" placeholder="Display name" />
               </div>
               <div class="rv-field">
-                <label>비밀번호</label>
-                <input id="lv-rv-pw" maxlength="8" inputmode="numeric" placeholder="삭제용 숫자" />
+                <label>Password</label>
+                <input id="lv-rv-pw" maxlength="8" inputmode="numeric" placeholder="Number for deletion" />
               </div>
               <div class="rv-field">
-                <label>별점</label>
+                <label>Rating</label>
                 <div class="star-pick" id="lv-star-pick">
                   <span data-v="1" onclick="lvPickStar(1)">★</span><span data-v="2" onclick="lvPickStar(2)">★</span><span data-v="3" onclick="lvPickStar(3)">★</span><span data-v="4" onclick="lvPickStar(4)">★</span><span data-v="5" onclick="lvPickStar(5)">★</span>
                 </div>
               </div>
               <div class="rv-field">
-                <label>한줄평</label>
-                <textarea id="lv-rv-content" rows="2" maxlength="60" placeholder="짧은 감상을 남겨주세요"></textarea>
+                <label>Review</label>
+                <textarea id="lv-rv-content" rows="2" maxlength="60" placeholder="Leave a short review"></textarea>
               </div>
               <div class="rv-form-msg" id="lv-rv-form-msg"></div>
               <div class="rv-form-btns">
-                <button class="rv-no" onclick="lvCloseForm()">취소</button>
-                <button class="rv-ok" onclick="lvSubmitReview()">등록</button>
+                <button class="rv-no" onclick="lvCloseForm()">Cancel</button>
+                <button class="rv-ok" onclick="lvSubmitReview()">Submit</button>
               </div>
             </div>
           </div>
         </div>
       </div>
-      <button id="upload-btn" onclick="startNewSpot()">
-        <span>📸</span> 스팟 남기기
+      <button
+        id="upload-btn"
+        disabled
+        style="opacity: 0.45; cursor: not-allowed; box-shadow: none"
+      >
+        <span>📸</span> Coming soon
       </button>
     </div>
 
-    <!-- 로그인 모달 -->
     <div id="modal-overlay" onclick="closeModal(event)">
       <div class="modal">
-        <div class="modal-logo">FLARE<span>(V)</span></div>
-        <h3>사진 공유를 위해 로그인이 필요해요</h3>
+        <div class="modal-logo">FLARE<span>[V]</span></div>
+        <h3>Log in to share photos</h3>
         <button class="modal-btn">
-          <img src="https://www.google.com/favicon.ico" width="18" /> 구글로
-          계속하기
+          <img src="https://www.google.com/favicon.ico" width="18" /> Continue with Google
         </button>
-        <button class="modal-btn"><span>🍎</span> 애플로 계속하기</button>
-        <button class="modal-btn"><span>📧</span> 이메일로 계속하기</button>
-        <button class="modal-cancel" onclick="closeModal()">취소</button>
+        <button class="modal-btn"><span>🍎</span> Continue with Apple</button>
+        <button class="modal-btn"><span>📧</span> Continue with email</button>
+        <button class="modal-cancel" onclick="closeModal()">Cancel</button>
       </div>
     </div>
 
-    <!-- 개발자에게 메시지 보내기 모달 -->
     <div id="contact-overlay" onclick="closeContact(event)">
       <div class="modal">
-        <div class="modal-logo">FLARE<span>(V)</span></div>
-        <h3 style="margin-bottom: 20px">개발자에게 메시지 보내기</h3>
+        <div class="modal-logo">FLARE<span>[V]</span></div>
+        <h3 style="margin-bottom: 20px">Send a message to the developer</h3>
         <div class="contact-field">
-          <label>회신받을 이메일</label>
+          <label>Your email</label>
           <input
             type="email"
             id="contact-email"
@@ -701,85 +549,74 @@
           />
         </div>
         <div class="contact-field">
-          <label>내용</label>
+          <label>Message</label>
           <textarea
             id="contact-content"
             rows="4"
-            placeholder="의견이나 문의를 남겨주세요"
+            placeholder="Leave your feedback or question"
           ></textarea>
         </div>
         <div id="contact-status" class="contact-status"></div>
         <button class="modal-btn contact-send" id="contact-send-btn" onclick="sendContact()">
-          보내기
+          Send
         </button>
-        <button class="modal-cancel" onclick="closeContact()">취소</button>
+        <button class="modal-cancel" onclick="closeContact()">Cancel</button>
       </div>
     </div>
 
-    <!-- 스팟 저장 모달 -->
     <input type="file" id="spot-file" accept="image/*" multiple style="display: none" />
     <div id="spot-overlay" onclick="closeSpotForm(event)">
       <div class="spot-sheet">
-        <h3>📍 스팟 남기기</h3>
-        <div class="sheet-sub">이 위치에 명소·풍경·맛집을 공유해요</div>
-        <!-- (8) 위치 확인하기: 강조된 버튼. 누르면 지도에서 핀으로 위치 지정 -->
-        <div class="spot-locrow" id="spot-locrow" onclick="enterSpotPickMode()">
-          <span class="slr-ic">🎯</span>
-          <span class="slr-txt">
-            <b id="spot-loc-title">위치 확인하기</b>
-            <span id="spot-loc-sub">지도에서 위치를 지정해주세요</span>
-          </span>
-          <span class="slr-go" id="spot-loc-go">지정</span>
-        </div>
+        <h3>📍 Add a spot</h3>
+        <div class="sheet-sub">Share a place, view or restaurant at this location</div>
+        <div class="spot-place-label" id="spot-place-label">📍 Location</div>
 
         <div class="spot-field">
-          <label>사진 (필수, 최대 5장)</label>
+          <label>Photos (required, up to 5)</label>
           <div class="spot-thumbs" id="spot-thumbs"></div>
         </div>
         <div class="spot-field">
-          <label>닉네임</label>
-          <input id="spot-author" maxlength="12" placeholder="표시될 이름" />
+          <label>Name</label>
+          <input id="spot-author" maxlength="12" placeholder="Display name" />
         </div>
         <div class="spot-field">
-          <label>제목</label>
-          <input id="spot-title" maxlength="30" placeholder="예: 노을 맛집 옥상" />
+          <label>Title</label>
+          <input id="spot-title" maxlength="30" placeholder="e.g. Rooftop with a great sunset" />
         </div>
         <div class="spot-field">
-          <label>설명</label>
-          <textarea id="spot-desc" rows="2" maxlength="120" placeholder="어떤 곳인지 소개해주세요"></textarea>
+          <label>Description</label>
+          <textarea id="spot-desc" rows="2" maxlength="120" placeholder="Tell people about this place"></textarea>
         </div>
         <div class="spot-field">
-          <label>태그 (1개 이상 필수)</label>
+          <label>Tags (at least 1)</label>
           <div class="spot-tags" id="spot-tags">
-            <button class="spot-tag" data-t="풍경">풍경</button>
-            <button class="spot-tag" data-t="맛집">맛집</button>
-            <button class="spot-tag" data-t="이색">이색</button>
-            <button class="spot-tag" data-t="힐링">힐링</button>
-            <button class="spot-tag" data-t="놀라운">놀라운</button>
-            <button class="spot-tag live-tag" data-t="실시간 현장">실시간 현장</button>
+            <button class="spot-tag" data-t="풍경">Scenery</button>
+            <button class="spot-tag" data-t="맛집">Food</button>
+            <button class="spot-tag" data-t="이색">Unique</button>
+            <button class="spot-tag" data-t="힐링">Relaxing</button>
+            <button class="spot-tag" data-t="놀라운">Amazing</button>
+            <button class="spot-tag live-tag" data-t="실시간 현장">Live spot</button>
           </div>
-          <div class="live-note" id="spot-live-note">⏱ 실시간 스팟은 24시간 동안만 지도에 보여요</div>
+          <div class="live-note" id="spot-live-note">⏱ Live spots stay on the map for 24 hours only</div>
         </div>
         <div class="spot-field">
-          <label>비밀번호</label>
-          <input id="spot-pw" maxlength="8" inputmode="numeric" placeholder="삭제용 숫자" />
-          <div class="hint">나중에 수정·삭제할 때 쓰는 숫자예요. 실제 비밀번호는 넣지 마세요.</div>
+          <label>Password</label>
+          <input id="spot-pw" maxlength="8" inputmode="numeric" placeholder="Number for deletion" />
+          <div class="hint">A number used to edit or delete later. Don't use a real password.</div>
         </div>
 
         <div class="spot-msg" id="spot-msg"></div>
         <div class="spot-btns">
-          <button class="spot-no" onclick="closeSpotForm()">취소</button>
-          <button class="spot-ok" id="spot-save-btn" onclick="saveSpot()">저장</button>
+          <button class="spot-no" onclick="closeSpotForm()">Cancel</button>
+          <button class="spot-ok" id="spot-save-btn" onclick="saveSpot()">Save</button>
         </div>
       </div>
     </div>
 
-    <!-- Supabase 라이브러리 -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script src="app.js"></script>
 
-    <!-- 구글 지도 API -->
     <script
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB00WMTxhIKSr_rRXGjnK-wCABbvbkilPU&libraries=places&callback=initMap"
       async

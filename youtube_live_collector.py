@@ -1,6 +1,6 @@
 # ============================================
 # Flare(V) 유튜브 라이브 웹캠 수집기  (youtube_live_collector.py)
-# 버전: 1.4  /  수정일: 2026-06-16  (뉴스 kind 분류 추가)
+# 버전: 1.5 / 2026-06-17 (resort/hotel 검색어·분류 + 좋아요/조회수/동시시청자 저장)
 # 역할: "webcam live" 라이브 검색 → 외부재생 가능 + 라이브 중 + 신규만 추려서
 #       Claude로 위치/좌표/카테고리/설명을 정제한 뒤 live_videos에 바로 공개 저장
 # 실행: 수동 (GitHub Actions의 "Run workflow" 버튼)
@@ -51,6 +51,8 @@ SEARCH_QUERIES = [
     "라이브 캠",
     "실시간 라이브 캠",
     "live webcam 24/7",
+    "resort live cam",
+    "hotel live cam",
 ]
 SEARCH_PAGES = 2               # 검색어당 페이지 수 (1페이지=50개, 100유닛). 2 = 검색어당 약 200유닛
 MAX_TO_REFINE = 500            # Claude로 정제할 최대 후보 수 (인기순 상위부터). 500=사실상 전부
@@ -155,6 +157,7 @@ def filter_and_sort(items, existing_ids):
 
         concurrent = int(live.get("concurrentViewers", 0) or 0)
         views = int(stats.get("viewCount", 0) or 0)
+        likes = int(stats.get("likeCount", 0) or 0)
         kept.append({
             "video_id": vid,
             "title": snip.get("title", ""),
@@ -162,6 +165,7 @@ def filter_and_sort(items, existing_ids):
             "channel_id": snip.get("channelId", ""),
             "concurrent": concurrent,
             "views": views,
+            "likes": likes,
         })
 
     # 인기순: 동시시청자 우선, 없으면 조회수
@@ -195,14 +199,17 @@ def _refine_batch(chunk, by_id):
         '  "latitude": 위도 숫자, "longitude": 경도 숫자,\n'
         '  "timezone": IANA 시간대 (예: "Asia/Seoul", "Europe/Rome"),\n'
         '  "category": ["도심","자연","바다","해외"] 중 하나,\n'
-        '  "kind": 뉴스 채널/뉴스 생방송이면 "news", 일반 풍경·웹캠이면 "stream",\n'
-        '  "description": 한국어 한 줄 설명 (40자 이내),\n'
-        '  "skip": 위치를 도저히 알 수 없으면 true, 아니면 false\n'
+        '  "kind": one of "news" (news channel / live news broadcast), '
+        '"resort" (holiday resort / ski resort / beach resort cam), '
+        '"hotel" (hotel cam), or "stream" (general scenery / city / nature webcam),\n'
+        '  "description": one short English sentence (max 80 chars),\n'
+        '  "skip": true if the location cannot be determined, otherwise false\n'
         "}\n\n"
-        "위치가 분명하지 않으면 추측하지 말고 skip=true. "
-        "뉴스 방송국 라이브(예: 24시간 뉴스 채널, 보도 생중계)는 kind=\"news\", "
-        "거리·해변·자연 등 풍경 웹캠은 kind=\"stream\". "
-        "국내는 category를 도심/자연/바다 중에서, 해외는 모두 해외로.\n\n"
+        "If the location is not clear, do not guess: set skip=true. "
+        "A news-station live (e.g. 24h news channel) is kind=\"news\"; "
+        "a resort cam is kind=\"resort\"; a hotel cam is kind=\"hotel\"; "
+        "general street/beach/nature scenery cams are kind=\"stream\". "
+        "Use category from [\"city\",\"nature\",\"beach\",\"overseas\"].\n\n"
         "목록:\n" + json.dumps(brief, ensure_ascii=False)
     )
 
@@ -241,8 +248,11 @@ def _refine_batch(chunk, by_id):
             "longitude": float(lng),
             "timezone": p.get("timezone") or None,
             "category": p.get("category") or None,
-            "kind": "news" if p.get("kind") == "news" else "stream",
+            "kind": (p.get("kind") if p.get("kind") in ("news", "resort", "hotel") else "stream"),
             "channel_id": by_id[vid]["channel_id"],
+            "view_count": by_id[vid].get("views", 0),
+            "like_count": by_id[vid].get("likes", 0),
+            "concurrent_viewers": by_id[vid].get("concurrent", 0),
         })
     return out
 
@@ -283,6 +293,9 @@ def save_rows(rows):
             "kind": r["kind"],
             "timezone": r["timezone"],
             "channel_id": r["channel_id"],
+            "view_count": r.get("view_count", 0),
+            "like_count": r.get("like_count", 0),
+            "concurrent_viewers": r.get("concurrent_viewers", 0),
             "is_live": True,
             "is_active": True,
             "source": "auto",
