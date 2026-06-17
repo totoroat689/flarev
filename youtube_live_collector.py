@@ -1,13 +1,17 @@
 # ============================================
-# Flare(V) 유튜브 라이브 웹캠 수집기  (youtube_live_collector.py)
-# 버전: 1.5 / 2026-06-17 (resort/hotel 검색어·분류 + 좋아요/조회수/동시시청자 저장)
+# Flare[V] 유튜브 라이브 웹캠 수집기  (youtube_live_collector.py)
+# 버전: 1.6 / 2026-06-17 (전체 영어화 + 미사용 category 제거)
 # 역할: "webcam live" 라이브 검색 → 외부재생 가능 + 라이브 중 + 신규만 추려서
-#       Claude로 위치/좌표/카테고리/설명을 정제한 뒤 live_videos에 바로 공개 저장
+#       Claude로 위치/좌표/kind/설명을 정제(전부 영어)한 뒤 live_videos에 바로 공개 저장
+# 변경(1.6):
+#   - 출력(title, place_name, description)을 모두 영어로 통일 (앱이 영어)
+#   - category(도심/자연/바다/해외) 제거 — 프론트에서 안 쓰는 필드라 토큰만 낭비
+#   - 제목 길이 한국어 30자 → 영어 ~60자
 # 실행: 수동 (GitHub Actions의 "Run workflow" 버튼)
 # 비용:
 #   - 유튜브: search.list 100유닛/회, videos.list 1유닛/회(50개 묶음)
-#             SEARCH_PAGES 만큼만 검색 (기본 3페이지 = 약 300유닛, 하루 한도의 3%)
-#   - Claude: 신규 후보만 1회 호출로 묶어서 정제 (보통 몇 센트)
+#             검색어 10개 x SEARCH_PAGES(2) = 약 2,000유닛 (하루 한도 10,000의 20%)
+#   - Claude: 신규 후보만 묶어서 정제 (보통 몇 센트)
 # 거르기 규칙 (Claude 쓰기 전에 먼저 걸러 비용 절약):
 #   - status.embeddable = False  → 외부 사이트 재생 불가 → 제외 (검은화면 방지)
 #   - liveBroadcastContent != 'live'  → 지금 라이브 아님 → 제외
@@ -175,7 +179,7 @@ def filter_and_sort(items, existing_ids):
 
 
 # ============================================
-# 3) Claude로 위치/좌표/카테고리/설명 정제
+# 3) Claude로 위치/좌표/kind/설명 정제 (전부 영어로 출력)
 #    - 20개씩 나눠서 호출 (출력이 잘리지 않게)
 #    - 24시간 웹캠 여부 판단은 하지 않음 (요청대로 제외)
 #    - 위치를 못 잡으면 skip=true 로 표시해 건너뜀
@@ -189,16 +193,16 @@ def _refine_batch(chunk, by_id):
         for c in chunk
     ]
     prompt = (
-        "다음은 유튜브 라이브 영상 목록이다. 각 영상의 제목·설명을 보고 "
-        "촬영 위치를 추론해 아래 JSON 배열만 출력하라. 설명/코드블록/그 외 텍스트는 절대 쓰지 말 것.\n\n"
-        "각 원소 형식:\n"
+        "You are given a list of YouTube live videos. For each one, infer the "
+        "filming location from its title/description and output ONLY a JSON array. "
+        "Do not write any explanation, code block, or other text.\n\n"
+        "Each element format:\n"
         "{\n"
-        '  "video_id": 원본 그대로,\n'
-        '  "title": 한국어로 짧고 깔끔하게 다듬은 제목 (지명 포함, 30자 이내),\n'
-        '  "place_name": 사람이 읽는 위치명 (예: "서울 홍대입구역", "일본 도쿄 가부키초"),\n'
-        '  "latitude": 위도 숫자, "longitude": 경도 숫자,\n'
-        '  "timezone": IANA 시간대 (예: "Asia/Seoul", "Europe/Rome"),\n'
-        '  "category": ["도심","자연","바다","해외"] 중 하나,\n'
+        '  "video_id": keep the original exactly,\n'
+        '  "title": a short clean English title including the place name (max 60 chars),\n'
+        '  "place_name": human-readable location in English (e.g. "Hongdae, Seoul", "Kabukicho, Tokyo"),\n'
+        '  "latitude": number, "longitude": number,\n'
+        '  "timezone": IANA timezone (e.g. "Asia/Seoul", "Europe/Rome"),\n'
         '  "kind": one of "news" (news channel / live news broadcast), '
         '"resort" (holiday resort / ski resort / beach resort cam), '
         '"hotel" (hotel cam), or "stream" (general scenery / city / nature webcam),\n'
@@ -206,11 +210,10 @@ def _refine_batch(chunk, by_id):
         '  "skip": true if the location cannot be determined, otherwise false\n'
         "}\n\n"
         "If the location is not clear, do not guess: set skip=true. "
-        "A news-station live (e.g. 24h news channel) is kind=\"news\"; "
-        "a resort cam is kind=\"resort\"; a hotel cam is kind=\"hotel\"; "
-        "general street/beach/nature scenery cams are kind=\"stream\". "
-        "Use category from [\"city\",\"nature\",\"beach\",\"overseas\"].\n\n"
-        "목록:\n" + json.dumps(brief, ensure_ascii=False)
+        'A news-station live (e.g. 24h news channel) is kind="news"; '
+        'a resort cam is kind="resort"; a hotel cam is kind="hotel"; '
+        'general street/beach/nature scenery cams are kind="stream".\n\n'
+        "List:\n" + json.dumps(brief, ensure_ascii=False)
     )
 
     msg = claude.messages.create(
@@ -247,7 +250,6 @@ def _refine_batch(chunk, by_id):
             "latitude": float(lat),
             "longitude": float(lng),
             "timezone": p.get("timezone") or None,
-            "category": p.get("category") or None,
             "kind": (p.get("kind") if p.get("kind") in ("news", "resort", "hotel") else "stream"),
             "channel_id": by_id[vid]["channel_id"],
             "view_count": by_id[vid].get("views", 0),
@@ -289,7 +291,6 @@ def save_rows(rows):
             "latitude": r["latitude"],
             "longitude": r["longitude"],
             "place_name": r["place_name"],
-            "category": r["category"],
             "kind": r["kind"],
             "timezone": r["timezone"],
             "channel_id": r["channel_id"],
