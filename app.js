@@ -1,3 +1,4 @@
+// Flare[V] v3.1.0 / 2026-06-17
 const SUPABASE_URL = 'https://pbrbzjxdjqqmhvhzhwlp.supabase.co';
 const SUPABASE_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicmJ6anhkanFxbWh2aHpod2xwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjc3NTcsImV4cCI6MjA5NTMwMzc1N30.E6-GthxwIFN2-jy4ojf5ZxR7YcdPJULG6Mxj9LvkI1c';
@@ -56,6 +57,11 @@ let pendingExistingPlaceId = null;
 let placesService = null; 
 let searchResults = []; 
 let spotPlaces = []; 
+let pickResults = [];
+let pickSearchPlace = null;
+let pickIdleListener = null;
+let geocoder = null;
+let pickedAddress = null;
 let spotPhotoFiles = []; 
 let spotMenuOpenedAt = 0; 
 let currentSpot = null; 
@@ -1811,11 +1817,276 @@ function hideSpotContextMenu() {
   document.getElementById('spot-ctx').classList.remove('show');
 }
 
+function startNewSpot() {
+  pendingLatLng = null;
+  pendingPlace = null;
+  pendingExistingPlaceId = null;
+  pickSearchPlace = null;
+  pickedAddress = null;
+  openSpotForm();
+}
+
+function updateSpotLocationLabel() {
+  const row = document.getElementById('spot-locrow');
+  const titleEl = document.getElementById('spot-loc-title');
+  const subEl = document.getElementById('spot-loc-sub');
+  const goEl = document.getElementById('spot-loc-go');
+  if (!row || !titleEl) return;
+  if (!pendingLatLng) {
+    row.classList.remove('set');
+    titleEl.textContent = 'Set location';
+    subEl.textContent = 'Pick the spot on the map';
+    goEl.textContent = 'Set';
+    return;
+  }
+  row.classList.add('set');
+  let name;
+  if (pendingExistingPlaceId) {
+    const ex = spotPlaces.find((p) => p.id === pendingExistingPlaceId);
+    name = (ex ? ex.name : 'Existing place') + ' (add here)';
+  } else if (pendingPlace && pendingPlace.name) {
+    name = pendingPlace.name;
+  } else if (pickedAddress) {
+    name = pickedAddress;
+  } else {
+    name = 'Pinned location';
+  }
+  titleEl.textContent = '📍 ' + name;
+  subEl.textContent = 'Tap to change location';
+  goEl.textContent = 'Change';
+}
+
+function enterSpotPickMode() {
+  if (!map) return;
+  document.getElementById('spot-overlay').classList.remove('show');
+  document.body.classList.add('spot-picking');
+  pickSearchPlace = null;
+  closeSearchResults();
+  const input = document.getElementById('spot-pick-input');
+  if (input) input.value = '';
+  const res = document.getElementById('spot-pick-results');
+  if (res) res.classList.remove('show');
+  document.getElementById('spot-pick').classList.add('show');
+  if (pendingLatLng) map.panTo(pendingLatLng);
+  updatePickWhere();
+  if (!pickIdleListener) {
+    pickIdleListener = map.addListener('center_changed', updatePickWhere);
+  }
+}
+
+function updatePickWhere() {
+  const el = document.getElementById('spot-pick-where');
+  if (!el) return;
+  if (pickSearchPlace && pickSearchPlace.loc && map) {
+    const c = map.getCenter();
+    if (
+      distMeters(
+        c.lat(),
+        c.lng(),
+        pickSearchPlace.loc.lat(),
+        pickSearchPlace.loc.lng()
+      ) < 40
+    ) {
+      el.innerHTML = '📍 <b>' + escapeHtml(pickSearchPlace.name) + '</b>';
+      return;
+    }
+  }
+  el.textContent = '📍 The center of the map will be set';
+}
+
+function confirmSpotPick() {
+  if (!map) return;
+  const c = map.getCenter();
+  pendingLatLng = c;
+  pendingPlace = null;
+  pendingExistingPlaceId = null;
+  pickedAddress = null;
+
+  exitSpotPick();
+  document.getElementById('spot-overlay').classList.add('show');
+
+  if (
+    pickSearchPlace &&
+    pickSearchPlace.loc &&
+    distMeters(c.lat(), c.lng(), pickSearchPlace.loc.lat(), pickSearchPlace.loc.lng()) < 40
+  ) {
+    pendingPlace = { place_id: pickSearchPlace.place_id, name: pickSearchPlace.name };
+    const ex = spotPlaces.find((p) => p.place_id === pendingPlace.place_id);
+    if (ex) pendingExistingPlaceId = ex.id;
+    finalizePickedLocation();
+    return;
+  }
+
+  showLocRowResolving();
+  resolvePinLabel(c, (poi, address) => {
+    if (poi && poi.place_id) {
+      pendingPlace = { place_id: poi.place_id, name: poi.name };
+      const ex = spotPlaces.find((p) => p.place_id === poi.place_id);
+      if (ex) pendingExistingPlaceId = ex.id;
+    } else {
+      pickedAddress = address || null;
+      const near = findNearbyPlace(c, 50);
+      if (near) {
+        const ok = confirm(
+          'There is already "' +
+            (near.name || 'a spot') +
+            '" nearby.\nAdd to that place?\n(Cancel to create a new location)'
+        );
+        pendingExistingPlaceId = ok ? near.id : null;
+      }
+    }
+    finalizePickedLocation();
+  });
+}
+
+function finalizePickedLocation() {
+  const t = document.getElementById('spot-title');
+  const nm = (pendingPlace && pendingPlace.name) || pickedAddress;
+  if (t && !t.value && nm) t.value = nm;
+  updateSpotLocationLabel();
+}
+
+function showLocRowResolving() {
+  const row = document.getElementById('spot-locrow');
+  if (!row) return;
+  row.classList.add('set');
+  document.getElementById('spot-loc-title').textContent = '📍 Checking location...';
+  document.getElementById('spot-loc-sub').textContent = 'Getting the address';
+  document.getElementById('spot-loc-go').textContent = 'Change';
+}
+
+function resolvePinLabel(latLng, cb) {
+  let done = false;
+  const finish = (poi, addr) => {
+    if (done) return;
+    done = true;
+    cb(poi, addr);
+  };
+  const timer = setTimeout(() => finish(null, null), 5000);
+  if (placesService) {
+    try {
+      placesService.nearbySearch(
+        { location: latLng, radius: 30 },
+        (results, status) => {
+          if (
+            status === google.maps.places.PlacesServiceStatus.OK &&
+            results &&
+            results.length &&
+            results[0].place_id
+          ) {
+            clearTimeout(timer);
+            finish({ place_id: results[0].place_id, name: results[0].name }, null);
+          } else {
+            reverseGeocodeAddr(latLng, (addr) => {
+              clearTimeout(timer);
+              finish(null, addr);
+            });
+          }
+        }
+      );
+      return;
+    } catch (e) {}
+  }
+  reverseGeocodeAddr(latLng, (addr) => {
+    clearTimeout(timer);
+    finish(null, addr);
+  });
+}
+
+function reverseGeocodeAddr(latLng, cb) {
+  if (!geocoder) {
+    try {
+      geocoder = new google.maps.Geocoder();
+    } catch (e) {
+      cb(null);
+      return;
+    }
+  }
+  geocoder.geocode({ location: latLng }, (results, status) => {
+    if (status === 'OK' && results && results.length) {
+      cb(cleanAddr(results[0].formatted_address));
+    } else {
+      cb(null);
+    }
+  });
+}
+
+function cleanAddr(s) {
+  if (!s) return null;
+  const t = s.replace(/\s*\d{5}(-\d{4})?\s*$/, '').trim();
+  return t || s;
+}
+
+function cancelSpotPick() {
+  exitSpotPick();
+  document.getElementById('spot-overlay').classList.add('show');
+}
+
+function exitSpotPick() {
+  document.getElementById('spot-pick').classList.remove('show');
+  document.body.classList.remove('spot-picking');
+  if (pickIdleListener) {
+    google.maps.event.removeListener(pickIdleListener);
+    pickIdleListener = null;
+  }
+}
+
+function runPickSearch() {
+  const q = document.getElementById('spot-pick-input').value.trim();
+  if (!q) return;
+  const listEl = document.getElementById('spot-pick-results');
+  if (!placesService) {
+    listEl.innerHTML = '<div class="sr-empty">Search is warming up. Please try again shortly.</div>';
+    listEl.classList.add('show');
+    return;
+  }
+  listEl.innerHTML = '<div class="sr-empty">Searching...</div>';
+  listEl.classList.add('show');
+  placesService.textSearch(
+    { query: q, location: map.getCenter(), radius: 30000 },
+    (results, status) => {
+      if (
+        status !== google.maps.places.PlacesServiceStatus.OK ||
+        !results ||
+        !results.length
+      ) {
+        pickResults = [];
+        listEl.innerHTML = '<div class="sr-empty">No results. Try another name.</div>';
+        return;
+      }
+      pickResults = results.slice(0, 5);
+      listEl.innerHTML = pickResults
+        .map(
+          (r, i) =>
+            '<div class="sr-item" onclick="choosePickResult(' +
+            i +
+            ')"><div class="sr-nm">' +
+            escapeHtml(r.name || '') +
+            '</div><div class="sr-ad">' +
+            escapeHtml(r.formatted_address || '') +
+            '</div></div>'
+        )
+        .join('');
+    }
+  );
+}
+
+function choosePickResult(i) {
+  const r = pickResults[i];
+  if (!r || !r.geometry) return;
+  const loc = r.geometry.location;
+  pickSearchPlace = { place_id: r.place_id, name: r.name, loc: loc };
+  document.getElementById('spot-pick-results').classList.remove('show');
+  document.getElementById('spot-pick-input').value = r.name || '';
+  map.panTo(loc);
+  map.setZoom(16);
+  updatePickWhere();
+}
+
 function openSpotForm() {
   hideSpotContextMenu();
-  if (!pendingLatLng) return;
 
-  if (!pendingPlace) {
+  if (pendingLatLng && !pendingPlace) {
     const near = findNearbyPlace(pendingLatLng, 50);
     if (near) {
       const ok = confirm(
@@ -1827,15 +2098,7 @@ function openSpotForm() {
     }
   }
 
-  const label = document.getElementById('spot-place-label');
-  if (pendingExistingPlaceId) {
-    const ex = spotPlaces.find((p) => p.id === pendingExistingPlaceId);
-    label.textContent = '📍 ' + (ex ? ex.name : 'Existing place') + ' (add here)';
-  } else if (pendingPlace && pendingPlace.name) {
-    label.textContent = '📍 ' + pendingPlace.name;
-  } else {
-    label.textContent = '📍 Pinned location on the map';
-  }
+  updateSpotLocationLabel();
 
   spotPhotoFiles = [];
   chosenSpotTags.clear();
@@ -2147,7 +2410,7 @@ async function saveSpot() {
     return;
   }
   if (!pendingLatLng) {
-    msg.textContent = 'No location set. Tap the map again.';
+    msg.textContent = 'Please set the location first using "Set location".';
     return;
   }
 
@@ -2193,7 +2456,7 @@ async function saveSpot() {
 
     if (!placeId) {
       const newPlace = {
-        name: (pendingPlace && pendingPlace.name) || title,
+        name: (pendingPlace && pendingPlace.name) || pickedAddress || title,
         latitude: lat,
         longitude: lng,
       };

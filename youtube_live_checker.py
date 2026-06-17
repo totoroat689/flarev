@@ -1,18 +1,22 @@
 # ============================================
-# Flare(V) 유튜브 라이브 상태 점검기  (youtube_live_checker.py)
-# 버전: 1.0  /  수정일: 2026-06-17
+# Flare[V] 유튜브 라이브 상태 점검기  (youtube_live_checker.py)
+# 버전: 1.1  /  수정일: 2026-06-17  (조회수/좋아요/동시접속자 통계 갱신 추가)
 # 역할: live_videos(is_active=true)의 영상들이 지금도 방송 중인지 30분마다 확인.
 #       - 방송 중      → is_live=true,  last_live_at=지금
 #       - 꺼짐/없음     → is_live=false (핀은 회색으로 표시됨, 숨기지 않음)
 #       - 30일 넘게 한 번도 안 켜짐 → is_active=false 로 숨김 (삭제 아님)
+#       - 함께 view_count / like_count / concurrent_viewers 를 최신값으로 갱신
+#         (수집할 때 한 번만 찍히면 옛날 숫자가 되므로, 나중 순위 페이지용으로 신선하게 유지)
 # 실행: GitHub Actions 스케줄(30분마다) + 수동 버튼
-# 비용: videos.list 1유닛/회(50개 묶음). 영상 500개라도 하루 약 480유닛(한도 5%).
+# 비용: videos.list 는 part 개수와 무관하게 1유닛/회(50개 묶음). 통계를 같이 받아도 비용 동일.
 # 메모:
 #   - Supabase anon 키는 공개돼도 되는 키라 수집기와 동일하게 코드에 둠
 #     (live_videos 테이블은 anon 에 UPDATE 권한(GRANT)이 있어 갱신 가능)
 #   - 유튜브 키는 금고(Secrets)의 GOOGLE_API_KEY 사용 (수집기와 동일)
 #   - '방송 중' 판정: snippet.liveBroadcastContent == 'live' 이고
 #     liveStreamingDetails.actualEndTime(종료시각)이 없으면 라이브로 봄
+#   - 동시접속자(concurrentViewers)는 라이브 중일 때만 값이 옴 → 꺼지면 0으로 둠
+#   - 조회수/좋아요는 유튜브에서 사라진(삭제/비공개) 영상은 기존 값 유지(0으로 덮지 않음)
 # ============================================
 
 import os
@@ -55,16 +59,17 @@ def parse_dt(s):
 
 
 # ============================================
-# 1) 유튜브에서 영상들의 '지금 라이브 여부' 확인 (50개씩 묶어 호출)
-#    반환: { video_id: True/False }  (유튜브에 없으면 키 자체가 없음)
+# 1) 유튜브에서 상태 + 통계 확인 (50개씩 묶어 호출)
+#    반환: { video_id: {"live": bool, "views": int, "likes": int, "concurrent": int} }
+#    (유튜브에 없으면 그 video_id 키 자체가 없음 → 삭제/비공개로 간주)
 # ============================================
-def fetch_live_status(video_ids):
-    status = {}
+def fetch_status_and_stats(video_ids):
+    info = {}
     for i in range(0, len(video_ids), 50):
         chunk = video_ids[i:i + 50]
         params = {
             "key": YOUTUBE_KEY,
-            "part": "snippet,liveStreamingDetails",
+            "part": "snippet,liveStreamingDetails,statistics",
             "id": ",".join(chunk),
             "maxResults": 50,
         }
@@ -76,13 +81,19 @@ def fetch_live_status(video_ids):
             vid = it.get("id")
             snip = it.get("snippet", {})
             live = it.get("liveStreamingDetails", {})
+            stats = it.get("statistics", {})
             is_live = (
                 snip.get("liveBroadcastContent") == "live"
                 and not live.get("actualEndTime")
             )
-            status[vid] = bool(is_live)
+            info[vid] = {
+                "live": bool(is_live),
+                "views": int(stats.get("viewCount", 0) or 0),
+                "likes": int(stats.get("likeCount", 0) or 0),
+                "concurrent": int(live.get("concurrentViewers", 0) or 0),
+            }
         time.sleep(0.3)
-    return status
+    return info
 
 
 # ============================================
@@ -122,7 +133,7 @@ def main():
         return
 
     ids = [r["video_id"] for r in rows if r.get("video_id")]
-    status = fetch_live_status(ids)
+    info = fetch_status_and_stats(ids)
 
     now = now_iso()
     cutoff = datetime.now(timezone.utc) - timedelta(days=HIDE_AFTER_DAYS)
@@ -132,12 +143,18 @@ def main():
 
     for r in rows:
         vid = r.get("video_id")
-        if vid in status:
-            live_now = status[vid]
-        else:
-            # 유튜브에 없음(삭제/비공개) → 꺼짐으로 처리
+        data = info.get(vid)
+
+        if data is None:
+            # 유튜브에 없음(삭제/비공개) → 꺼짐 처리, 통계는 기존 값 유지
             live_now = False
             n_missing += 1
+        else:
+            live_now = data["live"]
+            # 통계 최신화 (조회수/좋아요는 항상, 동시접속자는 라이브일 때만 의미 있음)
+            r["view_count"] = data["views"]
+            r["like_count"] = data["likes"]
+            r["concurrent_viewers"] = data["concurrent"] if live_now else 0
 
         r["is_live"] = live_now
         r["last_checked_at"] = now
@@ -147,7 +164,6 @@ def main():
             n_live += 1
         else:
             n_off += 1
-            # 숨김 판단: 마지막 라이브(없으면 생성일)가 기준일보다 오래됐으면 숨김
             last = parse_dt(r.get("last_live_at")) or parse_dt(r.get("created_at"))
             if last is not None and last < cutoff:
                 r["is_active"] = False
