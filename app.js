@@ -1,4 +1,4 @@
-// Flare[V] v3.1.0 / 2026-06-17
+// Flare[V] v3.2.0 / 2026-06-17
 const SUPABASE_URL = 'https://pbrbzjxdjqqmhvhzhwlp.supabase.co';
 const SUPABASE_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicmJ6anhkanFxbWh2aHpod2xwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjc3NTcsImV4cCI6MjA5NTMwMzc1N30.E6-GthxwIFN2-jy4ojf5ZxR7YcdPJULG6Mxj9LvkI1c';
@@ -3189,6 +3189,14 @@ function openLivePanel(item) {
   lvSetupDesc(item.description);
   const link = document.getElementById('lv-link');
   link.href = 'https://www.youtube.com/watch?v=' + item.video_id;
+
+  const fp = document.getElementById('lv-fullpage');
+  if (item.slug) {
+    fp.href = '/cam/' + item.slug + '/';
+    fp.style.display = '';
+  } else {
+    fp.style.display = 'none';
+  }
 
   startLiveClock(item.timezone);
 

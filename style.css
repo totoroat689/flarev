@@ -1,4 +1,4 @@
-/* Flare[V] v3.1.0 / 2026-06-17 */
+/* Flare[V] v3.2.0 / 2026-06-17 */
 :root {
   --bg: #0a0a0f;
   --sidebar: #10101a;
@@ -2384,6 +2384,11 @@ body[data-mode='festival'] #fest-search { display: block; }
   text-decoration: none; white-space: nowrap; transition: background 0.15s;
 }
 .lv-yt-pill:hover { background: rgba(255, 78, 69, 0.3); }
+
+.lv-fullpage{display:inline-block;margin:10px 0 2px;font-size:0.78rem;font-weight:700;
+  color:var(--live);background:var(--live-bg);border:1px solid rgba(107,255,184,0.4);
+  padding:8px 13px;border-radius:10px;text-decoration:none;transition:filter .15s;}
+.lv-fullpage:hover{filter:brightness(1.12);}
 
 #live-notice.has-live { display: none !important; }
 
