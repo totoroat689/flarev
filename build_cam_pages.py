@@ -1,22 +1,20 @@
 # ============================================
 # Flare[V] 캠 상세페이지 생성기  (build_cam_pages.py)
-# 버전: 1.0 / 2026-06-17
-# 역할: live_videos 에서 좋아요 상위 N개를 골라 /cam/<slug>/index.html 정적 페이지로 생성.
-#       + sitemap.xml 갱신, 페이지끼리 "근처 캠" 내부 링크, 내용 빈약하면 noindex 자동.
-# 실행: GitHub Actions (수동 또는 스케줄). 생성된 파일을 워크플로가 커밋→Vercel 배포.
-# 비용: AI 안 씀(0). 유튜브 안 부름(0). DB 읽기만.
-#
-# 설계 메모:
-#   - 페이지는 미리 만든 정적 HTML (구글이 가장 잘 크롤링). JS 모달 아님.
-#   - 빈 칸(소개/볼거리)이면 그 섹션을 아예 안 그림 (휑하지 않게).
-#   - 고유 콘텐츠가 너무 빈약하면 <meta robots noindex> 자동 → 사이트 SEO 평판 보호.
-#     (사람은 링크로 정상 접속 가능. 내용 채워지면 다음 생성 때 noindex 자동 해제)
-#   - sitemap 에는 색인 대상(noindex 아닌 것)만 넣음.
-#   - 로고/레이아웃은 확정한 demo3(영상 좌측 고정 + 보통/크게 + PiP)와 동일.
+# 버전: 2.0 / 2026-06-17
+# 역할: live_videos 에서 좋아요 상위 N개 → /cam/<slug>/index.html 정적 페이지 생성.
+#       + sitemap.xml, "근처 캠"(실제 썸네일), 내용 빈약하면 noindex 자동.
+# v2.0 변경:
+#   - 칩 마우스오버 툴팁: LIVE(며칠째), #N most liked(좋아요 수), Sunset/Sunrise(현지 시각)
+#   - 일출/일몰 실제 계산(좌표 기반) → "Sunset soon / Sunset time" 정밀 표시
+#   - 댓글: 라이브 리뷰(reviews 테이블)를 브라우저에서 직접 로드(최대 높이 스크롤) + 작성 팝업
+#   - 근처 캠: 이모지 → 유튜브 실제 썸네일
+#   - Open in map: 채도 어둡게 + /?cam=<video_id> 딥링크 (지도에서 팝업 열림)
+#   - 상단 Spots: /?view=spots&date=month 로 이동
+#   - 메타데이터(라이브시작/게시일/구독자/채널로고/국가 등)는 값이 있으면 표시, 없으면 자동 숨김
+# 실행: GitHub Actions. 비용: AI·유튜브 안 씀(0). DB 읽기만.
 # ============================================
 
 import os
-import re
 import html
 import json
 from datetime import datetime, timezone
@@ -26,25 +24,18 @@ from supabase import create_client
 SUPABASE_URL = "https://pbrbzjxdjqqmhvhzhwlp.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicmJ6anhkanFxbWh2aHpod2xwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjc3NTcsImV4cCI6MjA5NTMwMzc1N30.E6-GthxwIFN2-jy4ojf5ZxR7YcdPJULG6Mxj9LvkI1c"
 
-# ============================================
-# 설정값
-# ============================================
 SITE = "https://flarev.co"
-TOP_N = 10              # 시범: 좋아요 상위 N개만 페이지 생성
-NEARBY_COUNT = 6        # 페이지당 "근처 캠" 링크 수
-OUT_ROOT = "."         # 저장소 루트 (cam/<slug>/index.html, sitemap.xml 가 여기 생김)
-INTRO_MIN = 40         # 소개글이 이 글자 수 미만이고 볼거리도 없으면 "빈약" → noindex
+TOP_N = 10
+NEARBY_COUNT = 6
+OUT_ROOT = "."
+INTRO_MIN = 40
 
 
-# ============================================
-# 작은 도우미들
-# ============================================
 def esc(s):
     return html.escape(str(s if s is not None else ""))
 
 
 def human(n):
-    """329133627 → '329M', 567470 → '567K'"""
     try:
         n = int(n or 0)
     except Exception:
@@ -57,7 +48,6 @@ def human(n):
 
 
 def as_highlights(v):
-    """seo_highlights 가 list 또는 JSON 문자열로 올 수 있어 안전하게 list 로."""
     if isinstance(v, list):
         return [str(x) for x in v if str(x).strip()]
     if isinstance(v, str) and v.strip():
@@ -71,14 +61,17 @@ def as_highlights(v):
 
 
 def is_thin(cam):
-    """고유 콘텐츠가 빈약한가? (소개 짧음 + 볼거리 없음)"""
     intro = (cam.get("seo_intro") or "").strip()
     hl = as_highlights(cam.get("seo_highlights"))
     return len(intro) < INTRO_MIN and len(hl) == 0
 
 
+def thumb(vid, q="mqdefault"):
+    return f"https://i.ytimg.com/vi/{vid}/{q}.jpg"
+
+
 # ============================================
-# 페이지 HTML 만들기
+# 페이지 HTML
 # ============================================
 def render_page(cam, rank, nearby):
     vid = cam.get("video_id") or ""
@@ -92,9 +85,15 @@ def render_page(cam, rank, nearby):
     channel = cam.get("channel_title") or ""
     lat = cam.get("latitude")
     lng = cam.get("longitude")
-    likes = cam.get("like_count") or 0
+    likes = int(cam.get("like_count") or 0)
     views = cam.get("view_count") or 0
-    watching = cam.get("concurrent_viewers") or 0
+    watching = int(cam.get("concurrent_viewers") or 0)
+
+    # 메타데이터(있으면 표시) — 아직 비어있을 수 있음
+    live_start = cam.get("live_started_at") or ""
+    published = cam.get("published_at") or ""
+    subs = cam.get("subscriber_count")
+    channel_logo = cam.get("channel_logo") or ""
 
     canonical = f"{SITE}/cam/{slug}/"
     page_title = f"{title} — Watch {place} Live | Flare[V]" if place else f"{title} | Flare[V]"
@@ -102,13 +101,13 @@ def render_page(cam, rank, nearby):
     thin = is_thin(cam)
     robots = '<meta name="robots" content="noindex,follow" />' if thin else ""
 
-    # 칩
-    chips = ['<span class="chip live"><span class="dot"></span> LIVE</span>']
+    # 칩 (data-tip = 마우스오버 툴팁)
+    chips = ['<span class="chip live" id="chip-live"><span class="dot"></span> LIVE</span>']
     if rank:
-        chips.append(f'<span class="chip rank">🔥 #{rank} most liked</span>')
-    if int(watching or 0) > 0:
-        chips.append(f'<span class="chip">👀 {int(watching):,} watching</span>')
-    chips.append('<span class="chip see dn">🕐 —</span>')
+        chips.append(f'<span class="chip rank" data-tip="{likes:,} likes">🔥 #{rank} most liked</span>')
+    if watching > 0:
+        chips.append(f'<span class="chip" data-tip="{watching:,} watching right now">👀 {watching:,} watching</span>')
+    chips.append('<span class="chip see dn" id="chip-dn">🕐 —</span>')
     chips_html = "\n          ".join(chips)
 
     # 정보표
@@ -121,26 +120,27 @@ def render_page(cam, rank, nearby):
         facts.append('<tr><td class="k">Local time</td><td class="v lt">—</td></tr>')
     if lat is not None and lng is not None:
         facts.append(f'<tr><td class="k">Coordinates</td><td class="v">{float(lat):.3f}, {float(lng):.3f}</td></tr>')
-    if int(watching or 0) > 0:
-        facts.append(f'<tr><td class="k">Watching now</td><td class="v">{int(watching):,}</td></tr>')
+    if watching > 0:
+        facts.append(f'<tr><td class="k">Watching now</td><td class="v">{watching:,}</td></tr>')
     facts.append(f'<tr><td class="k">Total views</td><td class="v">{human(views)}</td></tr>')
     facts.append(f'<tr><td class="k">Likes</td><td class="v">{human(likes)}</td></tr>')
+    if subs:
+        facts.append(f'<tr><td class="k">Subscribers</td><td class="v">{human(subs)}</td></tr>')
+    if live_start:
+        facts.append(f'<tr><td class="k">Streaming since</td><td class="v">{esc(live_start[:10])}</td></tr>')
+    if published:
+        facts.append(f'<tr><td class="k">Published</td><td class="v">{esc(published[:10])}</td></tr>')
     if channel:
-        facts.append(f'<tr><td class="k">Channel</td><td class="v">{esc(channel)}</td></tr>')
+        logo = f'<img class="ch-logo" src="{esc(channel_logo)}" alt="" />' if channel_logo else ""
+        facts.append(f'<tr><td class="k">Channel</td><td class="v">{logo}{esc(channel)}</td></tr>')
     facts_html = "\n            ".join(facts)
 
-    # About (소개) — 없으면 통째로 생략
-    about_html = ""
-    if intro:
-        about_html = f'<section><h2>About this cam</h2><p>{esc(intro)}</p></section>'
-
-    # What you'll see (볼거리) — 없으면 생략
+    about_html = f'<section><h2>About this cam</h2><p>{esc(intro)}</p></section>' if intro else ""
     see_html = ""
     if hl:
         items = "".join(f"<li>{esc(x)}</li>" for x in hl)
         see_html = f'<section><h2>What you’ll see</h2><ul class="see-list">{items}</ul></section>'
 
-    # Best time — 시간대 있으면 JS로 실시간, 없으면 일반 문구
     if tz:
         best_html = ('<section><h2>Best time to watch</h2>'
                      '<p>It’s currently <b class="bn">—</b> at this location — '
@@ -149,19 +149,15 @@ def render_page(cam, rank, nearby):
         best_html = ('<section><h2>Best time to watch</h2>'
                      '<p>This camera streams live around the clock.</p></section>')
 
-    # Comments — 아직 데이터 연동 전: 빈 상태 안내 (구조만)
-    comments_html = ('<section><h2>Comments</h2>'
-                     '<div class="addc">💬 Open this cam in the map to leave a comment</div></section>')
-
-    # Nearby cams
+    # 근처 캠 (실제 썸네일)
     cards = []
     for nb in nearby:
-        emoji = {"news": "📰", "resort": "🏝️", "hotel": "🏨"}.get(nb.get("kind"), "📷")
+        nbvid = nb.get("video_id") or ""
         nb_place = nb.get("place_name") or nb.get("country") or ""
         cards.append(
-            f'<a class="card" href="/cam/{esc(nb.get("slug") or nb.get("video_id"))}/">'
-            f'<div class="th">{emoji}</div><div class="cap">'
-            f'<div class="nm">{esc((nb.get("title") or "")[:48])}</div>'
+            f'<a class="card" href="/cam/{esc(nb.get("slug") or nbvid)}/">'
+            f'<div class="th"><img loading="lazy" src="{thumb(nbvid)}" alt="" /></div>'
+            f'<div class="cap"><div class="nm">{esc((nb.get("title") or "")[:48])}</div>'
             f'<div class="cs">{esc(nb_place)}</div></div></a>'
         )
     nearby_html = ""
@@ -169,65 +165,39 @@ def render_page(cam, rank, nearby):
         nearby_html = ('<section><h2>Nearby &amp; similar cams</h2>'
                        f'<div class="cards">{"".join(cards)}</div></section>')
 
-    # JSON-LD (VideoObject + Breadcrumb)
-    jsonld = {
-        "@context": "https://schema.org",
-        "@type": "VideoObject",
-        "name": title,
-        "description": meta_desc,
-        "thumbnailUrl": [f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg"],
-        "uploadDate": (cam.get("created_at") or "")[:10] or None,
-        "embedUrl": f"https://www.youtube.com/embed/{vid}",
-        "isLiveBroadcast": True,
-        "contentUrl": f"https://www.youtube.com/watch?v={vid}",
-    }
+    # JSON-LD
+    jsonld = {"@context": "https://schema.org", "@type": "VideoObject", "name": title,
+              "description": meta_desc, "thumbnailUrl": [thumb(vid, "hqdefault")],
+              "uploadDate": (published or cam.get("created_at") or "")[:10] or None,
+              "embedUrl": f"https://www.youtube.com/embed/{vid}", "isLiveBroadcast": True,
+              "contentUrl": f"https://www.youtube.com/watch?v={vid}"}
     jsonld = {k: v for k, v in jsonld.items() if v is not None}
     crumb_country = esc(country) if country else "Live cams"
-    breadcrumb = {
-        "@context": "https://schema.org",
-        "@type": "BreadcrumbList",
-        "itemListElement": [
-            {"@type": "ListItem", "position": 1, "name": "Home", "item": SITE + "/"},
-            {"@type": "ListItem", "position": 2, "name": crumb_country, "item": SITE + "/"},
-            {"@type": "ListItem", "position": 3, "name": title, "item": canonical},
-        ],
-    }
-    jsonld_html = (
-        '<script type="application/ld+json">' + json.dumps(jsonld, ensure_ascii=False) + "</script>\n"
-        '<script type="application/ld+json">' + json.dumps(breadcrumb, ensure_ascii=False) + "</script>"
-    )
+    breadcrumb = {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": "Home", "item": SITE + "/"},
+        {"@type": "ListItem", "position": 2, "name": crumb_country, "item": SITE + "/?view=spots&date=month"},
+        {"@type": "ListItem", "position": 3, "name": title, "item": canonical}]}
+    jsonld_html = ('<script type="application/ld+json">' + json.dumps(jsonld, ensure_ascii=False) + "</script>\n"
+                   '<script type="application/ld+json">' + json.dumps(breadcrumb, ensure_ascii=False) + "</script>")
 
-    embed_url = f"https://www.youtube.com/embed/{vid}?autoplay=1&mute=1&playsinline=1"
-
-    html_out = TEMPLATE
     repl = {
-        "__ROBOTS__": robots,
-        "__PAGETITLE__": esc(page_title),
-        "__METADESC__": esc(meta_desc),
-        "__CANONICAL__": canonical,
-        "__JSONLD__": jsonld_html,
-        "__CRUMB_COUNTRY__": crumb_country,
-        "__H1__": esc(page_title.split(" | ")[0]),
-        "__EMBED__": embed_url,
-        "__PIPNAME__": esc((title[:28])),
-        "__CHIPS__": chips_html,
-        "__FACTS__": facts_html,
-        "__ABOUT__": about_html,
-        "__SEE__": see_html,
-        "__BEST__": best_html,
-        "__COMMENTS__": comments_html,
-        "__NEARBY__": nearby_html,
+        "__ROBOTS__": robots, "__PAGETITLE__": esc(page_title), "__METADESC__": esc(meta_desc),
+        "__CANONICAL__": canonical, "__JSONLD__": jsonld_html, "__CRUMB_COUNTRY__": crumb_country,
+        "__H1__": esc(page_title.split(" | ")[0]), "__VID__": esc(vid),
+        "__EMBED__": f"https://www.youtube.com/embed/{vid}?autoplay=1&mute=1&playsinline=1",
+        "__PIPNAME__": esc(title[:28]), "__CHIPS__": chips_html, "__FACTS__": facts_html,
+        "__ABOUT__": about_html, "__SEE__": see_html, "__BEST__": best_html, "__NEARBY__": nearby_html,
         "__MAPHREF__": f"{SITE}/?cam={esc(vid)}",
-        "__TZ__": esc(tz),
+        "__TZ__": esc(tz), "__LAT__": (str(float(lat)) if lat is not None else ""),
+        "__LNG__": (str(float(lng)) if lng is not None else ""),
+        "__LIVESTART__": esc(live_start), "__SBURL__": SUPABASE_URL, "__SBKEY__": SUPABASE_KEY,
     }
+    out = TEMPLATE
     for k, v in repl.items():
-        html_out = html_out.replace(k, v)
-    return html_out, thin
+        out = out.replace(k, v)
+    return out, thin
 
 
-# ============================================
-# 근처 캠 고르기: 같은 나라 먼저, 모자라면 인기순으로 채움
-# ============================================
 def pick_nearby(cam, pool):
     me = cam.get("video_id")
     same = [c for c in pool if c.get("video_id") != me and c.get("country") and c.get("country") == cam.get("country")]
@@ -235,61 +205,46 @@ def pick_nearby(cam, pool):
     return (same + others)[:NEARBY_COUNT]
 
 
-# ============================================
-# 메인
-# ============================================
 def main():
     sb = create_client(SUPABASE_URL, SUPABASE_KEY)
-    res = (
-        sb.table("live_videos")
-        .select("*")
-        .eq("is_active", True)
-        .not_.is_("slug", "null")
-        .order("like_count", desc=True)
-        .execute()
-    )
+    res = (sb.table("live_videos").select("*").eq("is_active", True)
+           .not_.is_("slug", "null").order("like_count", desc=True).execute())
     rows = res.data or []
     print(f"📂 활성+slug 있는 캠 {len(rows)}개")
     if not rows:
         print("만들 페이지 없음 — 종료")
         return
-
     top = rows[:TOP_N]
     print(f"🏗️  좋아요 상위 {len(top)}개 페이지 생성")
 
-    sitemap_urls = [(SITE + "/", None)]
+    sitemap_urls = [SITE + "/"]
     made = 0
     for i, cam in enumerate(top):
-        rank = i + 1
         nearby = pick_nearby(cam, rows)
-        page, thin = render_page(cam, rank, nearby)
+        page, thin = render_page(cam, i + 1, nearby)
         slug = cam.get("slug") or cam.get("video_id")
         d = os.path.join(OUT_ROOT, "cam", slug)
         os.makedirs(d, exist_ok=True)
         with open(os.path.join(d, "index.html"), "w", encoding="utf-8") as f:
             f.write(page)
         made += 1
-        tag = " (noindex: 내용 빈약)" if thin else ""
-        print(f"  ✅ /cam/{slug}/{tag}")
+        print(f"  ✅ /cam/{slug}/" + (" (noindex)" if thin else ""))
         if not thin:
-            sitemap_urls.append((f"{SITE}/cam/{slug}/", None))
+            sitemap_urls.append(f"{SITE}/cam/{slug}/")
 
-    # sitemap.xml 생성
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     lines = ['<?xml version="1.0" encoding="UTF-8"?>',
              '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
-    for url, _ in sitemap_urls:
+    for url in sitemap_urls:
         lines.append(f"  <url><loc>{url}</loc><lastmod>{now}</lastmod></url>")
     lines.append("</urlset>")
     with open(os.path.join(OUT_ROOT, "sitemap.xml"), "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
-    print(f"🗺️  sitemap.xml 갱신 ({len(sitemap_urls)}개 URL)")
-    print(f"🎉 완료 — 페이지 {made}개")
+    print(f"🗺️  sitemap.xml ({len(sitemap_urls)} URL) | 🎉 완료 {made}개")
 
 
 # ============================================
-# 페이지 템플릿 (확정 demo3: 영상 좌측 고정 + 보통/크게 + PiP + 실제 로고)
-# __TOKEN__ 자리는 render_page 에서 채움
+# 템플릿 (확정 레이아웃 + 툴팁/일출일몰/댓글/썸네일)
 # ============================================
 TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
@@ -304,7 +259,9 @@ __ROBOTS__
 <meta property="og:title" content="__PAGETITLE__" />
 <meta property="og:description" content="__METADESC__" />
 <meta property="og:url" content="__CANONICAL__" />
+<meta property="og:image" content="https://i.ytimg.com/vi/__VID__/hqdefault.jpg" />
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+KR:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 __JSONLD__
 <style>
   :root{--bg:#0a0a0f;--panel:#14141f;--panel2:#1a1a26;--border:rgba(255,255,255,0.08);
@@ -315,86 +272,101 @@ __JSONLD__
     font-family:'Noto Sans KR',system-ui,-apple-system,sans-serif;line-height:1.6;}
   a{color:inherit;text-decoration:none;}
   .topbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:24px;
-    padding:11px 22px;background:rgba(10,10,15,0.9);backdrop-filter:blur(12px);
-    border-bottom:1px solid var(--border);}
-  .logo{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;letter-spacing:2px;line-height:1;
-    position:relative;display:inline-block;}
+    padding:11px 22px;background:rgba(10,10,15,0.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);}
+  .logo{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;letter-spacing:2px;line-height:1;position:relative;}
   .logo span{color:var(--festival);animation:breath 3.5s ease-in-out infinite;}
-  @keyframes breath{0%,100%{text-shadow:0 0 10px rgba(255,107,107,0.55);}
-    50%{text-shadow:0 0 22px rgba(255,107,107,1),0 0 38px rgba(255,107,107,0.6);}}
+  @keyframes breath{0%,100%{text-shadow:0 0 10px rgba(255,107,107,0.55);}50%{text-shadow:0 0 22px rgba(255,107,107,1),0 0 38px rgba(255,107,107,0.6);}}
   .nav{display:flex;gap:20px;font-size:0.85rem;color:var(--muted);}
-  .nav a:hover{color:var(--text);} .nav .drop::after{content:" ▾";font-size:0.7rem;}
+  .nav a:hover{color:var(--text);}
   .wrap{max-width:1160px;margin:0 auto;padding:22px 22px 70px;}
   .crumb{font-size:0.75rem;color:var(--muted);margin-bottom:12px;}
   .crumb a:hover{color:var(--mint);}
   h1{font-size:1.55rem;line-height:1.3;margin:0 0 18px;}
-  .grid{display:grid;grid-template-columns:600px 1fr;gap:28px;align-items:start;
-    transition:grid-template-columns .25s ease;}
+  .grid{display:grid;grid-template-columns:600px 1fr;gap:28px;align-items:start;transition:grid-template-columns .25s ease;}
   .grid.theater{grid-template-columns:1fr;} .grid.theater .left{position:static;}
   .left{position:sticky;top:80px;align-self:start;}
   .videowrap{position:relative;aspect-ratio:16/9;background:#000;border-radius:16px;}
   .vidinner{position:absolute;inset:0;border-radius:16px;overflow:hidden;border:1px solid var(--border);background:#000;}
   .vidinner iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
-  .vidinner.pip{position:fixed;width:340px;aspect-ratio:16/9;z-index:60;
-    border-color:rgba(107,255,184,0.5);box-shadow:0 14px 38px rgba(0,0,0,0.6);}
+  .vidinner.pip{position:fixed;width:340px;aspect-ratio:16/9;z-index:60;border-color:rgba(107,255,184,0.5);box-shadow:0 14px 38px rgba(0,0,0,0.6);}
   .pip-bar{display:none;}
-  .vidinner.pip .pip-bar{display:flex;align-items:center;justify-content:space-between;
-    position:absolute;top:0;left:0;right:0;height:28px;padding:0 6px 0 10px;z-index:4;
-    font-size:0.7rem;font-weight:700;color:#fff;cursor:grab;
-    background:linear-gradient(rgba(0,0,0,0.75),rgba(0,0,0,0));touch-action:none;}
-  #pipClose{background:rgba(0,0,0,0.5);border:none;color:#fff;border-radius:6px;
-    cursor:pointer;font-size:0.72rem;padding:3px 7px;line-height:1;}
+  .vidinner.pip .pip-bar{display:flex;align-items:center;justify-content:space-between;position:absolute;top:0;left:0;right:0;height:28px;padding:0 6px 0 10px;z-index:4;font-size:0.7rem;font-weight:700;color:#fff;cursor:grab;background:linear-gradient(rgba(0,0,0,0.75),rgba(0,0,0,0));touch-action:none;}
+  #pipClose{background:rgba(0,0,0,0.5);border:none;color:#fff;border-radius:6px;cursor:pointer;font-size:0.72rem;padding:3px 7px;line-height:1;}
   .drag-layer{display:none;}
   .vidinner.pip .drag-layer{display:block;position:absolute;inset:0;z-index:3;cursor:grab;touch-action:none;}
   .vidinner.pip.dragging,.vidinner.pip.dragging .pip-bar,.vidinner.pip.dragging .drag-layer{cursor:grabbing;}
   .vidinner.pip .sizectl{display:none;}
-  .sizectl{position:absolute;top:10px;right:10px;z-index:6;display:flex;gap:4px;
-    background:rgba(10,10,15,0.72);backdrop-filter:blur(8px);border:1px solid var(--border);
-    border-radius:10px;padding:4px;}
-  .sizectl button{border:none;background:transparent;color:var(--muted);font-size:0.74rem;
-    font-weight:700;padding:5px 12px;border-radius:7px;cursor:pointer;font-family:inherit;}
+  .sizectl{position:absolute;top:10px;right:10px;z-index:6;display:flex;gap:4px;background:rgba(10,10,15,0.72);backdrop-filter:blur(8px);border:1px solid var(--border);border-radius:10px;padding:4px;}
+  .sizectl button{border:none;background:transparent;color:var(--muted);font-size:0.74rem;font-weight:700;padding:5px 12px;border-radius:7px;cursor:pointer;font-family:inherit;}
   .sizectl button.on{background:var(--mint);color:#06231a;}
   @media(max-width:760px){.sizectl{display:none;}}
   .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:13px;}
-  .chip{display:inline-flex;align-items:center;gap:5px;font-size:0.76rem;font-weight:700;
-    padding:6px 11px;border-radius:30px;border:1px solid var(--border);background:var(--panel2);}
+  .chip{display:inline-flex;align-items:center;gap:5px;font-size:0.76rem;font-weight:700;padding:6px 11px;border-radius:30px;border:1px solid var(--border);background:var(--panel2);}
+  .chip[data-tip]{cursor:default;}
   .chip.live{color:var(--red);border-color:rgba(255,78,69,0.45);background:rgba(255,78,69,0.12);}
   .chip.rank{color:var(--gold);border-color:rgba(240,196,25,0.4);background:rgba(240,196,25,0.1);}
   .chip.see{color:var(--mint);border-color:rgba(107,255,184,0.4);background:var(--mint-bg);}
   .chip .dot{width:7px;height:7px;border-radius:50%;background:var(--red);animation:pulse 1.6s infinite;}
   @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,78,69,0.5);}70%{box-shadow:0 0 0 7px rgba(255,78,69,0);}100%{box-shadow:0 0 0 0 rgba(255,78,69,0);}}
-  .facts{width:100%;border-collapse:collapse;font-size:0.82rem;margin-top:14px;
-    background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+  .tip{position:fixed;transform:translate(-50%,-100%);background:#05050a;color:#fff;font-size:0.72rem;font-weight:600;padding:6px 10px;border-radius:8px;border:1px solid var(--border);pointer-events:none;opacity:0;transition:opacity .12s;white-space:nowrap;z-index:90;box-shadow:0 6px 18px rgba(0,0,0,0.5);}
+  .tip.show{opacity:1;}
+  .facts{width:100%;border-collapse:collapse;font-size:0.82rem;margin-top:14px;background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
   .facts td{padding:10px 14px;border-bottom:1px solid var(--border);}
   .facts tr:last-child td{border-bottom:none;}
   .facts .k{color:var(--muted);width:42%;} .facts .v{text-align:right;font-weight:600;}
-  .mapbtn{display:block;width:100%;text-align:center;margin-top:12px;padding:12px;
-    border-radius:12px;background:var(--mint);color:#06231a;font-weight:800;font-size:0.85rem;}
+  .ch-logo{width:18px;height:18px;border-radius:50%;vertical-align:middle;margin-right:6px;}
+  .mapbtn{display:block;width:100%;text-align:center;margin-top:12px;padding:12px;border-radius:12px;
+    background:#173e33;color:#9af5cd;font-weight:800;font-size:0.85rem;border:1px solid rgba(107,255,184,0.25);}
+  .mapbtn:hover{background:#1c4a3c;}
   .right section{margin-bottom:32px;} .right section:first-child{margin-top:4px;}
   .right h2{font-size:1.1rem;margin:0 0 10px;}
   .right p{color:#d8d8e2;font-size:0.94rem;}
   .see-list{list-style:none;padding:0;margin:0;display:grid;gap:9px;}
   .see-list li{padding-left:21px;position:relative;font-size:0.92rem;color:#d8d8e2;}
   .see-list li::before{content:"📍";position:absolute;left:0;}
-  .addc{font-size:0.85rem;color:var(--mint);border:1px dashed rgba(107,255,184,0.4);
-    border-radius:11px;padding:13px;text-align:center;}
+  /* 댓글 */
+  .cmt-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .cmt-rating{font-size:0.82rem;color:var(--gold);font-weight:700;}
+  .cmt-write{border:1px solid rgba(107,255,184,0.4);background:var(--mint-bg);color:var(--mint);
+    font-weight:700;font-size:0.78rem;padding:7px 13px;border-radius:9px;cursor:pointer;}
+  .cmt-list{max-height:330px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;
+    scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.18) transparent;padding-right:4px;}
+  .cmt-list::-webkit-scrollbar{width:7px;} .cmt-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.14);border-radius:7px;}
+  .cmt{background:var(--panel);border:1px solid var(--border);border-radius:11px;padding:11px 13px;}
+  .cmt .ct{display:flex;justify-content:space-between;font-size:0.76rem;color:var(--muted);margin-bottom:4px;gap:8px;}
+  .cmt .cs{color:var(--gold);} .cmt .cc{font-size:0.88rem;color:#e4e4ee;}
+  .cmt-empty,.cmt-loading{font-size:0.85rem;color:var(--muted);padding:8px 2px;}
+  /* 댓글 작성 모달 */
+  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100;display:none;align-items:center;justify-content:center;padding:18px;}
+  .modal-bg.show{display:flex;}
+  .modal{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:20px;width:100%;max-width:420px;}
+  .modal h3{margin:0 0 14px;font-size:1.05rem;}
+  .modal input,.modal textarea{width:100%;background:var(--panel2);border:1px solid var(--border);color:var(--text);
+    border-radius:9px;padding:10px;font-size:0.88rem;font-family:inherit;margin-bottom:10px;}
+  .modal textarea{min-height:80px;resize:vertical;}
+  .mstars{font-size:1.4rem;color:var(--muted);cursor:pointer;margin-bottom:10px;}
+  .mstars b{cursor:pointer;} .mstars b.on{color:var(--gold);}
+  .mrow{display:flex;gap:8px;} .mrow button{flex:1;border:none;border-radius:10px;padding:11px;font-weight:700;cursor:pointer;font-family:inherit;}
+  .m-ok{background:var(--mint);color:#06231a;} .m-no{background:var(--panel2);color:var(--text);border:1px solid var(--border);}
+  .m-msg{font-size:0.78rem;color:var(--festival);min-height:16px;margin-bottom:6px;}
   .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
   .card{background:var(--panel);border:1px solid var(--border);border-radius:11px;overflow:hidden;transition:border-color .15s;}
   .card:hover{border-color:rgba(107,255,184,0.4);}
-  .card .th{height:84px;background:linear-gradient(135deg,#1a2740,#0e1622);display:flex;align-items:center;justify-content:center;font-size:1.5rem;}
+  .card .th{height:96px;background:#0e1622;overflow:hidden;}
+  .card .th img{width:100%;height:100%;object-fit:cover;display:block;}
   .card .cap{padding:8px 11px;} .card .nm{font-size:0.82rem;font-weight:600;}
   .card .cs{font-size:0.7rem;color:var(--muted);margin-top:2px;}
   footer{margin-top:40px;padding-top:20px;border-top:1px solid var(--border);color:var(--muted);font-size:0.8rem;text-align:center;}
-  @media(max-width:760px){.grid{grid-template-columns:1fr;} .left{position:static;}}
+  @media(max-width:760px){.grid{grid-template-columns:1fr;} .left{position:static;} .cards{grid-template-columns:1fr 1fr;}}
 </style>
 </head>
 <body>
   <div class="topbar">
     <a href="/" class="logo">FLARE<span>[V]</span></a>
-    <nav class="nav"><a href="/">Home</a><a href="/" class="drop">Spots</a><a href="/" class="drop">Live cams</a></nav>
+    <nav class="nav"><a href="/">Home</a><a href="/?view=spots&date=month">Spots</a><a href="/">Live cams</a></nav>
   </div>
   <div class="wrap">
-    <div class="crumb"><a href="/">Home</a> › <a href="/">__CRUMB_COUNTRY__</a> › __H1__</div>
+    <div class="crumb"><a href="/">Home</a> › <a href="/?view=spots&date=month">__CRUMB_COUNTRY__</a> › __H1__</div>
     <h1>__H1__</h1>
     <div class="grid" id="grid">
       <div class="left">
@@ -418,63 +390,166 @@ __JSONLD__
         __ABOUT__
         __SEE__
         __BEST__
-        __COMMENTS__
+        <section>
+          <div class="cmt-head"><h2 style="margin:0;">Comments</h2><button class="cmt-write" onclick="cmtOpen()">✏️ Write a review</button></div>
+          <div class="cmt-rating" id="cmt-rating">⭐ –</div>
+          <div class="cmt-list" id="cmt-list"><div class="cmt-loading">Loading…</div></div>
+        </section>
         __NEARBY__
         <footer>Flare[V] · Live web cams around the world, on a map</footer>
       </div>
     </div>
   </div>
+
+  <div class="modal-bg" id="cmt-modal">
+    <div class="modal">
+      <h3>Write a review</h3>
+      <div class="m-msg" id="cmt-msg"></div>
+      <input id="cmt-author" type="text" placeholder="Your name" maxlength="40" />
+      <input id="cmt-pw" type="text" inputmode="numeric" placeholder="Password (to edit/delete later)" maxlength="20" />
+      <div class="mstars" id="cmt-stars"><b data-n="1">★</b><b data-n="2">★</b><b data-n="3">★</b><b data-n="4">★</b><b data-n="5">★</b></div>
+      <textarea id="cmt-content" placeholder="Share what you think about this cam" maxlength="600"></textarea>
+      <div class="mrow"><button class="m-no" onclick="cmtClose()">Cancel</button><button class="m-ok" onclick="cmtSubmit()">Post</button></div>
+    </div>
+  </div>
+
 <script>
-  var TZ="__TZ__";
+  var TZ="__TZ__", LAT=parseFloat("__LAT__"), LNG=parseFloat("__LNG__"), LIVESTART="__LIVESTART__", VID="__VID__";
+
+  // ---- 일출/일몰 계산 (SunCalc 핵심 축약, MIT) ----
+  var rad=Math.PI/180,dayMs=864e5,J1970=2440588,J2000=2451545;
+  function toJ(d){return d.valueOf()/dayMs-0.5+J1970;} function fromJ(j){return new Date((j+0.5-J1970)*dayMs);}
+  function toDays(d){return toJ(d)-J2000;} var e0=rad*23.4397;
+  function dec(l,b){return Math.asin(Math.sin(b)*Math.cos(e0)+Math.cos(b)*Math.sin(e0)*Math.sin(l));}
+  function sma(d){return rad*(357.5291+0.98560028*d);}
+  function ecl(M){var C=rad*(1.9148*Math.sin(M)+0.02*Math.sin(2*M)+0.0003*Math.sin(3*M));return M+C+rad*102.9372+Math.PI;}
+  var J0=0.0009;
+  function aT(Ht,lw,n){return J0+(Ht+lw)/(2*Math.PI)+n;}
+  function stJ(ds,M,L){return J2000+ds+0.0053*Math.sin(M)-0.0069*Math.sin(2*L);}
+  function ha(h,phi,d){return Math.acos((Math.sin(h)-Math.sin(phi)*Math.sin(d))/(Math.cos(phi)*Math.cos(d)));}
+  function sunTimes(date,lat,lng){
+    var lw=rad*-lng,phi=rad*lat,d=toDays(date),n=Math.round(d-J0-lw/(2*Math.PI)),
+        ds=aT(0,lw,n),M=sma(ds),L=ecl(M),de=dec(L,0),Jn=stJ(ds,M,L),h=-0.833*rad,
+        Js=stJ(aT(ha(h,phi,de),lw,n),M,L),Jr=Jn-(Js-Jn);
+    return {sunrise:fromJ(Jr),sunset:fromJ(Js)};
+  }
+  function fmtT(d){try{return new Intl.DateTimeFormat('en-US',{timeZone:TZ||'UTC',hour:'2-digit',minute:'2-digit'}).format(d);}catch(e){return '';}}
+
   function refresh(){
-    if(!TZ)return;
-    var now=new Date();
-    var t=new Intl.DateTimeFormat('en-US',{timeZone:TZ,hour:'2-digit',minute:'2-digit'}).format(now);
-    var h=parseInt(new Intl.DateTimeFormat('en-US',{timeZone:TZ,hour:'2-digit',hour12:false}).format(now),10);
-    var icon,label;
-    if(h>=5&&h<8){icon="🌅";label="Sunrise";}
-    else if(h>=8&&h<17){icon="☀️";label="Daytime";}
-    else if(h>=17&&h<20){icon="🌇";label="Sunset soon";}
-    else{icon="🌙";label="Night";}
-    document.querySelectorAll('.lt').forEach(function(e){e.textContent=t+" (local)";});
-    document.querySelectorAll('.dn').forEach(function(e){e.textContent=icon+" "+label;});
-    document.querySelectorAll('.bn').forEach(function(e){e.textContent=label.toLowerCase();});
-    document.querySelectorAll('.bt').forEach(function(e){
-      e.textContent = (h>=8&&h<20)?"good visibility right now.":"quieter hours — check back in daylight.";});
+    var now=new Date(), icon="🕐", label="—", tip="";
+    if(TZ){
+      var t=new Intl.DateTimeFormat('en-US',{timeZone:TZ,hour:'2-digit',minute:'2-digit'}).format(now);
+      document.querySelectorAll('.lt').forEach(function(el){el.textContent=t+" (local)";});
+    }
+    if(!isNaN(LAT)&&!isNaN(LNG)){
+      var s=sunTimes(now,LAT,LNG),H=3600000;
+      var sr=s.sunrise,ss=s.sunset;
+      if(now>=new Date(+sr-H)&&now<sr){icon="🌅";label="Sunrise soon";tip="Sunrise at "+fmtT(sr);}
+      else if(now>=sr&&now<=new Date(+sr+H)){icon="🌅";label="Sunrise time";tip="Sunrise at "+fmtT(sr);}
+      else if(now>=new Date(+ss-H)&&now<ss){icon="🌇";label="Sunset soon";tip="Sunset at "+fmtT(ss);}
+      else if(now>=ss&&now<=new Date(+ss+H)){icon="🌇";label="Sunset time";tip="Sunset at "+fmtT(ss);}
+      else if(now>sr&&now<ss){icon="☀️";label="Daytime";tip="Sunset at "+fmtT(ss);}
+      else {icon="🌙";label="Night";tip="Sunrise at "+fmtT(sr);}
+    } else if(TZ){
+      var h=parseInt(new Intl.DateTimeFormat('en-US',{timeZone:TZ,hour:'2-digit',hour12:false}).format(now),10);
+      if(h>=8&&h<18){icon="☀️";label="Daytime";} else {icon="🌙";label="Night";}
+    }
+    var dn=document.getElementById('chip-dn');
+    if(label==="—"){dn.style.display="none";} else {
+      dn.style.display="";dn.textContent=icon+" "+label;
+      if(tip)dn.setAttribute('data-tip',tip);else dn.removeAttribute('data-tip');
+    }
+    document.querySelectorAll('.bn').forEach(function(el){el.textContent=label.toLowerCase();});
+    document.querySelectorAll('.bt').forEach(function(el){el.textContent=(label==="Daytime"||label.indexOf("Sun")===0)?"good visibility right now.":"quieter hours — check back in daylight.";});
   }
   refresh();setInterval(refresh,60000);
 
+  // LIVE 칩 툴팁: 며칠째 방송 중 (데이터 있을 때만)
+  (function(){
+    if(!LIVESTART)return;
+    var d=new Date(LIVESTART); if(isNaN(d))return;
+    var days=Math.floor((Date.now()-d)/86400000);
+    var txt = days>=1 ? ("Live for "+days+" day"+(days>1?"s":"")) : "Live since "+fmtT(d);
+    document.getElementById('chip-live').setAttribute('data-tip',txt);
+  })();
+
+  // 공통 툴팁 (마우스 올리면 표시, 벗어나면 사라짐)
+  var tipEl=document.createElement('div');tipEl.className='tip';document.body.appendChild(tipEl);
+  document.addEventListener('mouseover',function(ev){var el=ev.target.closest('[data-tip]');
+    if(!el||!el.getAttribute('data-tip'))return;tipEl.textContent=el.getAttribute('data-tip');
+    var r=el.getBoundingClientRect();tipEl.style.left=(r.left+r.width/2)+'px';tipEl.style.top=(r.top-8)+'px';tipEl.classList.add('show');});
+  document.addEventListener('mouseout',function(ev){if(ev.target.closest('[data-tip]'))tipEl.classList.remove('show');});
+
+  // 크게/보통
   var grid=document.getElementById('grid');
   document.querySelectorAll('#sizectl button').forEach(function(b){b.onclick=function(){
     grid.classList.toggle('theater',b.dataset.t==='1');
     document.querySelectorAll('#sizectl button').forEach(function(x){x.classList.remove('on');});
-    b.classList.add('on');window.scrollTo({top:0,behavior:'smooth'});
-  };});
+    b.classList.add('on');window.scrollTo({top:0,behavior:'smooth'});};});
 
+  // PiP + 드래그
   var vidinner=document.getElementById('vidinner'),videowrap=document.getElementById('videowrap'),pipClosed=false;
-  function enablePip(){if(vidinner.classList.contains('pip'))return;vidinner.classList.add('pip');
-    var w=vidinner.offsetWidth||340;vidinner.style.left=(window.innerWidth-w-20)+'px';vidinner.style.top='86px';}
+  function enablePip(){if(vidinner.classList.contains('pip'))return;vidinner.classList.add('pip');var w=vidinner.offsetWidth||340;vidinner.style.left=(window.innerWidth-w-20)+'px';vidinner.style.top='86px';}
   function disablePip(){vidinner.classList.remove('pip','dragging');vidinner.style.left='';vidinner.style.top='';}
   document.getElementById('pipClose').onclick=function(e){e.stopPropagation();pipClosed=true;disablePip();};
-  new IntersectionObserver(function(en){var e=en[0];
-    if(e.isIntersecting){disablePip();pipClosed=false;}
-    else if(e.boundingClientRect.bottom<80&&!pipClosed){enablePip();}
-  },{threshold:0,rootMargin:'-76px 0px 0px 0px'}).observe(videowrap);
-  var dragging=false,moved=false,sx,sy,ox,oy;
+  new IntersectionObserver(function(en){var e=en[0];if(e.isIntersecting){disablePip();pipClosed=false;}else if(e.boundingClientRect.bottom<80&&!pipClosed){enablePip();}},{threshold:0,rootMargin:'-76px 0px 0px 0px'}).observe(videowrap);
+  var dr=false,mv=false,sx,sy,ox,oy;
   function pt(ev){return ev.touches?ev.touches[0]:ev;}
-  function dStart(ev){if(!vidinner.classList.contains('pip'))return;if(ev.target&&ev.target.id==='pipClose')return;
-    dragging=true;moved=false;var p=pt(ev);sx=p.clientX;sy=p.clientY;var r=vidinner.getBoundingClientRect();ox=r.left;oy=r.top;
-    vidinner.classList.add('dragging');ev.preventDefault();}
-  function dMove(ev){if(!dragging)return;var p=pt(ev);var dx=p.clientX-sx,dy=p.clientY-sy;
-    if(Math.abs(dx)+Math.abs(dy)>4)moved=true;var w=vidinner.offsetWidth,h=vidinner.offsetHeight;
-    var nx=Math.max(8,Math.min(window.innerWidth-w-8,ox+dx)),ny=Math.max(8,Math.min(window.innerHeight-h-8,oy+dy));
-    vidinner.style.left=nx+'px';vidinner.style.top=ny+'px';ev.preventDefault();}
-  function dEnd(){if(!dragging)return;dragging=false;vidinner.classList.remove('dragging');
-    if(!moved){window.scrollTo({top:0,behavior:'smooth'});}}
-  ['#draglayer','#pipbar'].forEach(function(sel){var el=document.querySelector(sel);
-    el.addEventListener('mousedown',dStart);el.addEventListener('touchstart',dStart,{passive:false});});
-  window.addEventListener('mousemove',dMove);window.addEventListener('touchmove',dMove,{passive:false});
-  window.addEventListener('mouseup',dEnd);window.addEventListener('touchend',dEnd);
+  function ds(ev){if(!vidinner.classList.contains('pip'))return;if(ev.target&&ev.target.id==='pipClose')return;dr=true;mv=false;var p=pt(ev);sx=p.clientX;sy=p.clientY;var r=vidinner.getBoundingClientRect();ox=r.left;oy=r.top;vidinner.classList.add('dragging');ev.preventDefault();}
+  function dm(ev){if(!dr)return;var p=pt(ev),dx=p.clientX-sx,dy=p.clientY-sy;if(Math.abs(dx)+Math.abs(dy)>4)mv=true;var w=vidinner.offsetWidth,h=vidinner.offsetHeight;vidinner.style.left=Math.max(8,Math.min(window.innerWidth-w-8,ox+dx))+'px';vidinner.style.top=Math.max(8,Math.min(window.innerHeight-h-8,oy+dy))+'px';ev.preventDefault();}
+  function de(){if(!dr)return;dr=false;vidinner.classList.remove('dragging');if(!mv){window.scrollTo({top:0,behavior:'smooth'});}}
+  ['#draglayer','#pipbar'].forEach(function(s){var el=document.querySelector(s);el.addEventListener('mousedown',ds);el.addEventListener('touchstart',ds,{passive:false});});
+  window.addEventListener('mousemove',dm);window.addEventListener('touchmove',dm,{passive:false});
+  window.addEventListener('mouseup',de);window.addEventListener('touchend',de);
+
+  // ---- 댓글 (라이브 리뷰 공유: reviews 테이블) ----
+  var sb=supabase.createClient("__SBURL__","__SBKEY__");
+  var cmtRating=0;
+  function escH(s){return (s||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  function fmtDate(s){try{return new Date(s).toLocaleDateString();}catch(e){return '';}}
+  async function loadComments(){
+    var list=document.getElementById('cmt-list');
+    try{
+      var res=await sb.from('reviews').select('*').eq('content_id',VID).order('created_at',{ascending:false});
+      var rows=res.data||[];
+      var rb=document.getElementById('cmt-rating');
+      if(rows.length){var avg=rows.reduce(function(a,r){return a+(r.rating||0);},0)/rows.length;
+        rb.textContent='⭐ '+avg.toFixed(1)+' · '+rows.length+' review'+(rows.length>1?'s':'');}
+      else rb.textContent='⭐ No reviews yet';
+      if(!rows.length){list.innerHTML='<div class="cmt-empty">No reviews yet — be the first!</div>';return;}
+      list.innerHTML=rows.map(function(r){
+        var stars='★'.repeat(r.rating||0)+'☆'.repeat(5-(r.rating||0));
+        return '<div class="cmt"><div class="ct"><span>'+escH(r.author)+'</span><span class="cs">'+stars+'</span><span>'+fmtDate(r.created_at)+'</span></div><div class="cc">'+escH(r.content)+'</div></div>';
+      }).join('');
+    }catch(err){list.innerHTML='<div class="cmt-empty">Could not load comments.</div>';}
+  }
+  function cmtOpen(){document.getElementById('cmt-modal').classList.add('show');document.getElementById('cmt-msg').textContent='';}
+  function cmtClose(){document.getElementById('cmt-modal').classList.remove('show');}
+  document.getElementById('cmt-modal').addEventListener('click',function(e){if(e.target===this)cmtClose();});
+  document.querySelectorAll('#cmt-stars b').forEach(function(b){b.onclick=function(){cmtRating=+b.dataset.n;
+    document.querySelectorAll('#cmt-stars b').forEach(function(x){x.classList.toggle('on',+x.dataset.n<=cmtRating);});};});
+  var lastPost=0;
+  async function cmtSubmit(){
+    var msg=document.getElementById('cmt-msg');
+    var author=document.getElementById('cmt-author').value.trim();
+    var pw=document.getElementById('cmt-pw').value.trim();
+    var content=document.getElementById('cmt-content').value.trim();
+    if(!author){msg.textContent='Please enter a name';return;}
+    if(!pw){msg.textContent='Please enter a password';return;}
+    if(!cmtRating){msg.textContent='Please pick a rating';return;}
+    if(!content){msg.textContent='Please write a review';return;}
+    if(Date.now()-lastPost<10000){msg.textContent='Please wait a few seconds';return;}
+    try{
+      var res=await sb.from('reviews').insert([{content_id:VID,author:author,password:pw,content:content,rating:cmtRating}]).select();
+      if(res.error){msg.textContent='Failed — try again in a moment';return;}
+      lastPost=Date.now();cmtClose();
+      document.getElementById('cmt-author').value='';document.getElementById('cmt-pw').value='';document.getElementById('cmt-content').value='';
+      cmtRating=0;document.querySelectorAll('#cmt-stars b').forEach(function(x){x.classList.remove('on');});
+      loadComments();
+    }catch(err){msg.textContent='Failed — try again in a moment';}
+  }
+  window.cmtOpen=cmtOpen;window.cmtClose=cmtClose;window.cmtSubmit=cmtSubmit;
+  loadComments();
 </script>
 </body>
 </html>"""
