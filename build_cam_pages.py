@@ -141,12 +141,13 @@ def build_menu_html(menu):
         first = False
     nav = (
         '<nav class="nav">'
-        '<a href="/">Home</a>'
-        '<a href="/?view=spots&date=month">Spots</a>'
-        '<div class="nav-drop"><span class="nav-trigger">Live cams ▾</span>'
+        '<a class="bar-link" href="/top/">🏆 Ranking</a>'
+        '<div class="nav-drop"><span class="nav-trigger">📡 Live cams ▾</span>'
         '<div class="mega"><a class="mega-top" href="/top/">🏆 Rankings</a>'
         '<div class="mega-body"><div class="mega-conts">' + "".join(conts) + '</div>'
         '<div class="mega-countries">' + "".join(grps) + '</div></div></div></div>'
+        '<span class="bar-spacer"></span>'
+        '<a class="bar-link" href="/?contact=1">✉️ Message</a>'
         '</nav>'
     )
     js = (
@@ -401,7 +402,7 @@ __JSONLD__
   .logo span{color:var(--festival);animation:breath 3.5s ease-in-out infinite;}
   @keyframes breath{0%,100%{text-shadow:0 0 10px rgba(255,107,107,0.55);}50%{text-shadow:0 0 22px rgba(255,107,107,1),0 0 38px rgba(255,107,107,0.6);}}
   .nav{display:flex;gap:18px;font-size:0.85rem;color:var(--muted);align-items:center;}
-  .nav>a:hover{color:var(--text);}
+  .nav>a:hover{color:var(--text);} .bar-link{color:var(--muted);font-weight:600;} .bar-link:hover{color:var(--text);} .bar-spacer{flex:1;} .bar-link{color:var(--muted);font-weight:600;} .bar-link:hover{color:var(--text);} .bar-spacer{flex:1;}
   .nav-drop{position:relative;}
   .nav-trigger{cursor:pointer;}
   .nav-drop:hover .nav-trigger{color:var(--text);}

@@ -1,4 +1,4 @@
-// Flare[V] v3.5.0 / 2026-06-17
+// Flare[V] v3.6.0 / 2026-06-17
 const SUPABASE_URL = 'https://pbrbzjxdjqqmhvhzhwlp.supabase.co';
 const SUPABASE_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicmJ6anhkanFxbWh2aHpod2xwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjc3NTcsImV4cCI6MjA5NTMwMzc1N30.E6-GthxwIFN2-jy4ojf5ZxR7YcdPJULG6Mxj9LvkI1c';
@@ -3079,6 +3079,7 @@ async function loadLiveVideos() {
   setC('cnt-hotel', kc('hotel'));
 
   if (viewMode === 'live') renderLivePins();
+  buildHomeMegamenu();
   handleDeepLink();
 }
 
@@ -3089,6 +3090,10 @@ function handleDeepLink() {
   const cam = params.get('cam');
 
   if (view === 'spots') setViewMode('spot');
+
+  if (params.get('contact') && typeof openContact === 'function') {
+    setTimeout(openContact, 300);
+  }
 
   const country = params.get('country');
   if (country) {
@@ -3619,3 +3624,83 @@ loadFestivals();
     if (!bm.contains(e.target)) bm.classList.remove('open');
   });
 })();
+
+// ===== v3.6 상단바: 필터 패널 슬라이드 + 홈 메가메뉴 =====
+function toggleFilterPanel() {
+  var open = document.body.classList.toggle('filters-open');
+  var p = document.getElementById('filter-panel');
+  var t = document.getElementById('filter-toggle');
+  if (p) p.setAttribute('aria-hidden', open ? 'false' : 'true');
+  if (t) t.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+function closeFilterPanel() {
+  document.body.classList.remove('filters-open');
+  var p = document.getElementById('filter-panel');
+  var t = document.getElementById('filter-toggle');
+  if (p) p.setAttribute('aria-hidden', 'true');
+  if (t) t.setAttribute('aria-expanded', 'false');
+}
+document.addEventListener('click', function (e) {
+  if (!document.body.classList.contains('filters-open')) return;
+  var p = document.getElementById('filter-panel');
+  var t = document.getElementById('filter-toggle');
+  if (p && p.contains(e.target)) return;
+  if (t && t.contains(e.target)) return;
+  closeFilterPanel();
+});
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') closeFilterPanel();
+});
+
+var JS_CONT = {
+  'south korea':'Asia','korea':'Asia','japan':'Asia','china':'Asia','taiwan':'Asia','thailand':'Asia',
+  'vietnam':'Asia','indonesia':'Asia','philippines':'Asia','malaysia':'Asia','singapore':'Asia','india':'Asia',
+  'nepal':'Asia','sri lanka':'Asia','united arab emirates':'Asia','israel':'Asia','turkey':'Asia','hong kong':'Asia',
+  'united states':'North America','usa':'North America','canada':'North America','mexico':'North America',
+  'costa rica':'North America','panama':'North America','jamaica':'North America','cuba':'North America','bahamas':'North America',
+  'brazil':'South America','argentina':'South America','chile':'South America','peru':'South America','colombia':'South America','ecuador':'South America',
+  'united kingdom':'Europe','uk':'Europe','ireland':'Europe','france':'Europe','spain':'Europe','portugal':'Europe',
+  'italy':'Europe','germany':'Europe','netherlands':'Europe','belgium':'Europe','switzerland':'Europe','austria':'Europe',
+  'poland':'Europe','czech republic':'Europe','czechia':'Europe','greece':'Europe','sweden':'Europe','norway':'Europe',
+  'finland':'Europe','denmark':'Europe','iceland':'Europe','croatia':'Europe','hungary':'Europe','romania':'Europe','russia':'Europe','ukraine':'Europe',
+  'south africa':'Africa','namibia':'Africa','kenya':'Africa','tanzania':'Africa','egypt':'Africa','morocco':'Africa','nigeria':'Africa','botswana':'Africa',
+  'australia':'Oceania','new zealand':'Oceania','fiji':'Oceania'
+};
+var CONT_ORDER = ['Asia','Europe','North America','South America','Africa','Oceania','Other'];
+function jcslug(s){return (s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')||'other';}
+function jcont(c){return JS_CONT[(c||'').trim().toLowerCase()]||'Other';}
+
+function buildHomeMegamenu() {
+  var host = document.getElementById('home-mega');
+  if (!host) return;
+  var byc = {};
+  (liveData || []).forEach(function (v) {
+    var c = (v.country || '').trim();
+    if (c) byc[c] = (byc[c] || 0) + 1;
+  });
+  if (!Object.keys(byc).length) { host.innerHTML = '<div class="mega-empty">No live cams yet</div>'; return; }
+  var cont = {};
+  Object.keys(byc).forEach(function (c) { var k = jcont(c); (cont[k] = cont[k] || []).push([c, byc[c]]); });
+  var conts = [], grps = [], first = true;
+  CONT_ORDER.forEach(function (k) {
+    if (!cont[k]) return;
+    cont[k].sort(function (a, b) { return b[1] - a[1]; });
+    var total = cont[k].reduce(function (s, x) { return s + x[1]; }, 0);
+    var cid = jcslug(k), on = first ? ' on' : '';
+    conts.push('<button class="cont' + on + '" data-c="' + cid + '">' + k + ' <i>' + total + '</i></button>');
+    var links = cont[k].map(function (x) { return '<a href="/live/' + jcslug(x[0]) + '/">' + x[0] + ' <i>' + x[1] + '</i></a>'; }).join('');
+    grps.push('<div class="cgrp' + on + '" data-c="' + cid + '">' + links + '</div>');
+    first = false;
+  });
+  host.innerHTML = '<a class="mega-top" href="/top/">🏆 Rankings</a><div class="mega-body"><div class="mega-conts">' +
+    conts.join('') + '</div><div class="mega-countries">' + grps.join('') + '</div></div>';
+  host.querySelectorAll('.cont').forEach(function (b) {
+    function show() {
+      var c = b.dataset.c;
+      host.querySelectorAll('.cont').forEach(function (x) { x.classList.toggle('on', x.dataset.c === c); });
+      host.querySelectorAll('.cgrp').forEach(function (g) { g.classList.toggle('on', g.dataset.c === c); });
+    }
+    b.addEventListener('mouseenter', show);
+    b.addEventListener('click', show);
+  });
+}
