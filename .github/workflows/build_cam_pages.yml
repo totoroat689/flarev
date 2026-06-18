@@ -1,0 +1,43 @@
+name: Build Cam Pages
+
+# 캠 상세페이지(/cam/<slug>/)와 sitemap.xml 을 만들어 저장소에 커밋 → Vercel 자동 배포
+# 수동 실행 + 하루 한 번(통계/순위 갱신 반영). 수집기와는 별개.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 18 * * *'   # 매일 1회 (UTC 18:30)
+
+permissions:
+  contents: write           # 생성한 파일을 커밋/푸시하기 위해 필요
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: pip install supabase
+
+      - name: Build pages
+        run: python build_cam_pages.py
+
+      - name: Commit & push
+        run: |
+          git config user.name "flarev-bot"
+          git config user.email "bot@flarev.co"
+          git add cam sitemap.xml
+          if git diff --staged --quiet; then
+            echo "변경 없음 — 커밋 생략"
+          else
+            git commit -m "build: 캠 상세페이지 + sitemap 갱신"
+            git push
+          fi
