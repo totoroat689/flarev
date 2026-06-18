@@ -18,6 +18,7 @@ import os
 import html
 import json
 from datetime import datetime, timezone
+from urllib.parse import quote
 
 from supabase import create_client
 
@@ -70,10 +71,102 @@ def thumb(vid, q="mqdefault"):
     return f"https://i.ytimg.com/vi/{vid}/{q}.jpg"
 
 
+import re as _re
+
+
+def cslug(s):
+    s = (s or "").lower()
+    s = _re.sub(r"[^a-z0-9]+", "-", s).strip("-")
+    return s or "other"
+
+
+# 나라 → 대륙 매핑 (AI가 내보내는 영어 국가명 기준). 없으면 "Other".
+COUNTRY_CONTINENT = {
+    "south korea": "Asia", "korea": "Asia", "japan": "Asia", "china": "Asia", "taiwan": "Asia",
+    "thailand": "Asia", "vietnam": "Asia", "indonesia": "Asia", "philippines": "Asia",
+    "malaysia": "Asia", "singapore": "Asia", "india": "Asia", "nepal": "Asia", "sri lanka": "Asia",
+    "united arab emirates": "Asia", "israel": "Asia", "turkey": "Asia", "hong kong": "Asia",
+    "united states": "North America", "usa": "North America", "canada": "North America",
+    "mexico": "North America", "costa rica": "North America", "panama": "North America",
+    "jamaica": "North America", "cuba": "North America", "bahamas": "North America",
+    "brazil": "South America", "argentina": "South America", "chile": "South America",
+    "peru": "South America", "colombia": "South America", "ecuador": "South America",
+    "united kingdom": "Europe", "uk": "Europe", "ireland": "Europe", "france": "Europe",
+    "spain": "Europe", "portugal": "Europe", "italy": "Europe", "germany": "Europe",
+    "netherlands": "Europe", "belgium": "Europe", "switzerland": "Europe", "austria": "Europe",
+    "poland": "Europe", "czech republic": "Europe", "czechia": "Europe", "greece": "Europe",
+    "sweden": "Europe", "norway": "Europe", "finland": "Europe", "denmark": "Europe",
+    "iceland": "Europe", "croatia": "Europe", "hungary": "Europe", "romania": "Europe",
+    "russia": "Europe", "ukraine": "Europe",
+    "south africa": "Africa", "namibia": "Africa", "kenya": "Africa", "tanzania": "Africa",
+    "egypt": "Africa", "morocco": "Africa", "nigeria": "Africa", "botswana": "Africa",
+    "australia": "Oceania", "new zealand": "Oceania", "fiji": "Oceania",
+}
+CONTINENT_ORDER = ["Asia", "Europe", "North America", "South America", "Africa", "Oceania", "Other"]
+
+
+def continent_of(country):
+    return COUNTRY_CONTINENT.get((country or "").strip().lower(), "Other")
+
+
+def build_menu_data(rows):
+    """대륙 → [(country, count, cslug)] (라이브가 있는 나라만)."""
+    by_country = {}
+    for r in rows:
+        c = (r.get("country") or "").strip()
+        if not c:
+            continue
+        by_country.setdefault(c, 0)
+        by_country[c] += 1
+    cont = {}
+    for country, n in by_country.items():
+        cont.setdefault(continent_of(country), []).append((country, n, cslug(country)))
+    for k in cont:
+        cont[k].sort(key=lambda x: -x[1])
+    ordered = [(c, cont[c]) for c in CONTINENT_ORDER if c in cont]
+    return ordered
+
+
+def build_menu_html(menu):
+    conts, grps, first = [], [], True
+    for cont_name, countries in menu:
+        cid = cslug(cont_name)
+        total = sum(n for _, n, _ in countries)
+        on = " on" if first else ""
+        conts.append(f'<button class="cont{on}" data-c="{cid}">{esc(cont_name)} <i>{total}</i></button>')
+        links = "".join(
+            f'<a href="/live/{cs}/">{esc(cn)} <i>{n}</i></a>' for cn, n, cs in countries
+        )
+        grps.append(f'<div class="cgrp{on}" data-c="{cid}">{links}</div>')
+        first = False
+    nav = (
+        '<nav class="nav">'
+        '<a href="/">Home</a>'
+        '<a href="/?view=spots&date=month">Spots</a>'
+        '<div class="nav-drop"><span class="nav-trigger">Live cams ▾</span>'
+        '<div class="mega"><a class="mega-top" href="/top/">🏆 Rankings</a>'
+        '<div class="mega-body"><div class="mega-conts">' + "".join(conts) + '</div>'
+        '<div class="mega-countries">' + "".join(grps) + '</div></div></div></div>'
+        '</nav>'
+    )
+    js = (
+        "<script>(function(){"
+        "function show(c){document.querySelectorAll('.cont').forEach(function(b){b.classList.toggle('on',b.dataset.c===c);});"
+        "document.querySelectorAll('.cgrp').forEach(function(g){g.classList.toggle('on',g.dataset.c===c);});}"
+        "document.querySelectorAll('.cont').forEach(function(b){"
+        "b.addEventListener('mouseenter',function(){show(b.dataset.c);});"
+        "b.addEventListener('click',function(){show(b.dataset.c);});});"
+        "var dd=document.querySelector('.nav-drop'),tr=document.querySelector('.nav-trigger');"
+        "if(tr){tr.addEventListener('click',function(){if(window.innerWidth<=760)dd.classList.toggle('open');});}"
+        "})();</script>"
+    )
+    return nav + js
+
+
 # ============================================
 # 페이지 HTML
 # ============================================
-def render_page(cam, rank, nearby):
+def render_page(cam, rank, nearby, menu_html):
     vid = cam.get("video_id") or ""
     title = cam.get("title") or "Live Cam"
     place = cam.get("place_name") or ""
@@ -183,6 +276,8 @@ def render_page(cam, rank, nearby):
     repl = {
         "__ROBOTS__": robots, "__PAGETITLE__": esc(page_title), "__METADESC__": esc(meta_desc),
         "__CANONICAL__": canonical, "__JSONLD__": jsonld_html, "__CRUMB_COUNTRY__": crumb_country,
+        "__CRUMB_HREF__": (f"/?view=live&country={quote(country)}" if country else "/"),
+        "__MENU__": menu_html,
         "__H1__": esc(page_title.split(" | ")[0]), "__VID__": esc(vid),
         "__EMBED__": f"https://www.youtube.com/embed/{vid}?autoplay=1&mute=1&playsinline=1",
         "__PIPNAME__": esc(title[:28]), "__CHIPS__": chips_html, "__FACTS__": facts_html,
@@ -217,12 +312,15 @@ def main():
     top = rows if TOP_N is None else rows[:TOP_N]
     print(f"🏗️  페이지 생성 대상 {len(top)}개")
 
-    sitemap_urls = [SITE + "/"]
+    menu = build_menu_data(rows)
+    menu_html = build_menu_html(menu)
+
+    sitemap_urls = [SITE + "/", SITE + "/top/"]
     made = 0
     skipped_noindex = 0
     for i, cam in enumerate(top):
         nearby = pick_nearby(cam, rows)
-        page, thin = render_page(cam, i + 1, nearby)
+        page, thin = render_page(cam, i + 1, nearby, menu_html)
         slug = cam.get("slug") or cam.get("video_id")
         d = os.path.join(OUT_ROOT, "cam", slug)
         os.makedirs(d, exist_ok=True)
@@ -235,6 +333,28 @@ def main():
             sitemap_urls.append(f"{SITE}/cam/{slug}/")
         if made % 50 == 0:
             print(f"  … {made}/{len(top)} 생성")
+
+    # 나라별 목록 페이지
+    by_country = {}
+    for c in rows:
+        cn = (c.get("country") or "").strip()
+        if cn:
+            by_country.setdefault(cn, []).append(c)
+    for cn, cams in by_country.items():
+        cams = sorted(cams, key=lambda x: -(x.get("like_count") or 0))
+        d = os.path.join(OUT_ROOT, "live", cslug(cn))
+        os.makedirs(d, exist_ok=True)
+        with open(os.path.join(d, "index.html"), "w", encoding="utf-8") as f:
+            f.write(render_country_page(cn, cams, menu_html))
+        sitemap_urls.append(f"{SITE}/live/{cslug(cn)}/")
+    print(f"🌍 나라 목록 페이지 {len(by_country)}개")
+
+    # 순위 페이지
+    d = os.path.join(OUT_ROOT, "top")
+    os.makedirs(d, exist_ok=True)
+    with open(os.path.join(d, "index.html"), "w", encoding="utf-8") as f:
+        f.write(render_top_page(rows, menu_html))
+    print("🏆 순위 페이지 생성")
 
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     lines = ['<?xml version="1.0" encoding="UTF-8"?>',
@@ -280,8 +400,44 @@ __JSONLD__
   .logo{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;letter-spacing:2px;line-height:1;position:relative;}
   .logo span{color:var(--festival);animation:breath 3.5s ease-in-out infinite;}
   @keyframes breath{0%,100%{text-shadow:0 0 10px rgba(255,107,107,0.55);}50%{text-shadow:0 0 22px rgba(255,107,107,1),0 0 38px rgba(255,107,107,0.6);}}
-  .nav{display:flex;gap:20px;font-size:0.85rem;color:var(--muted);}
-  .nav a:hover{color:var(--text);}
+  .nav{display:flex;gap:18px;font-size:0.85rem;color:var(--muted);align-items:center;}
+  .nav>a:hover{color:var(--text);}
+  .nav-drop{position:relative;}
+  .nav-trigger{cursor:pointer;}
+  .nav-drop:hover .nav-trigger{color:var(--text);}
+  .mega{position:absolute;top:calc(100% + 12px);left:50%;transform:translateX(-50%) translateY(8px);
+    background:rgba(16,16,26,0.98);backdrop-filter:blur(16px);border:1px solid var(--border);
+    border-radius:16px;padding:14px;width:min(620px,92vw);box-shadow:0 24px 60px rgba(0,0,0,0.6);
+    opacity:0;visibility:hidden;transition:opacity .2s ease,transform .2s ease;z-index:50;}
+  .nav-drop:hover .mega{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0);}
+  .nav-drop.open .mega{opacity:1;visibility:visible;transform:none;}
+  .mega::before{content:"";position:absolute;top:-12px;left:0;right:0;height:12px;}
+  .mega-top{display:flex;align-items:center;gap:8px;font-weight:800;font-size:0.9rem;color:var(--gold);
+    background:rgba(240,196,25,0.1);border:1px solid rgba(240,196,25,0.3);border-radius:11px;
+    padding:11px 14px;margin-bottom:12px;transition:filter .15s;}
+  .mega-top:hover{filter:brightness(1.12);}
+  .mega-body{display:grid;grid-template-columns:150px 1fr;gap:10px;}
+  .mega-conts{display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--border);padding-right:8px;}
+  .cont{display:flex;justify-content:space-between;align-items:center;background:transparent;border:none;
+    color:var(--text);font-family:inherit;font-size:0.82rem;font-weight:600;text-align:left;
+    padding:8px 10px;border-radius:9px;cursor:pointer;transition:background .15s;}
+  .cont i{color:var(--muted);font-style:normal;font-size:0.72rem;}
+  .cont:hover,.cont.on{background:var(--mint-bg);color:var(--mint);}
+  .cont.on i{color:var(--mint);}
+  .mega-countries{position:relative;min-height:150px;}
+  .cgrp{display:none;grid-template-columns:1fr 1fr;gap:4px;animation:fadein .25s ease;}
+  .cgrp.on{display:grid;}
+  @keyframes fadein{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+  .cgrp a{font-size:0.8rem;color:var(--text);padding:7px 9px;border-radius:8px;display:flex;justify-content:space-between;gap:8px;transition:background .15s;}
+  .cgrp a:hover{background:rgba(255,255,255,0.06);color:var(--mint);}
+  .cgrp a i{color:var(--muted);font-style:normal;font-size:0.72rem;}
+  @media(max-width:760px){
+    .nav{gap:12px;font-size:0.8rem;}
+    .mega{position:fixed;left:8px;right:8px;top:58px;transform:none;width:auto;max-height:70vh;overflow:auto;}
+    .nav-drop:hover .mega{transform:none;}
+    .mega-body{grid-template-columns:1fr;}
+    .mega-conts{flex-direction:row;flex-wrap:wrap;border-right:none;border-bottom:1px solid var(--border);padding:0 0 8px;}
+  }
   .wrap{max-width:1160px;margin:0 auto;padding:22px 22px 70px;}
   .crumb{font-size:0.75rem;color:var(--muted);margin-bottom:12px;}
   .crumb a:hover{color:var(--mint);}
@@ -367,10 +523,10 @@ __JSONLD__
 <body>
   <div class="topbar">
     <a href="/" class="logo">FLARE<span>[V]</span></a>
-    <nav class="nav"><a href="/">Home</a><a href="/?view=spots&date=month">Spots</a><a href="/">Live cams</a></nav>
+    __MENU__
   </div>
   <div class="wrap">
-    <div class="crumb"><a href="/">Home</a> › <a href="/?view=spots&date=month">__CRUMB_COUNTRY__</a> › __H1__</div>
+    <div class="crumb"><a href="/">Home</a> › <a href="__CRUMB_HREF__">__CRUMB_COUNTRY__</a> › __H1__</div>
     <h1>__H1__</h1>
     <div class="grid" id="grid">
       <div class="left">
@@ -557,6 +713,173 @@ __JSONLD__
 </script>
 </body>
 </html>"""
+
+
+SHARED_CSS = """
+  :root{--bg:#0a0a0f;--panel:#14141f;--panel2:#1a1a26;--border:rgba(255,255,255,0.08);
+    --text:#f0f0f5;--muted:#7c7c92;--mint:#6bffb8;--mint-bg:rgba(107,255,184,0.12);
+    --red:#ff4e45;--gold:#f0c419;--festival:#ff6b6b;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:'Noto Sans KR',system-ui,-apple-system,sans-serif;line-height:1.6;}
+  a{color:inherit;text-decoration:none;}
+  .topbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:24px;padding:11px 22px;background:rgba(10,10,15,0.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);}
+  .logo{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;letter-spacing:2px;line-height:1;}
+  .logo span{color:var(--festival);animation:breath 3.5s ease-in-out infinite;}
+  @keyframes breath{0%,100%{text-shadow:0 0 10px rgba(255,107,107,0.55);}50%{text-shadow:0 0 22px rgba(255,107,107,1),0 0 38px rgba(255,107,107,0.6);}}
+  .nav{display:flex;gap:18px;font-size:0.85rem;color:var(--muted);align-items:center;}
+  .nav>a:hover{color:var(--text);}
+  .nav-drop{position:relative;} .nav-trigger{cursor:pointer;} .nav-drop:hover .nav-trigger{color:var(--text);}
+  .mega{position:absolute;top:calc(100% + 12px);left:50%;transform:translateX(-50%) translateY(8px);background:rgba(16,16,26,0.98);backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:16px;padding:14px;width:min(620px,92vw);box-shadow:0 24px 60px rgba(0,0,0,0.6);opacity:0;visibility:hidden;transition:opacity .2s ease,transform .2s ease;z-index:50;}
+  .nav-drop:hover .mega{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0);}
+  .nav-drop.open .mega{opacity:1;visibility:visible;transform:none;}
+  .mega::before{content:"";position:absolute;top:-12px;left:0;right:0;height:12px;}
+  .mega-top{display:flex;align-items:center;gap:8px;font-weight:800;font-size:0.9rem;color:var(--gold);background:rgba(240,196,25,0.1);border:1px solid rgba(240,196,25,0.3);border-radius:11px;padding:11px 14px;margin-bottom:12px;}
+  .mega-top:hover{filter:brightness(1.12);}
+  .mega-body{display:grid;grid-template-columns:150px 1fr;gap:10px;}
+  .mega-conts{display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--border);padding-right:8px;}
+  .cont{display:flex;justify-content:space-between;align-items:center;background:transparent;border:none;color:var(--text);font-family:inherit;font-size:0.82rem;font-weight:600;text-align:left;padding:8px 10px;border-radius:9px;cursor:pointer;}
+  .cont i{color:var(--muted);font-style:normal;font-size:0.72rem;} .cont:hover,.cont.on{background:var(--mint-bg);color:var(--mint);} .cont.on i{color:var(--mint);}
+  .mega-countries{min-height:150px;} .cgrp{display:none;grid-template-columns:1fr 1fr;gap:4px;animation:fadein .25s ease;} .cgrp.on{display:grid;}
+  @keyframes fadein{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+  .cgrp a{font-size:0.8rem;padding:7px 9px;border-radius:8px;display:flex;justify-content:space-between;gap:8px;} .cgrp a:hover{background:rgba(255,255,255,0.06);color:var(--mint);}
+  .cgrp a i{color:var(--muted);font-style:normal;font-size:0.72rem;}
+  .wrap{max-width:1160px;margin:0 auto;padding:26px 22px 70px;}
+  .ph{margin:0 0 6px;font-size:1.7rem;} .psub{color:var(--muted);font-size:0.9rem;margin-bottom:24px;}
+  .grid-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;}
+  .gc{background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:transform .15s,border-color .15s;}
+  .gc:hover{transform:translateY(-3px);border-color:rgba(107,255,184,0.45);}
+  .gc .th{position:relative;aspect-ratio:16/9;background:#0e1622;overflow:hidden;}
+  .gc .th img{width:100%;height:100%;object-fit:cover;display:block;}
+  .gc .lvb{position:absolute;top:8px;left:8px;font-size:0.6rem;font-weight:800;letter-spacing:0.5px;color:#fff;background:var(--red);padding:3px 7px;border-radius:5px;}
+  .gc .cap{padding:11px 13px;} .gc .nm{font-size:0.88rem;font-weight:600;line-height:1.35;}
+  .gc .cs{font-size:0.74rem;color:var(--muted);margin-top:4px;}
+  footer{margin-top:46px;padding-top:20px;border-top:1px solid var(--border);color:var(--muted);font-size:0.8rem;text-align:center;}
+  @media(max-width:760px){.nav{gap:12px;font-size:0.8rem;} .mega{position:fixed;left:8px;right:8px;top:58px;transform:none;width:auto;max-height:70vh;overflow:auto;} .nav-drop:hover .mega{transform:none;} .mega-body{grid-template-columns:1fr;} .mega-conts{flex-direction:row;flex-wrap:wrap;border-right:none;border-bottom:1px solid var(--border);padding:0 0 8px;}}
+"""
+
+LIST_TEMPLATE = """<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>__PAGETITLE__</title>
+<meta name="description" content="__METADESC__" />
+<link rel="canonical" href="__CANONICAL__" />
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+KR:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<style>__CSS__</style></head><body>
+  <div class="topbar"><a href="/" class="logo">FLARE<span>[V]</span></a>__MENU__</div>
+  <div class="wrap">
+    <div class="psub" style="margin-bottom:10px;"><a href="/" style="color:var(--muted)">Home</a> › Live cams</div>
+    <h1 class="ph">__H1__</h1>
+    <div class="psub">__SUB__</div>
+    <div class="grid-cards">__CARDS__</div>
+    <footer>Flare[V] · Live web cams around the world, on a map</footer>
+  </div>
+</body></html>"""
+
+TOP_TEMPLATE = """<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Live Cam Rankings | Flare[V]</title>
+<meta name="description" content="The most popular live cams right now — ranked by likes, views and live viewers." />
+<link rel="canonical" href="__CANONICAL__" />
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+KR:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<style>__CSS__
+  .tabs{display:flex;gap:8px;margin-bottom:22px;flex-wrap:wrap;}
+  .tab{padding:9px 16px;border-radius:30px;border:1px solid var(--border);background:var(--panel2);color:var(--muted);font-weight:700;font-size:0.82rem;cursor:pointer;font-family:inherit;}
+  .tab.on{background:var(--mint);color:#06231a;border-color:var(--mint);}
+  .rlist{display:none;flex-direction:column;gap:10px;} .rlist.on{display:flex;animation:fadein .3s ease;}
+  .row{display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid var(--border);border-radius:13px;padding:10px 14px;transition:transform .12s,border-color .12s;}
+  .row:hover{transform:translateX(3px);border-color:rgba(107,255,184,0.4);}
+  .rk{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;width:42px;text-align:center;color:var(--muted);flex:0 0 42px;}
+  .row:nth-child(1) .rk{color:var(--gold);} .row:nth-child(2) .rk{color:#cfd3da;} .row:nth-child(3) .rk{color:#e0a06a;}
+  .rth{width:104px;height:60px;border-radius:9px;overflow:hidden;flex:0 0 104px;background:#0e1622;}
+  .rth img{width:100%;height:100%;object-fit:cover;display:block;}
+  .rmid{flex:1;min-width:0;} .rnm{font-size:0.9rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .rpl{font-size:0.74rem;color:var(--muted);margin-top:2px;}
+  .rval{font-weight:800;font-size:0.95rem;color:var(--mint);white-space:nowrap;} .rval span{font-size:0.7rem;color:var(--muted);font-weight:600;display:block;text-align:right;}
+</style></head><body>
+  <div class="topbar"><a href="/" class="logo">FLARE<span>[V]</span></a>__MENU__</div>
+  <div class="wrap">
+    <div class="psub" style="margin-bottom:10px;"><a href="/" style="color:var(--muted)">Home</a> › Rankings</div>
+    <h1 class="ph">🏆 Live Cam Rankings</h1>
+    <div class="psub">The most popular live cams right now, updated daily.</div>
+    <div class="tabs">
+      <button class="tab on" data-t="liked">❤️ Most liked</button>
+      <button class="tab" data-t="viewed">📺 Most viewed</button>
+      <button class="tab" data-t="watching">👀 Watching now</button>
+    </div>
+    __LISTS__
+    <footer>Flare[V] · Live web cams around the world, on a map</footer>
+  </div>
+<script>
+  document.querySelectorAll('.tab').forEach(function(b){b.onclick=function(){
+    document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('on');});b.classList.add('on');
+    document.querySelectorAll('.rlist').forEach(function(l){l.classList.toggle('on',l.dataset.t===b.dataset.t);});
+  };});
+</script>
+</body></html>"""
+
+
+def _card(cam):
+    vid = cam.get("video_id") or ""
+    slug = cam.get("slug") or vid
+    place = cam.get("place_name") or cam.get("country") or ""
+    return (
+        f'<a class="gc" href="/cam/{esc(slug)}/"><div class="th">'
+        f'<img loading="lazy" src="{thumb(vid)}" alt="" /><span class="lvb">LIVE</span></div>'
+        f'<div class="cap"><div class="nm">{esc((cam.get("title") or "")[:60])}</div>'
+        f'<div class="cs">📍 {esc(place)}</div></div></a>'
+    )
+
+
+def render_country_page(country, cams, menu_html):
+    cards = "".join(_card(c) for c in cams)
+    h1 = f"Live cams in {country}"
+    sub = f"{len(cams)} live cam" + ("s" if len(cams) != 1 else "")
+    out = LIST_TEMPLATE
+    repl = {
+        "__CSS__": SHARED_CSS, "__MENU__": menu_html,
+        "__PAGETITLE__": esc(f"Live Cams in {country} | Flare[V]"),
+        "__METADESC__": esc(f"Watch {len(cams)} live cams in {country}, streaming right now on Flare[V]."),
+        "__CANONICAL__": f"{SITE}/live/{cslug(country)}/",
+        "__H1__": esc(h1), "__SUB__": esc(sub), "__CARDS__": cards,
+    }
+    for k, v in repl.items():
+        out = out.replace(k, v)
+    return out
+
+
+def _rank_list(tab, cams, valfn, unit):
+    rows = []
+    for i, c in enumerate(cams):
+        vid = c.get("video_id") or ""
+        slug = c.get("slug") or vid
+        place = c.get("place_name") or c.get("country") or ""
+        rows.append(
+            f'<a class="row" href="/cam/{esc(slug)}/"><div class="rk">{i+1}</div>'
+            f'<div class="rth"><img loading="lazy" src="{thumb(vid)}" alt="" /></div>'
+            f'<div class="rmid"><div class="rnm">{esc((c.get("title") or "")[:70])}</div>'
+            f'<div class="rpl">📍 {esc(place)}</div></div>'
+            f'<div class="rval">{human(valfn(c))}<span>{unit}</span></div></a>'
+        )
+    on = " on" if tab == "liked" else ""
+    return f'<div class="rlist{on}" data-t="{tab}">' + "".join(rows) + "</div>"
+
+
+def render_top_page(rows, menu_html, limit=50):
+    liked = sorted(rows, key=lambda c: -(c.get("like_count") or 0))[:limit]
+    viewed = sorted(rows, key=lambda c: -(c.get("view_count") or 0))[:limit]
+    watching = [c for c in rows if (c.get("concurrent_viewers") or 0) > 0]
+    watching = sorted(watching, key=lambda c: -(c.get("concurrent_viewers") or 0))[:limit]
+    lists = (
+        _rank_list("liked", liked, lambda c: c.get("like_count") or 0, "likes")
+        + _rank_list("viewed", viewed, lambda c: c.get("view_count") or 0, "views")
+        + _rank_list("watching", watching, lambda c: c.get("concurrent_viewers") or 0, "watching")
+    )
+    out = TOP_TEMPLATE
+    for k, v in {"__CSS__": SHARED_CSS, "__MENU__": menu_html,
+                 "__CANONICAL__": f"{SITE}/top/", "__LISTS__": lists}.items():
+        out = out.replace(k, v)
+    return out
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-// Flare[V] v3.3.0 / 2026-06-17
+// Flare[V] v3.4.0 / 2026-06-17
 const SUPABASE_URL = 'https://pbrbzjxdjqqmhvhzhwlp.supabase.co';
 const SUPABASE_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicmJ6anhkanFxbWh2aHpod2xwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjc3NTcsImV4cCI6MjA5NTMwMzc1N30.E6-GthxwIFN2-jy4ojf5ZxR7YcdPJULG6Mxj9LvkI1c';
@@ -3089,6 +3089,21 @@ function handleDeepLink() {
   const cam = params.get('cam');
 
   if (view === 'spots') setViewMode('spot');
+
+  const country = params.get('country');
+  if (country) {
+    if (viewMode !== 'live') setViewMode('live');
+    const pts = liveData.filter(
+      (v) => (v.country || '').toLowerCase() === country.toLowerCase()
+    );
+    if (pts.length && map) {
+      const b = new google.maps.LatLngBounds();
+      pts.forEach((v) =>
+        b.extend({ lat: parseFloat(v.latitude), lng: parseFloat(v.longitude) })
+      );
+      map.fitBounds(b);
+    }
+  }
 
   if (date === 'month') {
     const btn = Array.from(document.querySelectorAll('.date-btn')).find(
