@@ -1,4 +1,4 @@
-/* Flare[V] v3.8.0 / 2026-06-17 */
+/* Flare[V] v3.8.1 / 2026-06-17 */
 :root {
   --bg: #0a0a0f;
   --sidebar: #10101a;
@@ -2723,3 +2723,6 @@ body.spot-picking #upload-btn { display: none !important; }
 .mega-cats .filter-list { display: flex; flex-direction: column; gap: 2px; }
 
 .nav-drop.open .mega { opacity: 1; visibility: visible; transform: none; }
+
+/* v3.8.1: Ranking 링크 수직정렬 수정 */
+.bar-link { display: flex; align-items: center; }
