@@ -1,4 +1,4 @@
-// Flare[V] v3.6.0 / 2026-06-17
+// Flare[V] v3.7.0 / 2026-06-17
 const SUPABASE_URL = 'https://pbrbzjxdjqqmhvhzhwlp.supabase.co';
 const SUPABASE_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicmJ6anhkanFxbWh2aHpod2xwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjc3NTcsImV4cCI6MjA5NTMwMzc1N30.E6-GthxwIFN2-jy4ojf5ZxR7YcdPJULG6Mxj9LvkI1c';
@@ -28,7 +28,7 @@ let myLocationMarker = null;
 const CLUSTER_RADIUS = 48; 
 const LONG_RUNNING_DAYS = 14; 
 
-let activeCategories = { festival: true, yt: true, news: true, resort: true, hotel: true };
+let activeCategories = { spot: true, festival: true, yt: true, news: true, resort: true, hotel: true };
 
 let viewMode = 'live';
 
@@ -190,7 +190,6 @@ function initMap() {
   map.addListener('click', (e) => {
     if (e && e.placeId) {
       e.stop(); 
-      if (viewMode !== 'spot') return; 
       const rect = document
         .getElementById('map-container')
         .getBoundingClientRect();
@@ -227,7 +226,6 @@ function initMap() {
 
   map.addListener('contextmenu', (e) => {
     if (!e.latLng) return;
-    if (viewMode !== 'spot') return; 
     const de = e.domEvent;
     const rect = document
       .getElementById('map-container')
@@ -1502,7 +1500,9 @@ function toggleFilter(el, type) {
     el.classList.add(activeClass);
     activeCategories[type] = true;
   }
-  if (type === 'yt' || type === 'news' || type === 'resort' || type === 'hotel') {
+  if (type === 'spot') {
+    renderSpotPins();
+  } else if (type === 'yt' || type === 'news' || type === 'resort' || type === 'hotel') {
     renderLivePins();
   } else {
     applyFilters();
@@ -1531,46 +1531,13 @@ function toggleGenre(el, genre) {
   renderPerfPins();
 }
 
-function setViewMode(mode) {
-  if (mode === viewMode) return;
-  viewMode = mode;
+function refreshMap() {
+  renderSpotPins();
+  renderLivePins();
+}
 
-  const seg = document.getElementById('mode-seg');
-  if (seg) seg.dataset.m = mode;
-  document.body.dataset.mode = mode;
-
-  closePanel();
-  closeSpotPanel();
-  closePerfPanel();
-  closeLivePanel();
-  hideSpotContextMenu();
-  closeSearchResults();
-
-  if (selectedPin) {
-    selectedPin.setSelected(false);
-    selectedPin = null;
-  }
-  festSearchQuery = '';
-  const fsInput = document.getElementById('fest-search-input');
-  if (fsInput) fsInput.value = '';
-  const fsClear = document.getElementById('fest-search-clear');
-  if (fsClear) fsClear.style.display = 'none';
-
-  clearFestivalPins();
-  clearPerfPins();
-  clearLivePins();
-  expandedLiveGroup = null;
-  spotOverlays.forEach((s) => s.setMap(null));
-  spotOverlays = [];
-
-  if (mode === 'festival') {
-    buildPinsForCurrentFilter(); 
-    renderPerfPins(); 
-  } else if (mode === 'spot') {
-    renderSpotPins(); 
-  } else if (mode === 'live') {
-    renderLivePins(); 
-  }
+function setViewMode() {
+  refreshMap();
 }
 
 function clearFestivalPins() {
@@ -1773,7 +1740,6 @@ function setupLongPress() {
     'touchstart',
     (e) => {
       if (e.touches.length !== 1) return;
-      if (viewMode !== 'spot') return; 
       const t = e.touches[0];
       sx = t.clientX;
       sy = t.clientY;
@@ -2612,13 +2578,9 @@ function distMeters(lat1, lng1, lat2, lng2) {
 function renderSpotPins() {
   spotOverlays.forEach((s) => s.setMap(null));
   spotOverlays = [];
-  if (viewMode === 'spot') {
+  if (activeCategories.spot) {
     spotPlaces.forEach((place) => {
-      
-      const show = place.posts.some((p) =>
-        (p.tags || []).some((t) => activeSpotTags.has(t))
-      );
-      if (show) addSpotPin(place.posts[0], place.posts.length);
+      addSpotPin(place.posts[0], place.posts.length);
     });
   }
   updateSpotCount();
@@ -2631,14 +2593,8 @@ function addSpotPin(post, count) {
 }
 
 function updateSpotCount() {
-  SPOT_TAGS.forEach((tag) => {
-    const el = document.querySelector('[data-tagcount="' + tag + '"]');
-    if (!el) return;
-    const n = spotPlaces.filter((pl) =>
-      pl.posts.some((p) => (p.tags || []).includes(tag))
-    ).length;
-    el.textContent = n;
-  });
+  const el = document.getElementById('cnt-spot');
+  if (el) el.textContent = spotPlaces.length;
 }
 
 function openSpotPanel(post) {
@@ -2955,42 +2911,16 @@ function clearFestSearch() {
   renderPerfPins();
 }
 
-function setAllCategories(mode, on) {
-  if (mode === 'spot') {
-    activeSpotTags = on ? new Set(SPOT_TAGS) : new Set();
-    document
-      .querySelectorAll('#cat-spot .filter-item')
-      .forEach((el) => el.classList.toggle('active-tag', on));
-    renderSpotPins();
-  } else if (mode === 'festival') {
-    
-    const festItem = document.querySelector('#cat-festival .filter-item');
-    activeCategories.festival = on;
-    if (festItem) festItem.classList.toggle('active-festival', on);
-    
-    document
-      .querySelectorAll('#cat-perf-genres .filter-item')
-      .forEach((el) => el.classList.toggle('active-perf', on));
-    activeGenres = new Set();
-    if (on) {
-      perfData.forEach((p) => {
-        const g = p.genre || p.tags;
-        if (g) activeGenres.add(g);
-      });
-    }
-    buildPinsForCurrentFilter();
-    renderPerfPins();
-  } else if (mode === 'live') {
-    document.querySelectorAll('#cat-live .filter-item').forEach((el) => {
-      let t = 'yt';
-      if (el.querySelector('.dot-news')) t = 'news';
-      else if (el.querySelector('.dot-resort')) t = 'resort';
-      else if (el.querySelector('.dot-hotel')) t = 'hotel';
-      activeCategories[t] = on;
-      el.classList.toggle('active-' + t, on);
-    });
-    renderLivePins();
-  }
+function setAllCategories(_mode, on) {
+  ['spot', 'yt', 'news', 'resort', 'hotel'].forEach((t) => {
+    activeCategories[t] = on;
+  });
+  document.querySelectorAll('#cat-list .filter-item').forEach((el) => {
+    const t = el.dataset.cat;
+    if (t) el.classList.toggle('active-' + t, on);
+  });
+  renderSpotPins();
+  renderLivePins();
 }
 
 function openPerfPanel(p) {
@@ -3078,18 +3008,15 @@ async function loadLiveVideos() {
   setC('cnt-resort', kc('resort'));
   setC('cnt-hotel', kc('hotel'));
 
-  if (viewMode === 'live') renderLivePins();
+  renderLivePins();
+  renderSpotPins();
   buildHomeMegamenu();
   handleDeepLink();
 }
 
 function handleDeepLink() {
   const params = new URLSearchParams(window.location.search);
-  const view = params.get('view');
-  const date = params.get('date');
   const cam = params.get('cam');
-
-  if (view === 'spots') setViewMode('spot');
 
   if (params.get('contact') && typeof openContact === 'function') {
     setTimeout(openContact, 300);
@@ -3097,7 +3024,6 @@ function handleDeepLink() {
 
   const country = params.get('country');
   if (country) {
-    if (viewMode !== 'live') setViewMode('live');
     const pts = liveData.filter(
       (v) => (v.country || '').toLowerCase() === country.toLowerCase()
     );
@@ -3110,17 +3036,9 @@ function handleDeepLink() {
     }
   }
 
-  if (date === 'month') {
-    const btn = Array.from(document.querySelectorAll('.date-btn')).find(
-      (b) => b.dataset.d === 'month' || /month/i.test(b.textContent || '')
-    );
-    if (btn) setDate(btn, 'month');
-  }
-
   if (cam) {
     const item = liveData.find((v) => v.video_id === cam);
     if (item) {
-      if (viewMode !== 'live') setViewMode('live');
       if (map) {
         map.panTo({ lat: parseFloat(item.latitude), lng: parseFloat(item.longitude) });
         if (map.getZoom() < 13) map.setZoom(14);
@@ -3173,7 +3091,6 @@ function liveKindOn(item) {
 
 function renderLivePins() {
   clearLivePins();
-  if (viewMode !== 'live') return;
   if (!LivePinClass || !map) return;
 
   liveGroups.forEach((g) => {
@@ -3629,21 +3546,21 @@ loadFestivals();
 function toggleFilterPanel() {
   var open = document.body.classList.toggle('filters-open');
   var p = document.getElementById('filter-panel');
-  var t = document.getElementById('filter-toggle');
+  var t = document.querySelector('.bar-cats');
   if (p) p.setAttribute('aria-hidden', open ? 'false' : 'true');
-  if (t) t.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (t) { t.setAttribute('aria-expanded', open ? 'true' : 'false'); t.classList.toggle('on', open); }
 }
 function closeFilterPanel() {
   document.body.classList.remove('filters-open');
   var p = document.getElementById('filter-panel');
-  var t = document.getElementById('filter-toggle');
+  var t = document.querySelector('.bar-cats');
   if (p) p.setAttribute('aria-hidden', 'true');
-  if (t) t.setAttribute('aria-expanded', 'false');
+  if (t) { t.setAttribute('aria-expanded', 'false'); t.classList.remove('on'); }
 }
 document.addEventListener('click', function (e) {
   if (!document.body.classList.contains('filters-open')) return;
   var p = document.getElementById('filter-panel');
-  var t = document.getElementById('filter-toggle');
+  var t = document.querySelector('.bar-cats');
   if (p && p.contains(e.target)) return;
   if (t && t.contains(e.target)) return;
   closeFilterPanel();
@@ -3692,7 +3609,7 @@ function buildHomeMegamenu() {
     grps.push('<div class="cgrp' + on + '" data-c="' + cid + '">' + links + '</div>');
     first = false;
   });
-  host.innerHTML = '<a class="mega-top" href="/top/">🏆 Rankings</a><div class="mega-body"><div class="mega-conts">' +
+  host.innerHTML = '<div class="mega-body"><div class="mega-conts">' +
     conts.join('') + '</div><div class="mega-countries">' + grps.join('') + '</div></div>';
   host.querySelectorAll('.cont').forEach(function (b) {
     function show() {
