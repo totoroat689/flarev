@@ -913,7 +913,7 @@ BAR_CSS = """
   @keyframes logo-fall{0%,9%{opacity:0;transform:translateY(0) scale(0.4);}11%{opacity:1;transform:translateY(0) scale(1.3);}
     14%{opacity:1;transform:translateY(4px) scale(1);}30%{opacity:0.85;transform:translateY(40px) scale(0.85);}34%{opacity:0;transform:translateY(48px) scale(0.5);}100%{opacity:0;transform:translateY(48px) scale(0.5);}}
   .bar-link,.nav-trigger{font-family:'Noto Sans KR',sans-serif;font-size:0.86rem;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap;}
-  .bar-link:hover,.nav-drop:hover .nav-trigger{color:var(--text);}
+  .bar-link{display:flex;align-items:center;} .bar-link:hover,.nav-drop:hover .nav-trigger{color:var(--text);}
   .bar-spacer{flex:1;}
   .nav-drop{position:relative;flex-shrink:0;}
   .mega{position:absolute;top:calc(100% + 14px);left:0;width:min(620px,92vw);background:rgba(16,16,26,0.98);
