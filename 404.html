@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>Page not found | Flare[V]</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+KR:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{--bg:#0a0a0f;--text:#f0f0f5;--muted:#7c7c92;--mint:#6bffb8;--mint-bg:rgba(107,255,184,0.12);
+    --border:rgba(255,255,255,0.08);--festival:#ff6b6b;}
+  *{box-sizing:border-box;}
+  body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);
+    font-family:'Noto Sans KR',system-ui,-apple-system,sans-serif;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;padding:24px;}
+  .logo{font-family:'Bebas Neue',sans-serif;font-size:2.4rem;letter-spacing:3px;margin-bottom:28px;}
+  .logo span{color:var(--festival);animation:breath 3.5s ease-in-out infinite;}
+  @keyframes breath{0%,100%{text-shadow:0 0 10px rgba(255,107,107,0.55);}
+    50%{text-shadow:0 0 22px rgba(255,107,107,1),0 0 38px rgba(255,107,107,0.6);}}
+  .code{font-size:0.8rem;font-weight:700;letter-spacing:2px;color:var(--mint);
+    background:var(--mint-bg);border:1px solid rgba(107,255,184,0.3);
+    padding:5px 12px;border-radius:30px;margin-bottom:18px;}
+  h1{font-size:1.35rem;margin:0 0 10px;font-weight:700;}
+  p{color:var(--muted);font-size:0.92rem;max-width:380px;margin:0 0 26px;line-height:1.6;}
+  .btns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+  a.btn{padding:12px 22px;border-radius:12px;font-weight:700;font-size:0.88rem;text-decoration:none;}
+  a.primary{background:var(--mint);color:#06231a;}
+  a.ghost{border:1px solid var(--border);color:var(--text);}
+  a.btn:hover{filter:brightness(1.1);}
+</style>
+</head>
+<body>
+  <div class="logo">FLARE<span>[V]</span></div>
+  <div class="code">404 · NOT FOUND</div>
+  <h1>This cam isn’t here yet</h1>
+  <p>This page may not be ready, or the stream went offline. Explore thousands of live cams on the map instead.</p>
+  <div class="btns">
+    <a class="btn primary" href="/">🗺 Open the map</a>
+    <a class="btn ghost" href="/?view=spots&date=month">Browse cams</a>
+  </div>
+</body>
+</html>
