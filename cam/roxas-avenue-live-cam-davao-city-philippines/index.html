@@ -29,8 +29,44 @@
   .logo{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;letter-spacing:2px;line-height:1;position:relative;}
   .logo span{color:var(--festival);animation:breath 3.5s ease-in-out infinite;}
   @keyframes breath{0%,100%{text-shadow:0 0 10px rgba(255,107,107,0.55);}50%{text-shadow:0 0 22px rgba(255,107,107,1),0 0 38px rgba(255,107,107,0.6);}}
-  .nav{display:flex;gap:20px;font-size:0.85rem;color:var(--muted);}
-  .nav a:hover{color:var(--text);}
+  .nav{display:flex;gap:18px;font-size:0.85rem;color:var(--muted);align-items:center;}
+  .nav>a:hover{color:var(--text);}
+  .nav-drop{position:relative;}
+  .nav-trigger{cursor:pointer;}
+  .nav-drop:hover .nav-trigger{color:var(--text);}
+  .mega{position:absolute;top:calc(100% + 12px);left:50%;transform:translateX(-50%) translateY(8px);
+    background:rgba(16,16,26,0.98);backdrop-filter:blur(16px);border:1px solid var(--border);
+    border-radius:16px;padding:14px;width:min(620px,92vw);box-shadow:0 24px 60px rgba(0,0,0,0.6);
+    opacity:0;visibility:hidden;transition:opacity .2s ease,transform .2s ease;z-index:50;}
+  .nav-drop:hover .mega{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0);}
+  .nav-drop.open .mega{opacity:1;visibility:visible;transform:none;}
+  .mega::before{content:"";position:absolute;top:-12px;left:0;right:0;height:12px;}
+  .mega-top{display:flex;align-items:center;gap:8px;font-weight:800;font-size:0.9rem;color:var(--gold);
+    background:rgba(240,196,25,0.1);border:1px solid rgba(240,196,25,0.3);border-radius:11px;
+    padding:11px 14px;margin-bottom:12px;transition:filter .15s;}
+  .mega-top:hover{filter:brightness(1.12);}
+  .mega-body{display:grid;grid-template-columns:150px 1fr;gap:10px;}
+  .mega-conts{display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--border);padding-right:8px;}
+  .cont{display:flex;justify-content:space-between;align-items:center;background:transparent;border:none;
+    color:var(--text);font-family:inherit;font-size:0.82rem;font-weight:600;text-align:left;
+    padding:8px 10px;border-radius:9px;cursor:pointer;transition:background .15s;}
+  .cont i{color:var(--muted);font-style:normal;font-size:0.72rem;}
+  .cont:hover,.cont.on{background:var(--mint-bg);color:var(--mint);}
+  .cont.on i{color:var(--mint);}
+  .mega-countries{position:relative;min-height:150px;}
+  .cgrp{display:none;grid-template-columns:1fr 1fr;gap:4px;animation:fadein .25s ease;}
+  .cgrp.on{display:grid;}
+  @keyframes fadein{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+  .cgrp a{font-size:0.8rem;color:var(--text);padding:7px 9px;border-radius:8px;display:flex;justify-content:space-between;gap:8px;transition:background .15s;}
+  .cgrp a:hover{background:rgba(255,255,255,0.06);color:var(--mint);}
+  .cgrp a i{color:var(--muted);font-style:normal;font-size:0.72rem;}
+  @media(max-width:760px){
+    .nav{gap:12px;font-size:0.8rem;}
+    .mega{position:fixed;left:8px;right:8px;top:58px;transform:none;width:auto;max-height:70vh;overflow:auto;}
+    .nav-drop:hover .mega{transform:none;}
+    .mega-body{grid-template-columns:1fr;}
+    .mega-conts{flex-direction:row;flex-wrap:wrap;border-right:none;border-bottom:1px solid var(--border);padding:0 0 8px;}
+  }
   .wrap{max-width:1160px;margin:0 auto;padding:22px 22px 70px;}
   .crumb{font-size:0.75rem;color:var(--muted);margin-bottom:12px;}
   .crumb a:hover{color:var(--mint);}
@@ -116,10 +152,10 @@
 <body>
   <div class="topbar">
     <a href="/" class="logo">FLARE<span>[V]</span></a>
-    <nav class="nav"><a href="/">Home</a><a href="/?view=spots&date=month">Spots</a><a href="/">Live cams</a></nav>
+    <nav class="nav"><a href="/">Home</a><a href="/?view=spots&date=month">Spots</a><div class="nav-drop"><span class="nav-trigger">Live cams ▾</span><div class="mega"><a class="mega-top" href="/top/">🏆 Rankings</a><div class="mega-body"><div class="mega-conts"><button class="cont on" data-c="asia">Asia <i>105</i></button><button class="cont" data-c="europe">Europe <i>133</i></button><button class="cont" data-c="north-america">North America <i>180</i></button><button class="cont" data-c="south-america">South America <i>5</i></button><button class="cont" data-c="africa">Africa <i>6</i></button><button class="cont" data-c="oceania">Oceania <i>3</i></button><button class="cont" data-c="other">Other <i>26</i></button></div><div class="mega-countries"><div class="cgrp on" data-c="asia"><a href="/live/japan/">Japan <i>37</i></a><a href="/live/south-korea/">South Korea <i>20</i></a><a href="/live/philippines/">Philippines <i>19</i></a><a href="/live/taiwan/">Taiwan <i>12</i></a><a href="/live/thailand/">Thailand <i>7</i></a><a href="/live/israel/">Israel <i>3</i></a><a href="/live/china/">China <i>3</i></a><a href="/live/indonesia/">Indonesia <i>2</i></a><a href="/live/vietnam/">Vietnam <i>1</i></a><a href="/live/hong-kong/">Hong Kong <i>1</i></a></div><div class="cgrp" data-c="europe"><a href="/live/united-kingdom/">United Kingdom <i>30</i></a><a href="/live/spain/">Spain <i>23</i></a><a href="/live/italy/">Italy <i>19</i></a><a href="/live/germany/">Germany <i>15</i></a><a href="/live/netherlands/">Netherlands <i>11</i></a><a href="/live/finland/">Finland <i>5</i></a><a href="/live/portugal/">Portugal <i>4</i></a><a href="/live/belgium/">Belgium <i>3</i></a><a href="/live/greece/">Greece <i>3</i></a><a href="/live/norway/">Norway <i>2</i></a><a href="/live/austria/">Austria <i>2</i></a><a href="/live/switzerland/">Switzerland <i>2</i></a><a href="/live/russia/">Russia <i>2</i></a><a href="/live/france/">France <i>2</i></a><a href="/live/romania/">Romania <i>2</i></a><a href="/live/ukraine/">Ukraine <i>2</i></a><a href="/live/croatia/">Croatia <i>2</i></a><a href="/live/denmark/">Denmark <i>1</i></a><a href="/live/ireland/">Ireland <i>1</i></a><a href="/live/czech-republic/">Czech Republic <i>1</i></a><a href="/live/iceland/">Iceland <i>1</i></a></div><div class="cgrp" data-c="north-america"><a href="/live/united-states/">United States <i>161</i></a><a href="/live/canada/">Canada <i>7</i></a><a href="/live/mexico/">Mexico <i>7</i></a><a href="/live/jamaica/">Jamaica <i>5</i></a></div><div class="cgrp" data-c="south-america"><a href="/live/brazil/">Brazil <i>3</i></a><a href="/live/argentina/">Argentina <i>2</i></a></div><div class="cgrp" data-c="africa"><a href="/live/namibia/">Namibia <i>2</i></a><a href="/live/kenya/">Kenya <i>2</i></a><a href="/live/south-africa/">South Africa <i>1</i></a><a href="/live/nigeria/">Nigeria <i>1</i></a></div><div class="cgrp" data-c="oceania"><a href="/live/new-zealand/">New Zealand <i>2</i></a><a href="/live/australia/">Australia <i>1</i></a></div><div class="cgrp" data-c="other"><a href="/live/sint-maarten/">Sint Maarten <i>6</i></a><a href="/live/vatican-city/">Vatican City <i>3</i></a><a href="/live/pakistan/">Pakistan <i>2</i></a><a href="/live/cura-ao/">Curaçao <i>2</i></a><a href="/live/maldives/">Maldives <i>1</i></a><a href="/live/saudi-arabia/">Saudi Arabia <i>1</i></a><a href="/live/outer-space/">Outer Space <i>1</i></a><a href="/live/british-virgin-islands/">British Virgin Islands <i>1</i></a><a href="/live/guatemala/">Guatemala <i>1</i></a><a href="/live/estonia/">Estonia <i>1</i></a><a href="/live/seychelles/">Seychelles <i>1</i></a><a href="/live/aruba/">Aruba <i>1</i></a><a href="/live/greenland/">Greenland <i>1</i></a><a href="/live/sint-maarten-saint-martin/">Sint Maarten / Saint Martin <i>1</i></a><a href="/live/turks-and-caicos-islands/">Turks and Caicos Islands <i>1</i></a><a href="/live/united-states-virgin-islands/">United States Virgin Islands <i>1</i></a><a href="/live/north-macedonia/">North Macedonia <i>1</i></a></div></div></div></div></div></nav><script>(function(){function show(c){document.querySelectorAll('.cont').forEach(function(b){b.classList.toggle('on',b.dataset.c===c);});document.querySelectorAll('.cgrp').forEach(function(g){g.classList.toggle('on',g.dataset.c===c);});}document.querySelectorAll('.cont').forEach(function(b){b.addEventListener('mouseenter',function(){show(b.dataset.c);});b.addEventListener('click',function(){show(b.dataset.c);});});var dd=document.querySelector('.nav-drop'),tr=document.querySelector('.nav-trigger');if(tr){tr.addEventListener('click',function(){if(window.innerWidth<=760)dd.classList.toggle('open');});}})();</script>
   </div>
   <div class="wrap">
-    <div class="crumb"><a href="/">Home</a> › <a href="/?view=spots&date=month">Philippines</a> › Roxas Avenue Live Cam - Davao City, Philippines — Watch Davao City, Mindanao, Philippines Live</div>
+    <div class="crumb"><a href="/">Home</a> › <a href="/?view=live&country=Philippines">Philippines</a> › Roxas Avenue Live Cam - Davao City, Philippines — Watch Davao City, Mindanao, Philippines Live</div>
     <h1>Roxas Avenue Live Cam - Davao City, Philippines — Watch Davao City, Mindanao, Philippines Live</h1>
     <div class="grid" id="grid">
       <div class="left">
