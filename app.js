@@ -1,4 +1,4 @@
-// Flare[V] v3.4.0 / 2026-06-17
+// Flare[V] v3.5.0 / 2026-06-17
 const SUPABASE_URL = 'https://pbrbzjxdjqqmhvhzhwlp.supabase.co';
 const SUPABASE_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicmJ6anhkanFxbWh2aHpod2xwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjc3NTcsImV4cCI6MjA5NTMwMzc1N30.E6-GthxwIFN2-jy4ojf5ZxR7YcdPJULG6Mxj9LvkI1c';
@@ -3232,6 +3232,8 @@ function openLivePanel(item) {
   currentLiveItem = item;
   document.getElementById('lv-title').textContent = item.title || 'Live';
   document.getElementById('lv-title').classList.toggle('has-page', !!item.slug);
+  const vpBtn = document.getElementById('lv-viewpage');
+  if (vpBtn) vpBtn.style.display = item.slug ? '' : 'none';
   setPerfMeta('lv-place', item.place_name, '📍 ');
   lvSetupDesc(item.description);
 
@@ -3604,3 +3606,16 @@ function setupLiveResize() {
 }
 
 loadFestivals();
+
+(function () {
+  var bm = document.getElementById('bar-mode');
+  if (!bm) return;
+  bm.addEventListener('click', function () {
+    if (window.innerWidth > 768) return;
+    bm.classList.add('open');
+  });
+  document.addEventListener('click', function (e) {
+    if (window.innerWidth > 768) return;
+    if (!bm.contains(e.target)) bm.classList.remove('open');
+  });
+})();
