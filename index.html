@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Flare[V] v3.2.0 / 2026-06-17 -->
+<!-- Flare[V] v3.3.0 / 2026-06-17 -->
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -481,7 +481,6 @@
         <div class="panel-header">
           <span class="lv-head-left">
             <span class="panel-badge" id="lv-badge" style="background: rgba(255,78,69,0.15); color: #ff4e45; border: 1px solid rgba(255,78,69,0.4);">LIVE</span>
-            <a id="lv-link" class="lv-yt-pill" href="#" target="_blank" rel="noopener noreferrer">▶️ YouTube</a>
           </span>
           <div class="lv-sizes">
             <button onclick="setLiveSize('m')" data-s="m">Normal</button>
@@ -496,15 +495,13 @@
         </div>
         <div class="lv-offline" id="lv-offline">📴 This stream is offline right now</div>
         <div class="lv-body">
-          <div class="lv-title" id="lv-title"></div>
+          <div class="lv-title lv-title-link" id="lv-title" onclick="lvOpenFullPage()"></div>
           <div class="lv-meta" id="lv-time"></div>
-          <div class="lv-meta" id="lv-place"></div>
+          <div class="lv-meta lv-place-link" id="lv-place" onclick="lvGoToLocation()"></div>
           <div class="panel-desc lv-desc" id="lv-desc">
             <div class="desc-text" id="lv-desc-text"></div>
             <span class="desc-more" id="lv-desc-more" onclick="lvToggleDesc()">More</span>
           </div>
-
-          <a id="lv-fullpage" class="lv-fullpage" href="#" rel="noopener" style="display:none;">📄 Open full page ↗</a>
 
           <div class="lv-reviews" id="lv-reviews">
             <div class="lv-rv-head">

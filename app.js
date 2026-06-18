@@ -1,4 +1,4 @@
-// Flare[V] v3.2.0 / 2026-06-17
+// Flare[V] v3.3.0 / 2026-06-17
 const SUPABASE_URL = 'https://pbrbzjxdjqqmhvhzhwlp.supabase.co';
 const SUPABASE_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicmJ6anhkanFxbWh2aHpod2xwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjc3NTcsImV4cCI6MjA5NTMwMzc1N30.E6-GthxwIFN2-jy4ojf5ZxR7YcdPJULG6Mxj9LvkI1c';
@@ -62,6 +62,7 @@ let pickSearchPlace = null;
 let pickIdleListener = null;
 let geocoder = null;
 let pickedAddress = null;
+let currentLiveItem = null;
 let spotPhotoFiles = []; 
 let spotMenuOpenedAt = 0; 
 let currentSpot = null; 
@@ -3078,6 +3079,35 @@ async function loadLiveVideos() {
   setC('cnt-hotel', kc('hotel'));
 
   if (viewMode === 'live') renderLivePins();
+  handleDeepLink();
+}
+
+function handleDeepLink() {
+  const params = new URLSearchParams(window.location.search);
+  const view = params.get('view');
+  const date = params.get('date');
+  const cam = params.get('cam');
+
+  if (view === 'spots') setViewMode('spot');
+
+  if (date === 'month') {
+    const btn = Array.from(document.querySelectorAll('.date-btn')).find(
+      (b) => b.dataset.d === 'month' || /month/i.test(b.textContent || '')
+    );
+    if (btn) setDate(btn, 'month');
+  }
+
+  if (cam) {
+    const item = liveData.find((v) => v.video_id === cam);
+    if (item) {
+      if (viewMode !== 'live') setViewMode('live');
+      if (map) {
+        map.panTo({ lat: parseFloat(item.latitude), lng: parseFloat(item.longitude) });
+        if (map.getZoom() < 13) map.setZoom(14);
+      }
+      setTimeout(() => openLivePanel(item), 450);
+    }
+  }
 }
 
 function buildLiveGroups() {
@@ -3184,19 +3214,11 @@ function openLivePanel(item) {
     if (offline) offline.style.display = 'flex';
   }
 
+  currentLiveItem = item;
   document.getElementById('lv-title').textContent = item.title || 'Live';
+  document.getElementById('lv-title').classList.toggle('has-page', !!item.slug);
   setPerfMeta('lv-place', item.place_name, '📍 ');
   lvSetupDesc(item.description);
-  const link = document.getElementById('lv-link');
-  link.href = 'https://www.youtube.com/watch?v=' + item.video_id;
-
-  const fp = document.getElementById('lv-fullpage');
-  if (item.slug) {
-    fp.href = '/cam/' + item.slug + '/';
-    fp.style.display = '';
-  } else {
-    fp.style.display = 'none';
-  }
 
   startLiveClock(item.timezone);
 
@@ -3212,6 +3234,21 @@ function openLivePanel(item) {
   panel.scrollTop = 0;
   lvMeasureDesc(); 
   pushPopupState();
+}
+
+function lvOpenFullPage() {
+  if (currentLiveItem && currentLiveItem.slug) {
+    window.location.href = '/cam/' + currentLiveItem.slug + '/';
+  }
+}
+
+function lvGoToLocation() {
+  if (!currentLiveItem || !map) return;
+  const lat = parseFloat(currentLiveItem.latitude);
+  const lng = parseFloat(currentLiveItem.longitude);
+  if (isNaN(lat) || isNaN(lng)) return;
+  map.panTo({ lat: lat, lng: lng });
+  if (map.getZoom() < 13) map.setZoom(14);
 }
 
 function closeLivePanel() {
