@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Flare[V] v3.6.0 / 2026-06-17 -->
+<!-- Flare[V] v3.7.0 / 2026-06-17 -->
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -101,91 +101,60 @@
         <span class="logo-light"></span>
       </div>
 
-      <button id="filter-toggle" class="filter-toggle" onclick="toggleFilterPanel()" title="Filters" aria-expanded="false">
-        <span class="ft-ic">▾</span>
-      </button>
+      <button class="bar-link bar-cats" onclick="toggleFilterPanel()" aria-expanded="false">Categories</button>
 
-      <a class="bar-link" href="/top/">🏆 Ranking</a>
+      <a class="bar-link" href="/top/">Ranking</a>
 
       <div class="nav-drop" id="livecams-drop">
-        <span class="nav-trigger">📡 Live cams ▾</span>
+        <span class="nav-trigger">Live cams</span>
         <div class="mega" id="home-mega"><div class="mega-empty">Loading…</div></div>
       </div>
 
       <div class="bar-spacer"></div>
 
-      <button class="contact-btn" onclick="openContact()"><span>✉️</span> Message</button>
+      <button class="contact-btn" onclick="openContact()">Message</button>
 
       <div class="login-wrap">
-        <button class="login-btn" onclick="openModal()"><span>🔐</span> Log in / Sign up</button>
+        <button class="login-btn" onclick="openModal()">Log in / Sign up</button>
       </div>
     </nav>
 
     <div id="filter-panel" aria-hidden="true">
       <div class="fp-inner">
         <div class="section">
-          <div class="section-label">View mode</div>
-          <div class="seg2" id="mode-seg" data-m="live">
-            <div class="seg-thumb"></div>
-            <button class="b-spot" onclick="setViewMode('spot')">📍 Spots</button>
-            <button class="b-live" onclick="setViewMode('live')">📡 Live cams</button>
-          </div>
-        </div>
-
-        <div class="section" id="date-section">
-          <div class="section-label">Date</div>
-          <div class="date-row">
-            <button class="date-btn active" onclick="setDate(this,'today')">Today</button>
-            <button class="date-btn" onclick="setDate(this,'week')">This week</button>
-            <button class="date-btn" onclick="setDate(this,'month')">This month</button>
-            <button class="date-btn" onclick="setDate(this,'custom')">Custom</button>
-          </div>
-          <div class="date-range" id="date-range">
-            <div class="range-col">
-              <span class="range-label">Start</span>
-              <input type="date" id="range-start" onchange="setCustomRange()" />
-            </div>
-            <div class="range-col">
-              <span class="range-label">End</span>
-              <input type="date" id="range-end" onchange="setCustomRange()" />
-            </div>
-          </div>
-        </div>
-
-        <div class="section">
-          <div class="section-label">Categories</div>
-
-          <div class="filter-list cat-group" id="cat-spot">
+          <div class="cat-head">
+            <div class="section-label">Categories</div>
             <div class="cat-tools">
-              <button onclick="setAllCategories('spot', true)">Select all</button>
-              <button onclick="setAllCategories('spot', false)">Clear all</button>
+              <button onclick="setAllCategories('all', true)">Select all</button>
+              <button onclick="setAllCategories('all', false)">Clear all</button>
             </div>
-            <div class="filter-item active-tag" onclick="toggleSpotTag(this,'풍경')"><div class="filter-dot dot-spot"></div><span class="filter-text">🏞️ Scenery</span><span class="filter-count" data-tagcount="풍경">0</span></div>
-            <div class="filter-item active-tag" onclick="toggleSpotTag(this,'맛집')"><div class="filter-dot dot-spot"></div><span class="filter-text">🍜 Food</span><span class="filter-count" data-tagcount="맛집">0</span></div>
-            <div class="filter-item active-tag" onclick="toggleSpotTag(this,'이색')"><div class="filter-dot dot-spot"></div><span class="filter-text">✨ Unique</span><span class="filter-count" data-tagcount="이색">0</span></div>
-            <div class="filter-item active-tag" onclick="toggleSpotTag(this,'힐링')"><div class="filter-dot dot-spot"></div><span class="filter-text">🌿 Relaxing</span><span class="filter-count" data-tagcount="힐링">0</span></div>
-            <div class="filter-item active-tag" onclick="toggleSpotTag(this,'놀라운')"><div class="filter-dot dot-spot"></div><span class="filter-text">😮 Amazing</span><span class="filter-count" data-tagcount="놀라운">0</span></div>
-            <div class="filter-item active-tag" onclick="toggleSpotTag(this,'실시간 현장')"><div class="filter-dot dot-spot"></div><span class="filter-text">🔴 Live spot</span><span class="filter-count" data-tagcount="실시간 현장">0</span></div>
           </div>
-
-          <div class="filter-list cat-group" id="cat-festival">
-            <div class="cat-tools">
-              <button onclick="setAllCategories('festival', true)">Select all</button>
-              <button onclick="setAllCategories('festival', false)">Clear all</button>
+          <div class="filter-list" id="cat-list">
+            <div class="filter-item active-spot" data-cat="spot" onclick="toggleFilter(this,'spot')">
+              <div class="filter-dot dot-spot"></div>
+              <span class="filter-text">Spots</span>
+              <span class="filter-count" id="cnt-spot">0</span>
             </div>
-            <div class="filter-item active-festival" onclick="toggleFilter(this,'festival')"><div class="filter-dot dot-festival"></div><span class="filter-text">🎪 Festivals</span><span class="filter-count" id="cnt-festival">0</span></div>
-            <div id="cat-perf-genres"></div>
-          </div>
-
-          <div class="filter-list cat-group" id="cat-live">
-            <div class="cat-tools">
-              <button onclick="setAllCategories('live', true)">Select all</button>
-              <button onclick="setAllCategories('live', false)">Clear all</button>
+            <div class="filter-item active-yt" data-cat="yt" onclick="toggleFilter(this,'yt')">
+              <div class="filter-dot dot-yt"></div>
+              <span class="filter-text">Live</span>
+              <span class="filter-count" id="cnt-yt">0</span>
             </div>
-            <div class="filter-item active-yt" onclick="toggleFilter(this,'yt')"><div class="filter-dot dot-yt"></div><span class="filter-text">🔴 Live</span><span class="filter-count" id="cnt-yt">0</span></div>
-            <div class="filter-item active-news" onclick="toggleFilter(this,'news')"><div class="filter-dot dot-news"></div><span class="filter-text">📰 Local news</span><span class="filter-count" id="cnt-news">0</span></div>
-            <div class="filter-item active-resort" onclick="toggleFilter(this,'resort')"><div class="filter-dot dot-resort"></div><span class="filter-text">🏝️ Resort</span><span class="filter-count" id="cnt-resort">0</span></div>
-            <div class="filter-item active-hotel" onclick="toggleFilter(this,'hotel')"><div class="filter-dot dot-hotel"></div><span class="filter-text">🏨 Hotel</span><span class="filter-count" id="cnt-hotel">0</span></div>
+            <div class="filter-item active-news" data-cat="news" onclick="toggleFilter(this,'news')">
+              <div class="filter-dot dot-news"></div>
+              <span class="filter-text">Local news</span>
+              <span class="filter-count" id="cnt-news">0</span>
+            </div>
+            <div class="filter-item active-resort" data-cat="resort" onclick="toggleFilter(this,'resort')">
+              <div class="filter-dot dot-resort"></div>
+              <span class="filter-text">Resort</span>
+              <span class="filter-count" id="cnt-resort">0</span>
+            </div>
+            <div class="filter-item active-hotel" data-cat="hotel" onclick="toggleFilter(this,'hotel')">
+              <div class="filter-dot dot-hotel"></div>
+              <span class="filter-text">Hotel</span>
+              <span class="filter-count" id="cnt-hotel">0</span>
+            </div>
           </div>
         </div>
       </div>
