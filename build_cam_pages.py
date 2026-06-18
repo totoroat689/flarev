@@ -25,7 +25,7 @@ SUPABASE_URL = "https://pbrbzjxdjqqmhvhzhwlp.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicmJ6anhkanFxbWh2aHpod2xwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjc3NTcsImV4cCI6MjA5NTMwMzc1N30.E6-GthxwIFN2-jy4ojf5ZxR7YcdPJULG6Mxj9LvkI1c"
 
 SITE = "https://flarev.co"
-TOP_N = 10
+TOP_N = None            # None = 전체 생성 (slug 있는 활성 캠 전부). 숫자로 두면 그 개수만.
 NEARBY_COUNT = 6
 OUT_ROOT = "."
 INTRO_MIN = 40
@@ -214,11 +214,12 @@ def main():
     if not rows:
         print("만들 페이지 없음 — 종료")
         return
-    top = rows[:TOP_N]
-    print(f"🏗️  좋아요 상위 {len(top)}개 페이지 생성")
+    top = rows if TOP_N is None else rows[:TOP_N]
+    print(f"🏗️  페이지 생성 대상 {len(top)}개")
 
     sitemap_urls = [SITE + "/"]
     made = 0
+    skipped_noindex = 0
     for i, cam in enumerate(top):
         nearby = pick_nearby(cam, rows)
         page, thin = render_page(cam, i + 1, nearby)
@@ -228,9 +229,12 @@ def main():
         with open(os.path.join(d, "index.html"), "w", encoding="utf-8") as f:
             f.write(page)
         made += 1
-        print(f"  ✅ /cam/{slug}/" + (" (noindex)" if thin else ""))
-        if not thin:
+        if thin:
+            skipped_noindex += 1
+        else:
             sitemap_urls.append(f"{SITE}/cam/{slug}/")
+        if made % 50 == 0:
+            print(f"  … {made}/{len(top)} 생성")
 
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     lines = ['<?xml version="1.0" encoding="UTF-8"?>',
@@ -240,7 +244,7 @@ def main():
     lines.append("</urlset>")
     with open(os.path.join(OUT_ROOT, "sitemap.xml"), "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
-    print(f"🗺️  sitemap.xml ({len(sitemap_urls)} URL) | 🎉 완료 {made}개")
+    print(f"🗺️  sitemap.xml ({len(sitemap_urls)} URL) | 🎉 완료 {made}개 (색인제외 noindex {skipped_noindex}개)")
 
 
 # ============================================
