@@ -1,4 +1,4 @@
-/* Flare[V] v3.6.0 / 2026-06-17 */
+/* Flare[V] v3.7.0 / 2026-06-17 */
 :root {
   --bg: #0a0a0f;
   --sidebar: #10101a;
@@ -2691,4 +2691,25 @@ body.filters-open #filter-panel { transform: translateY(0); }
   #filter-panel { top: 54px; }
   .fp-inner { gap: 16px; padding: 14px; }
   .mega { position: fixed; left: 8px; right: 8px; top: 56px; width: auto; max-height: 72vh; overflow: auto; }
+}
+
+/* ===== v3.7 모드 폐지 + 카테고리 통합 ===== */
+#upload-btn { display: flex !important; }
+body.spot-picking #upload-btn { display: none !important; }
+
+.bar-cats { background: none; border: none; cursor: pointer; font-family: inherit; padding: 0; }
+.bar-cats.on { color: var(--mint); }
+
+.cat-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 9px; }
+.cat-head .section-label { margin: 0; }
+.cat-head .cat-tools { margin: 0; }
+#cat-list { display: flex; flex-direction: column; gap: 2px; }
+
+@media (max-width: 768px) {
+  #sidebar { gap: 10px; overflow: visible; }
+  .logo { font-size: 0; }
+  .logo span { font-size: 1.35rem; }
+  .logo-flare, .logo-light { display: none; }
+  .bar-link, .nav-trigger { font-size: 0.78rem; }
+  .contact-btn { padding: 7px 9px; font-size: 0.72rem; }
 }
