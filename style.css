@@ -2733,6 +2733,6 @@ body.spot-picking #upload-btn { display: none !important; }
 
 /* 랭킹 글자가 여전히 미세하게 높다면 아래 코드의 1px 숫자를 조절해 보세요 */
 .bar-link {
-  margin-top: 3px;
+  margin-top: 2px;
 }
 
