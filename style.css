@@ -1,4 +1,4 @@
-/* Flare[V] v3.7.0 / 2026-06-17 */
+/* Flare[V] v3.8.0 / 2026-06-17 */
 :root {
   --bg: #0a0a0f;
   --sidebar: #10101a;
@@ -2713,3 +2713,13 @@ body.spot-picking #upload-btn { display: none !important; }
   .bar-link, .nav-trigger { font-size: 0.78rem; }
   .contact-btn { padding: 7px 9px; font-size: 0.72rem; }
 }
+
+/* ===== v3.8 Categories 드롭다운 + 메뉴 통일 ===== */
+#sidebar a, .nav-trigger, .bar-link, .mega a { text-decoration: none; }
+.bar-link, .nav-trigger { font-family: 'Noto Sans KR', sans-serif; font-size: 0.86rem; font-weight: 600; color: var(--muted); cursor: pointer; white-space: nowrap; }
+.bar-link:hover, .nav-drop:hover .nav-trigger { color: var(--text); }
+.mega-cats { width: 260px; }
+.mega-cats .cat-tools { margin: 0 0 8px; }
+.mega-cats .filter-list { display: flex; flex-direction: column; gap: 2px; }
+
+.nav-drop.open .mega { opacity: 1; visibility: visible; transform: none; }

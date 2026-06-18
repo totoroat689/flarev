@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Flare[V] v3.7.0 / 2026-06-17 -->
+<!-- Flare[V] v3.8.0 / 2026-06-17 -->
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -96,12 +96,37 @@
 
     <nav id="sidebar">
       <div class="logo-wrap">
-        <div class="logo" onclick="location.reload()" style="cursor: pointer;" title="Back to start">FLARE<span>[V]</span></div>
+        <div class="logo" onclick="location.href='/'" style="cursor: pointer;" title="Back to start">FLARE<span>[V]</span></div>
         <span class="logo-flare"></span>
         <span class="logo-light"></span>
       </div>
 
-      <button class="bar-link bar-cats" onclick="toggleFilterPanel()" aria-expanded="false">Categories</button>
+      <div class="nav-drop" id="cats-drop">
+        <span class="nav-trigger">Categories</span>
+        <div class="mega mega-cats">
+          <div class="cat-tools">
+            <button onclick="setAllCategories('all', true)">Select all</button>
+            <button onclick="setAllCategories('all', false)">Clear all</button>
+          </div>
+          <div class="filter-list" id="cat-list">
+            <div class="filter-item active-spot" data-cat="spot" onclick="toggleFilter(this,'spot')">
+              <div class="filter-dot dot-spot"></div><span class="filter-text">Spots</span><span class="filter-count" id="cnt-spot">0</span>
+            </div>
+            <div class="filter-item active-yt" data-cat="yt" onclick="toggleFilter(this,'yt')">
+              <div class="filter-dot dot-yt"></div><span class="filter-text">Live</span><span class="filter-count" id="cnt-yt">0</span>
+            </div>
+            <div class="filter-item active-news" data-cat="news" onclick="toggleFilter(this,'news')">
+              <div class="filter-dot dot-news"></div><span class="filter-text">Local news</span><span class="filter-count" id="cnt-news">0</span>
+            </div>
+            <div class="filter-item active-resort" data-cat="resort" onclick="toggleFilter(this,'resort')">
+              <div class="filter-dot dot-resort"></div><span class="filter-text">Resort</span><span class="filter-count" id="cnt-resort">0</span>
+            </div>
+            <div class="filter-item active-hotel" data-cat="hotel" onclick="toggleFilter(this,'hotel')">
+              <div class="filter-dot dot-hotel"></div><span class="filter-text">Hotel</span><span class="filter-count" id="cnt-hotel">0</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <a class="bar-link" href="/top/">Ranking</a>
 
@@ -118,47 +143,6 @@
         <button class="login-btn" onclick="openModal()">Log in / Sign up</button>
       </div>
     </nav>
-
-    <div id="filter-panel" aria-hidden="true">
-      <div class="fp-inner">
-        <div class="section">
-          <div class="cat-head">
-            <div class="section-label">Categories</div>
-            <div class="cat-tools">
-              <button onclick="setAllCategories('all', true)">Select all</button>
-              <button onclick="setAllCategories('all', false)">Clear all</button>
-            </div>
-          </div>
-          <div class="filter-list" id="cat-list">
-            <div class="filter-item active-spot" data-cat="spot" onclick="toggleFilter(this,'spot')">
-              <div class="filter-dot dot-spot"></div>
-              <span class="filter-text">Spots</span>
-              <span class="filter-count" id="cnt-spot">0</span>
-            </div>
-            <div class="filter-item active-yt" data-cat="yt" onclick="toggleFilter(this,'yt')">
-              <div class="filter-dot dot-yt"></div>
-              <span class="filter-text">Live</span>
-              <span class="filter-count" id="cnt-yt">0</span>
-            </div>
-            <div class="filter-item active-news" data-cat="news" onclick="toggleFilter(this,'news')">
-              <div class="filter-dot dot-news"></div>
-              <span class="filter-text">Local news</span>
-              <span class="filter-count" id="cnt-news">0</span>
-            </div>
-            <div class="filter-item active-resort" data-cat="resort" onclick="toggleFilter(this,'resort')">
-              <div class="filter-dot dot-resort"></div>
-              <span class="filter-text">Resort</span>
-              <span class="filter-count" id="cnt-resort">0</span>
-            </div>
-            <div class="filter-item active-hotel" data-cat="hotel" onclick="toggleFilter(this,'hotel')">
-              <div class="filter-dot dot-hotel"></div>
-              <span class="filter-text">Hotel</span>
-              <span class="filter-count" id="cnt-hotel">0</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <div id="map-container">
       <div id="map"></div>

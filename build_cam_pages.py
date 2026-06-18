@@ -127,7 +127,7 @@ def build_menu_data(rows):
     return ordered
 
 
-def build_menu_html(menu):
+def build_bar(menu):
     conts, grps, first = [], [], True
     for cont_name, countries in menu:
         cid = cslug(cont_name)
@@ -139,26 +139,40 @@ def build_menu_html(menu):
         )
         grps.append(f'<div class="cgrp{on}" data-c="{cid}">{links}</div>')
         first = False
+
+    cats = (
+        '<div class="nav-drop nav-disabled"><span class="nav-trigger">Categories</span>'
+        '<div class="mega mega-cats"><div class="filter-list">'
+        '<div class="filter-item active-spot"><div class="filter-dot dot-spot"></div><span class="filter-text">Spots</span></div>'
+        '<div class="filter-item active-yt"><div class="filter-dot dot-yt"></div><span class="filter-text">Live</span></div>'
+        '<div class="filter-item active-news"><div class="filter-dot dot-news"></div><span class="filter-text">Local news</span></div>'
+        '<div class="filter-item active-resort"><div class="filter-dot dot-resort"></div><span class="filter-text">Resort</span></div>'
+        '<div class="filter-item active-hotel"><div class="filter-dot dot-hotel"></div><span class="filter-text">Hotel</span></div>'
+        '</div></div></div>'
+    )
+
     nav = (
-        '<nav class="nav">'
+        '<nav id="sidebar">'
+        '<div class="logo-wrap"><div class="logo" onclick="location.href=\'/\'" style="cursor:pointer">FLARE<span>[V]</span></div>'
+        '<span class="logo-flare"></span><span class="logo-light"></span></div>'
+        + cats +
         '<a class="bar-link" href="/top/">Ranking</a>'
         '<div class="nav-drop"><span class="nav-trigger">Live cams</span>'
-        '<div class="mega">'
-        '<div class="mega-body"><div class="mega-conts">' + "".join(conts) + '</div>'
+        '<div class="mega" id="live-mega"><div class="mega-body"><div class="mega-conts">' + "".join(conts) + '</div>'
         '<div class="mega-countries">' + "".join(grps) + '</div></div></div></div>'
         '<span class="bar-spacer"></span>'
         '<a class="bar-link" href="/?contact=1">Message</a>'
         '</nav>'
     )
     js = (
-        "<script>(function(){"
-        "function show(c){document.querySelectorAll('.cont').forEach(function(b){b.classList.toggle('on',b.dataset.c===c);});"
-        "document.querySelectorAll('.cgrp').forEach(function(g){g.classList.toggle('on',g.dataset.c===c);});}"
-        "document.querySelectorAll('.cont').forEach(function(b){"
+        "<script>(function(){var root=document.getElementById('live-mega');if(!root)return;"
+        "function show(c){root.querySelectorAll('.cont').forEach(function(b){b.classList.toggle('on',b.dataset.c===c);});"
+        "root.querySelectorAll('.cgrp').forEach(function(g){g.classList.toggle('on',g.dataset.c===c);});}"
+        "root.querySelectorAll('.cont').forEach(function(b){"
         "b.addEventListener('mouseenter',function(){show(b.dataset.c);});"
         "b.addEventListener('click',function(){show(b.dataset.c);});});"
-        "var dd=document.querySelector('.nav-drop'),tr=document.querySelector('.nav-trigger');"
-        "if(tr){tr.addEventListener('click',function(){if(window.innerWidth<=760)dd.classList.toggle('open');});}"
+        "document.querySelectorAll('.nav-drop').forEach(function(dd){var tr=dd.querySelector('.nav-trigger');"
+        "if(tr)tr.addEventListener('click',function(){if(window.innerWidth<=760)dd.classList.toggle('open');});});"
         "})();</script>"
     )
     return nav + js
@@ -278,7 +292,7 @@ def render_page(cam, rank, nearby, menu_html):
         "__ROBOTS__": robots, "__PAGETITLE__": esc(page_title), "__METADESC__": esc(meta_desc),
         "__CANONICAL__": canonical, "__JSONLD__": jsonld_html, "__CRUMB_COUNTRY__": crumb_country,
         "__CRUMB_HREF__": (f"/?view=live&country={quote(country)}" if country else "/"),
-        "__MENU__": menu_html,
+        "__BAR__": menu_html, "__BARCSS__": BAR_CSS,
         "__H1__": esc(page_title.split(" | ")[0]), "__VID__": esc(vid),
         "__EMBED__": f"https://www.youtube.com/embed/{vid}?autoplay=1&mute=1&playsinline=1",
         "__PIPNAME__": esc(title[:28]), "__CHIPS__": chips_html, "__FACTS__": facts_html,
@@ -314,7 +328,7 @@ def main():
     print(f"🏗️  페이지 생성 대상 {len(top)}개")
 
     menu = build_menu_data(rows)
-    menu_html = build_menu_html(menu)
+    menu_html = build_bar(menu)
 
     sitemap_urls = [SITE + "/", SITE + "/top/"]
     made = 0
@@ -519,13 +533,11 @@ __JSONLD__
   .card .cs{font-size:0.7rem;color:var(--muted);margin-top:2px;}
   footer{margin-top:40px;padding-top:20px;border-top:1px solid var(--border);color:var(--muted);font-size:0.8rem;text-align:center;}
   @media(max-width:760px){.grid{grid-template-columns:1fr;} .left{position:static;} .cards{grid-template-columns:1fr 1fr;}}
+__BARCSS__
 </style>
 </head>
 <body>
-  <div class="topbar">
-    <a href="/" class="logo">FLARE<span>[V]</span></a>
-    __MENU__
-  </div>
+  __BAR__
   <div class="wrap">
     <div class="crumb"><a href="/">Home</a> › <a href="__CRUMB_HREF__">__CRUMB_COUNTRY__</a> › __H1__</div>
     <h1>__H1__</h1>
@@ -766,7 +778,7 @@ LIST_TEMPLATE = """<!DOCTYPE html>
 <link rel="canonical" href="__CANONICAL__" />
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+KR:wght@400;600;700;800&display=swap" rel="stylesheet" />
 <style>__CSS__</style></head><body>
-  <div class="topbar"><a href="/" class="logo">FLARE<span>[V]</span></a>__MENU__</div>
+  __BAR__
   <div class="wrap">
     <div class="psub" style="margin-bottom:10px;"><a href="/" style="color:var(--muted)">Home</a> › Live cams</div>
     <h1 class="ph">__H1__</h1>
@@ -798,7 +810,7 @@ TOP_TEMPLATE = """<!DOCTYPE html>
   .rpl{font-size:0.74rem;color:var(--muted);margin-top:2px;}
   .rval{font-weight:800;font-size:0.95rem;color:var(--mint);white-space:nowrap;} .rval span{font-size:0.7rem;color:var(--muted);font-weight:600;display:block;text-align:right;}
 </style></head><body>
-  <div class="topbar"><a href="/" class="logo">FLARE<span>[V]</span></a>__MENU__</div>
+  __BAR__
   <div class="wrap">
     <div class="psub" style="margin-bottom:10px;"><a href="/" style="color:var(--muted)">Home</a> › Rankings</div>
     <h1 class="ph">🏆 Live Cam Rankings</h1>
@@ -838,7 +850,7 @@ def render_country_page(country, cams, menu_html):
     sub = f"{len(cams)} live cam" + ("s" if len(cams) != 1 else "")
     out = LIST_TEMPLATE
     repl = {
-        "__CSS__": SHARED_CSS, "__MENU__": menu_html,
+        "__CSS__": SHARED_CSS + BAR_CSS, "__BAR__": menu_html,
         "__PAGETITLE__": esc(f"Live Cams in {country} | Flare[V]"),
         "__METADESC__": esc(f"Watch {len(cams)} live cams in {country}, streaming right now on Flare[V]."),
         "__CANONICAL__": f"{SITE}/live/{cslug(country)}/",
@@ -877,11 +889,67 @@ def render_top_page(rows, menu_html, limit=50):
         + _rank_list("watching", watching, lambda c: c.get("concurrent_viewers") or 0, "watching")
     )
     out = TOP_TEMPLATE
-    for k, v in {"__CSS__": SHARED_CSS, "__MENU__": menu_html,
+    for k, v in {"__CSS__": SHARED_CSS + BAR_CSS, "__BAR__": menu_html,
                  "__CANONICAL__": f"{SITE}/top/", "__LISTS__": lists}.items():
         out = out.replace(k, v)
     return out
 
+
+
+BAR_CSS = """
+  #sidebar{position:sticky;top:0;z-index:300;display:flex;align-items:center;gap:16px;height:58px;
+    padding:0 18px;background:rgba(10,10,15,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);overflow:visible;}
+  #sidebar a,.nav-trigger,.bar-link,.mega a{text-decoration:none;}
+  .logo-wrap{position:relative;flex-shrink:0;}
+  .logo{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:3px;line-height:1;position:relative;z-index:2;display:inline-block;}
+  .logo span{color:var(--festival);animation:logo-breath 3.5s ease-in-out infinite;}
+  @keyframes logo-breath{0%,100%{text-shadow:0 0 10px rgba(255,107,107,0.55);}50%{text-shadow:0 0 22px rgba(255,107,107,1),0 0 38px rgba(255,107,107,0.6);}}
+  .logo-flare{position:absolute;left:82px;top:14px;width:5px;height:5px;border-radius:50%;background:#ffb3a0;
+    box-shadow:0 0 10px #ff6b6b,0 0 18px #ff6b6b;opacity:0;z-index:1;animation:logo-launch 15s ease-out infinite;}
+  @keyframes logo-launch{0%{transform:translateY(0) scale(1);opacity:0;}2%{opacity:1;}7%{transform:translateY(-32px) scale(0.7);opacity:1;}
+    9%{transform:translateY(-38px) scale(1.6);opacity:0.5;}10%{transform:translateY(-40px) scale(0.2);opacity:0;}100%{transform:translateY(-40px) scale(0.2);opacity:0;}}
+  .logo-light{position:absolute;left:84px;top:-8px;width:7px;height:7px;border-radius:50%;background:#ffe88a;
+    box-shadow:0 0 14px #ffd93d,0 0 26px rgba(255,217,61,0.7);opacity:0;z-index:1;animation:logo-fall 15s ease-in infinite;}
+  @keyframes logo-fall{0%,9%{opacity:0;transform:translateY(0) scale(0.4);}11%{opacity:1;transform:translateY(0) scale(1.3);}
+    14%{opacity:1;transform:translateY(4px) scale(1);}30%{opacity:0.85;transform:translateY(40px) scale(0.85);}34%{opacity:0;transform:translateY(48px) scale(0.5);}100%{opacity:0;transform:translateY(48px) scale(0.5);}}
+  .bar-link,.nav-trigger{font-family:'Noto Sans KR',sans-serif;font-size:0.86rem;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap;}
+  .bar-link:hover,.nav-drop:hover .nav-trigger{color:var(--text);}
+  .bar-spacer{flex:1;}
+  .nav-drop{position:relative;flex-shrink:0;}
+  .mega{position:absolute;top:calc(100% + 14px);left:0;width:min(620px,92vw);background:rgba(16,16,26,0.98);
+    backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:16px;padding:14px;box-shadow:0 24px 60px rgba(0,0,0,0.6);
+    opacity:0;visibility:hidden;transform:translateY(8px);transition:opacity .2s ease,transform .2s ease;z-index:320;}
+  .nav-drop:hover .mega,.nav-drop.open .mega{opacity:1;visibility:visible;transform:translateY(0);}
+  .mega::before{content:"";position:absolute;top:-14px;left:0;right:0;height:14px;}
+  .mega-body{display:grid;grid-template-columns:150px 1fr;gap:10px;}
+  .mega-conts{display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--border);padding-right:8px;}
+  .cont{display:flex;justify-content:space-between;align-items:center;background:transparent;border:none;color:var(--text);
+    font-family:inherit;font-size:0.82rem;font-weight:600;text-align:left;padding:8px 10px;border-radius:9px;cursor:pointer;}
+  .cont i{color:var(--muted);font-style:normal;font-size:0.72rem;}
+  .cont:hover,.cont.on{background:var(--mint-bg);color:var(--mint);} .cont.on i{color:var(--mint);}
+  .mega-countries{min-height:150px;}
+  .cgrp{display:none;grid-template-columns:1fr 1fr;gap:4px;animation:fadein .25s ease;} .cgrp.on{display:grid;}
+  @keyframes fadein{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+  .cgrp a{font-size:0.8rem;padding:7px 9px;border-radius:8px;display:flex;justify-content:space-between;gap:8px;color:var(--text);}
+  .cgrp a:hover{background:rgba(255,255,255,0.06);color:var(--mint);} .cgrp a i{color:var(--muted);font-style:normal;font-size:0.72rem;}
+  .mega-cats{width:240px;}
+  .mega-cats .filter-list{display:flex;flex-direction:column;gap:2px;}
+  .filter-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:9px;font-size:0.84rem;}
+  .filter-item .filter-text{flex:1;}
+  .filter-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .dot-spot{background:#ff8fa3;} .dot-yt{background:#ff4e45;} .dot-news{background:#4ea3ff;}
+  .dot-resort{background:#6bffb8;} .dot-hotel{background:#f0c419;}
+  .nav-disabled .filter-item{opacity:0.45;pointer-events:none;}
+  .contact-btn{font-family:'Noto Sans KR',sans-serif;font-size:0.86rem;font-weight:600;color:var(--muted);background:none;border:none;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+  .contact-btn:hover{color:var(--text);}
+  @media(max-width:760px){
+    #sidebar{gap:10px;padding:0 12px;}
+    .logo{font-size:0;} .logo span{font-size:1.35rem;} .logo-flare,.logo-light{display:none;}
+    .bar-link,.nav-trigger,.contact-btn{font-size:0.78rem;}
+    .mega{position:fixed;left:8px;right:8px;top:56px;width:auto;max-height:72vh;overflow:auto;}
+    .mega-cats{width:auto;}
+  }
+"""
 
 if __name__ == "__main__":
     main()
