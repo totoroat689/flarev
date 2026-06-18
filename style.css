@@ -2725,4 +2725,14 @@ body.spot-picking #upload-btn { display: none !important; }
 .nav-drop.open .mega { opacity: 1; visibility: visible; transform: none; }
 
 /* v3.8.1: Ranking 링크 수직정렬 수정 */
-.bar-link { display: flex; align-items: center; }
+.bar-link, .nav-trigger {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+/* 랭킹 글자가 여전히 미세하게 높다면 아래 코드의 1px 숫자를 조절해 보세요 */
+.bar-link {
+  margin-top: 1px;
+}
+
