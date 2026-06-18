@@ -141,13 +141,13 @@ def build_menu_html(menu):
         first = False
     nav = (
         '<nav class="nav">'
-        '<a class="bar-link" href="/top/">🏆 Ranking</a>'
-        '<div class="nav-drop"><span class="nav-trigger">📡 Live cams ▾</span>'
-        '<div class="mega"><a class="mega-top" href="/top/">🏆 Rankings</a>'
+        '<a class="bar-link" href="/top/">Ranking</a>'
+        '<div class="nav-drop"><span class="nav-trigger">Live cams</span>'
+        '<div class="mega">'
         '<div class="mega-body"><div class="mega-conts">' + "".join(conts) + '</div>'
         '<div class="mega-countries">' + "".join(grps) + '</div></div></div></div>'
         '<span class="bar-spacer"></span>'
-        '<a class="bar-link" href="/?contact=1">✉️ Message</a>'
+        '<a class="bar-link" href="/?contact=1">Message</a>'
         '</nav>'
     )
     js = (
