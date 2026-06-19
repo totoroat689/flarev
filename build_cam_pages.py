@@ -953,6 +953,8 @@ def render_top_page(rows, menu_html, limit=50):
 
 
 BAR_CSS = """
+  html,body{scrollbar-width:none;-ms-overflow-style:none;}
+  html::-webkit-scrollbar,body::-webkit-scrollbar{display:none;}
   #sidebar{position:sticky;top:0;z-index:300;display:flex;align-items:center;gap:16px;height:58px;
     padding:0 18px;background:var(--sidebar);border-bottom:1px solid var(--border);overflow:visible;}
   #sidebar a,.nav-trigger,.bar-link,.mega a{text-decoration:none;}
