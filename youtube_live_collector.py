@@ -75,16 +75,22 @@ def yt_get(url, params, tries=3):
 # 검색어 목록 — 여기에 추가/삭제만 하면 됨 (검색어 1개당 약 100~150유닛)
 # 검색어마다 다른 웹캠이 잡혀서, 합치면 수백 개 후보가 모임
 SEARCH_QUERIES = [
-    "webcam live",
-    "live cam 4k",
-    "live camera",
-    "beach live cam",
-    "city live stream",
-    "라이브 캠",
-    "실시간 라이브 캠",
-    "live webcam 24/7",
-    "resort live cam",
-    "hotel live cam",
+    "Camera trực tiếpe",
+    "กล้องถ่ายทอดสด",
+    "Kamera langsung",
+    "Kamera langsung",
+    "ກ້ອງຖ່າຍທອດສົດ",
+    "တိုက်ရိုက်ကင်မရာ",
+#    "webcam live",
+#    "live cam 4k",
+#    "live camera",
+#    "beach live cam",
+#    "city live stream",
+#    "라이브 캠",
+#    "실시간 라이브 캠",
+#    "live webcam 24/7",
+#    "resort live cam",
+#    "hotel live cam",
 ]
 SEARCH_PAGES = 2               # 검색어당 페이지 수 (1페이지=50개, 100유닛). 2 = 검색어당 약 200유닛
 MAX_TO_REFINE = 500            # Claude로 정제할 최대 후보 수 (인기순 상위부터). 500=사실상 전부
