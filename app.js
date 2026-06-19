@@ -1,4 +1,4 @@
-// Flare[V] v3.8.0 / 2026-06-17
+// Flare[V] v3.8.2 / 2026-06-19
 const SUPABASE_URL = 'https://pbrbzjxdjqqmhvhzhwlp.supabase.co';
 const SUPABASE_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicmJ6anhkanFxbWh2aHpod2xwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjc3NTcsImV4cCI6MjA5NTMwMzc1N30.E6-GthxwIFN2-jy4ojf5ZxR7YcdPJULG6Mxj9LvkI1c';
@@ -71,8 +71,6 @@ let spotPhotoIndex = 0;
 const chosenSpotTags = new Set();
 let lastSpotWrite = 0; 
 let SpotPinClass = null;
-let dateFilter = 'today'; 
-let customRange = { start: null, end: null };
 let festSearchQuery = '';
 
 let popupPushed = false;
@@ -852,37 +850,7 @@ function festivalDurationDays(f) {
 }
 
 function matchesDateFilter(f) {
-  
-  if (!f.date_start) return false;
-
-  const start = toDate(f.date_start);
-  const end = toDate(f.date_end) || start;
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  let from, to;
-
-  if (dateFilter === 'today') {
-    from = new Date(today);
-    to = new Date(today);
-  } else if (dateFilter === 'week') {
-    from = new Date(today);
-    to = new Date(today);
-    to.setDate(to.getDate() + 7);
-  } else if (dateFilter === 'month') {
-    from = new Date(today);
-    to = new Date(today);
-    to.setMonth(to.getMonth() + 1);
-  } else if (dateFilter === 'custom') {
-    if (!customRange.start || !customRange.end) return true;
-    from = toDate(customRange.start);
-    to = toDate(customRange.end);
-  } else {
-    return true; 
-  }
-
-  return start <= to && end >= from;
+  return true;
 }
 
 function applyFilters() {
@@ -1451,44 +1419,6 @@ function openMap(type) {
   }
 
   if (url) window.open(url, '_blank');
-}
-
-function setDate(el, type) {
-  document
-    .querySelectorAll('.date-btn')
-    .forEach((b) => b.classList.remove('active'));
-  el.classList.add('active');
-
-  const rangeBox = document.getElementById('date-range');
-
-  if (type === 'custom') {
-    
-    rangeBox.classList.add('show');
-    const s = document.getElementById('range-start').value;
-    const e = document.getElementById('range-end').value;
-    
-    dateFilter = s && e ? 'custom' : 'none';
-  } else {
-    
-    rangeBox.classList.remove('show');
-    document.getElementById('range-start').value = '';
-    document.getElementById('range-end').value = '';
-    customRange = { start: null, end: null };
-    dateFilter = type;
-  }
-
-  applyFilters();
-}
-
-function setCustomRange() {
-  const s = document.getElementById('range-start').value;
-  const e = document.getElementById('range-end').value;
-  customRange.start = s || null;
-  customRange.end = e || null;
-
-  if (s && e) dateFilter = 'custom';
-
-  applyFilters();
 }
 
 function toggleFilter(el, type) {
@@ -2493,46 +2423,9 @@ async function loadSpots() {
   rebuildSpotPlaces(); 
 }
 
-function spotInDateRange(post) {
-  const iso = post.taken_at || post.created_at;
-  if (!iso) return true;
-  const t = new Date(iso);
-  if (isNaN(t.getTime())) return true;
-
-  const today = new Date();
-  const endToday = new Date(today);
-  endToday.setHours(23, 59, 59, 999);
-  let from, to;
-
-  if (dateFilter === 'today') {
-    from = new Date(today);
-    from.setHours(0, 0, 0, 0);
-    to = endToday;
-  } else if (dateFilter === 'week') {
-    from = new Date(today);
-    from.setHours(0, 0, 0, 0);
-    from.setDate(from.getDate() - 7); 
-    to = endToday;
-  } else if (dateFilter === 'month') {
-    from = new Date(today);
-    from.setHours(0, 0, 0, 0);
-    from.setMonth(from.getMonth() - 1); 
-    to = endToday;
-  } else if (dateFilter === 'custom') {
-    if (!customRange.start || !customRange.end) return true;
-    from = toDate(customRange.start);
-    to = toDate(customRange.end);
-    to.setHours(23, 59, 59, 999);
-  } else {
-    return true; 
-  }
-  return t >= from && t <= to;
-}
-
 function rebuildSpotPlaces() {
   const byPlace = {};
   spotData.forEach((post) => {
-    if (!spotInDateRange(post)) return; 
     const pl = post.places;
     if (!byPlace[pl.id]) {
       byPlace[pl.id] = {
