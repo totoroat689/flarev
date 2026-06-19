@@ -1,45 +1,27 @@
-// Flare[V] v3.8.2 / 2026-06-19
+// Flare[V] v3.8.3 / 2026-06-19
 const SUPABASE_URL = 'https://pbrbzjxdjqqmhvhzhwlp.supabase.co';
 const SUPABASE_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicmJ6anhkanFxbWh2aHpod2xwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjc3NTcsImV4cCI6MjA5NTMwMzc1N30.E6-GthxwIFN2-jy4ojf5ZxR7YcdPJULG6Mxj9LvkI1c';
 
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let festivalData = [];
 let map;
-let pinOverlays = []; 
-let currentFestival = null; 
 
-let currentContentId = null; 
 let currentReviews = []; 
-let pickedRating = 0; 
 let likedIds = new Set(); 
 let lastReviewWrite = 0; 
 let lastReviewLike = 0; 
-const LABEL_ZOOM = 11;
 
 let selectedPin = null; 
-let clusterMarkers = []; 
-let expandedCluster = null; 
 let projectionHelper = null; 
-let FlarePinClass = null; 
-let ClusterMarkerClass = null; 
 let myLocationMarker = null; 
-const CLUSTER_RADIUS = 48; 
-const LONG_RUNNING_DAYS = 14; 
 
-let activeCategories = { spot: true, festival: true, yt: true, news: true, resort: true, hotel: true };
+let activeCategories = { spot: true, yt: true, news: true, resort: true, hotel: true };
 
-let viewMode = 'live';
 
 const SPOT_TAGS = ['풍경', '맛집', '이색', '힐링', '놀라운', '실시간 현장'];
 let activeSpotTags = new Set(SPOT_TAGS);
-let activeGenres = new Set(); 
 
-let perfData = []; 
-let perfOverlays = []; 
-let PerfPinClass = null;
-let currentPerf = null; 
 
 let liveData = []; 
 let liveGroups = []; 
@@ -71,7 +53,6 @@ let spotPhotoIndex = 0;
 const chosenSpotTags = new Set();
 let lastSpotWrite = 0; 
 let SpotPinClass = null;
-let festSearchQuery = '';
 
 let popupPushed = false;
 function pushPopupState() {
@@ -203,9 +184,7 @@ function initMap() {
       handlePoiClick(e.placeId, e.latLng, x, y);
       return;
     }
-    collapseSpider();
     closeSpotPanel(); 
-    closePerfPanel(); 
     closeLivePanel(); 
     if (expandedLiveGroup) {
       expandedLiveGroup = null; 
@@ -218,9 +197,6 @@ function initMap() {
   if (google.maps.places) {
     placesService = new google.maps.places.PlacesService(map);
   }
-  
-  map.addListener('idle', recluster);
-  map.addListener('zoom_changed', updatePinLabels);
 
   map.addListener('contextmenu', (e) => {
     if (!e.latLng) return;
@@ -239,9 +215,7 @@ function initMap() {
   
   setupLongPress();
 
-  if (festivalData.length > 0) showFestivalPins();
   loadSpots(); 
-  loadPerformances(); 
   loadLiveVideos(); 
   setupLiveResize(); 
 }
@@ -265,331 +239,6 @@ function defineOverlayClasses() {
   }
   projectionHelper = new ProjectionHelper();
   projectionHelper.setMap(map);
-
-  FlarePinClass = class extends google.maps.OverlayView {
-    constructor(festival) {
-      super();
-      this.festival = festival;
-      this.position = new google.maps.LatLng(
-        festival.latitude,
-        festival.longitude
-      );
-      this.div = null;
-      this.isOngoing = isOngoingFestival(festival); 
-      this.isLong =
-        this.isOngoing &&
-        festivalDurationDays(festival) >= LONG_RUNNING_DAYS; 
-      this.isPast = isPastFestival(festival); 
-      this.passesFilter = true; 
-      this.spiderOffset = null; 
-    }
-
-    onAdd() {
-      const div = document.createElement('div');
-      div.className =
-        'flare-pin' +
-        (this.isOngoing ? ' ongoing' : '') +
-        (this.isPast ? ' past' : '');
-      div.style.position = 'absolute';
-      div.style.willChange = 'transform';
-      const badgeHtml = this.isOngoing
-        ? this.isLong
-          ? '<div class="sangsi-badge">ALWAYS</div>'
-          : '<div class="now-badge">NOW</div>'
-        : '';
-      div.innerHTML =
-        '<div class="flare-dot"></div>' +
-        badgeHtml +
-        '<div class="flare-label">' +
-        escapeHtml(this.festival.title || 'Festival') +
-        '</div>';
-
-      const self = this;
-      div.addEventListener('click', (e) => {
-        e.stopPropagation();
-        openFestivalPanel(self.festival);
-        selectPin(self); 
-      });
-
-      this.div = div;
-      this.getPanes().overlayMouseTarget.appendChild(div);
-    }
-
-    draw() {
-      if (!this.div) return;
-      const point = this.getProjection().fromLatLngToDivPixel(
-        this.position
-      );
-      if (point) {
-        let x = point.x - 7;
-        let y = point.y - 7;
-        if (this.spiderOffset) {
-          x += this.spiderOffset.dx;
-          y += this.spiderOffset.dy;
-        }
-        this.div.style.transform = 'translate(' + x + 'px,' + y + 'px)';
-      }
-    }
-
-    setZoomed(isZoomed) {
-      if (!this.div) return;
-      this.div.classList.toggle('zoomed', isZoomed);
-    }
-
-    setVisible(visible) {
-      if (!this.div) return;
-      this.div.style.display = visible ? 'block' : 'none';
-    }
-
-    setSelected(isSel) {
-      if (!this.div) return;
-      this.div.classList.toggle('selected', isSel);
-    }
-
-    
-    setSpider(offset, animate) {
-      this.spiderOffset = offset;
-      if (this.div) {
-        this.div.classList.toggle('spider', !!offset);
-        this.div.classList.toggle(
-          'label-left',
-          !!(offset && offset.labelLeft)
-        );
-
-        if (animate) {
-          
-          this.div.style.transition =
-            'transform 0.2s cubic-bezier(0.34, 1.4, 0.6, 1)';
-          
-          clearTimeout(this._spiderTimer);
-          this._spiderTimer = setTimeout(() => {
-            if (this.div) this.div.style.transition = '';
-          }, 220);
-        }
-      }
-      this.draw();
-    }
-
-    onRemove() {
-      if (this.div) {
-        this.div.parentNode.removeChild(this.div);
-        this.div = null;
-      }
-    }
-  };
-
-  ClusterMarkerClass = class extends google.maps.OverlayView {
-    constructor(position, members) {
-      super();
-      this.position = position;
-      this.members = members;
-      this.div = null;
-    }
-    onAdd() {
-      const div = document.createElement('div');
-      div.className = 'flare-cluster';
-      div.style.willChange = 'transform';
-      div.textContent = this.members.length;
-      const self = this;
-      div.addEventListener('click', (e) => {
-        e.stopPropagation();
-        expandCluster(self); 
-      });
-      this.div = div;
-      this.getPanes().overlayMouseTarget.appendChild(div);
-    }
-    draw() {
-      if (!this.div) return;
-      const p = this.getProjection().fromLatLngToDivPixel(this.position);
-      if (p) {
-        this.div.style.transform =
-          'translate(' + (p.x - 18) + 'px,' + (p.y - 18) + 'px)';
-      }
-    }
-    hide() {
-      if (this.div) this.div.style.display = 'none';
-    }
-    show() {
-      if (this.div) this.div.style.display = 'flex';
-    }
-    onRemove() {
-      if (this.div) {
-        this.div.parentNode.removeChild(this.div);
-        this.div = null;
-      }
-    }
-  };
-
-  SpotPinClass = class extends google.maps.OverlayView {
-    constructor(post, count) {
-      super();
-      this.post = post;
-      this.count = count || 1;
-      const p = post.places;
-      this.position = new google.maps.LatLng(p.latitude, p.longitude);
-      this.div = null;
-    }
-    onAdd() {
-      const div = document.createElement('div');
-      div.className = 'spot-pin';
-      div.style.position = 'absolute';
-      div.style.willChange = 'transform';
-      div.innerHTML =
-        '<span class="spot-ring"></span>' +
-        '<div class="spot-drop"></div>' +
-        (this.count > 1
-          ? '<span class="spot-count">' + this.count + '</span>'
-          : '') +
-        '<div class="spot-label">' +
-        escapeHtml(this.post.title || 'Spot') +
-        '</div>';
-      const self = this;
-      div.addEventListener('click', (e) => {
-        e.stopPropagation();
-        openSpotPanel(self.post);
-      });
-      this.div = div;
-      this.getPanes().overlayMouseTarget.appendChild(div);
-    }
-    draw() {
-      if (!this.div) return;
-      const pt = this.getProjection().fromLatLngToDivPixel(this.position);
-      if (pt) {
-        this.div.style.transform =
-          'translate(' + (pt.x - 8) + 'px,' + (pt.y - 16) + 'px)';
-      }
-    }
-    setVisible(v) {
-      if (this.div) this.div.style.display = v ? 'block' : 'none';
-    }
-    onRemove() {
-      if (this.div) {
-        this.div.parentNode.removeChild(this.div);
-        this.div = null;
-      }
-    }
-  };
-
-  PerfPinClass = class extends google.maps.OverlayView {
-    constructor(perf) {
-      super();
-      this.perf = perf;
-      const v = perf.venues;
-      this.position = new google.maps.LatLng(v.latitude, v.longitude);
-      this.div = null;
-      this.isOngoing = isOngoingFestival(perf); 
-      this.isLong =
-        this.isOngoing && festivalDurationDays(perf) >= LONG_RUNNING_DAYS;
-      this.isPast = isPastFestival(perf);
-    }
-    onAdd() {
-      const div = document.createElement('div');
-      div.className =
-        'perf-pin' +
-        (this.isOngoing ? ' ongoing' : '') +
-        (this.isPast ? ' past' : '');
-      div.style.position = 'absolute';
-      div.style.willChange = 'transform';
-      const badgeHtml = this.isOngoing
-        ? this.isLong
-          ? '<div class="sangsi-badge">ALWAYS</div>'
-          : '<div class="now-badge">NOW</div>'
-        : '';
-      div.innerHTML =
-        '<span class="perf-ring"></span>' +
-        '<div class="perf-drop"></div>' +
-        badgeHtml +
-        '<div class="perf-label">' +
-        escapeHtml(this.perf.title || 'Show') +
-        '</div>';
-      const self = this;
-      div.addEventListener('click', (e) => {
-        e.stopPropagation();
-        openPerfPanel(self.perf);
-        selectPin(self); 
-      });
-      this.div = div;
-      this.getPanes().overlayMouseTarget.appendChild(div);
-    }
-    draw() {
-      if (!this.div) return;
-      const pt = this.getProjection().fromLatLngToDivPixel(this.position);
-      if (pt) {
-        this.div.style.transform =
-          'translate(' + (pt.x - 8) + 'px,' + (pt.y - 16) + 'px)';
-      }
-    }
-    setSelected(isSel) {
-      if (this.div) this.div.classList.toggle('selected', isSel);
-    }
-    setVisible(v) {
-      if (this.div) this.div.style.display = v ? 'block' : 'none';
-    }
-    onRemove() {
-      if (this.div) {
-        this.div.parentNode.removeChild(this.div);
-        this.div = null;
-      }
-    }
-  };
-
-  LivePinClass = class extends google.maps.OverlayView {
-    constructor(item, fan) {
-      super();
-      this.item = item;
-      this.fan = fan || null; 
-      this.position = new google.maps.LatLng(item.latitude, item.longitude);
-      this.div = null;
-    }
-    onAdd() {
-      const on = !!this.item.is_live;
-      const kind = this.item.kind || 'stream';
-      const isNews = kind === 'news';
-      let badgeText = 'LIVE';
-      if (kind === 'news') badgeText = 'NEWS';
-      else if (kind === 'resort') badgeText = 'RESORT';
-      else if (kind === 'hotel') badgeText = 'HOTEL';
-      const div = document.createElement('div');
-      div.className =
-        'live-pin' + (on ? ' on' : ' off') + ' kind-' + kind;
-      div.style.position = 'absolute';
-      div.style.willChange = 'transform';
-      div.innerHTML =
-        (on ? '<span class="live-ring"></span>' : '') +
-        '<div class="live-drop"></div>' +
-        (on ? '<div class="live-badge">' + badgeText + '</div>' : '') +
-        '<div class="live-label">' +
-        escapeHtml(this.item.title || 'Live') +
-        '</div>';
-      const self = this;
-      div.addEventListener('click', (e) => {
-        e.stopPropagation();
-        openLivePanel(self.item);
-        selectPin(self);
-      });
-      this.div = div;
-      this.getPanes().overlayMouseTarget.appendChild(div);
-    }
-    draw() {
-      if (!this.div) return;
-      const pt = this.getProjection().fromLatLngToDivPixel(this.position);
-      if (pt) {
-        const dx = this.fan ? this.fan.dx : 0;
-        const dy = this.fan ? this.fan.dy : 0;
-        this.div.style.transform =
-          'translate(' + (pt.x - 8 + dx) + 'px,' + (pt.y - 16 + dy) + 'px)';
-      }
-    }
-    setSelected(isSel) {
-      if (this.div) this.div.classList.toggle('selected', isSel);
-    }
-    onRemove() {
-      if (this.div) {
-        this.div.parentNode.removeChild(this.div);
-        this.div = null;
-      }
-    }
-  };
 
   LiveClusterClass = class extends google.maps.OverlayView {
     constructor(group) {
@@ -634,228 +283,19 @@ function defineOverlayClasses() {
     }
   };
 }
-async function loadFestivals() {
-  document.getElementById('loading').style.display = 'block';
 
-  const { data, error } = await supabaseClient
-    .from('festivals')
-    .select('*')
-    .eq('is_active', true);
 
-  document.getElementById('loading').style.display = 'none';
 
-  if (error) {
-    console.log('load error:', error.message);
-    return;
-  }
 
-  festivalData = data;
-  console.log('festivals loaded:', data.length);
 
-  if (map) showFestivalPins();
-}
 
-function showFestivalPins() {
-  buildPinsForCurrentFilter();
-}
 
-function passesCurrentFilter(f) {
-  if (!activeCategories.festival) return false;
-  if (festSearchQuery) {
-    
-    return matchesFestSearch([
-      f.title,
-      f.description,
-      f.tags,
-      f.place_name,
-      f.location_name,
-      f.address,
-    ]);
-  }
-  return matchesDateFilter(f);
-}
 
-function matchesFestSearch(parts) {
-  if (!festSearchQuery) return true;
-  const q = festSearchQuery.toLowerCase();
-  return parts.some((t) => t && String(t).toLowerCase().includes(q));
-}
 
-function buildPinsForCurrentFilter() {
-  if (!map || !FlarePinClass) return; 
-  
-  closePanel();
 
-  pinOverlays.forEach((p) => p.setMap(null));
-  pinOverlays = [];
-  clusterMarkers.forEach((c) => c.setMap(null));
-  clusterMarkers = [];
-  expandedCluster = null;
 
-  if (viewMode !== 'festival') return; 
-
-  let visibleCount = 0;
-  festivalData.forEach((f) => {
-    if (!f.latitude || !f.longitude) return;
-    if (!passesCurrentFilter(f)) return;
-    const pin = new FlarePinClass(f);
-    pin.passesFilter = true;
-    pin.setMap(map);
-    pinOverlays.push(pin);
-    visibleCount++;
-  });
-
-  document.getElementById('cnt-festival').textContent = visibleCount;
-  updatePinLabels();
-  recluster();
-}
-
-function updatePinLabels() {
-  if (!map || typeof map.getZoom !== 'function') return; 
-  const zoomedIn = map.getZoom() >= LABEL_ZOOM;
-  pinOverlays.forEach((pin) => pin.setZoomed(zoomedIn));
-}
-
-function recluster() {
-  if (!projectionHelper || !projectionHelper.getProjection()) return;
-
-  if (expandedCluster) {
-    expandedCluster.members.forEach((p) => p.setSpider(null));
-    expandedCluster = null;
-  }
-  
-  clusterMarkers.forEach((c) => c.setMap(null));
-  clusterMarkers = [];
-
-  const pts = [];
-  pinOverlays.forEach((pin) => {
-    if (!pin.passesFilter) return;
-    const px = projectionHelper.px(pin.position);
-    if (px) pts.push({ pin: pin, px: px });
-  });
-
-  const used = new Set();
-  for (let i = 0; i < pts.length; i++) {
-    if (used.has(i)) continue;
-    const group = [pts[i]];
-    used.add(i);
-    for (let j = i + 1; j < pts.length; j++) {
-      if (used.has(j)) continue;
-      const dx = pts[i].px.x - pts[j].px.x;
-      const dy = pts[i].px.y - pts[j].px.y;
-      if (Math.hypot(dx, dy) < CLUSTER_RADIUS) {
-        group.push(pts[j]);
-        used.add(j);
-      }
-    }
-
-    if (group.length === 1) {
-      
-      group[0].pin.setVisible(true);
-    } else {
-      
-      let latSum = 0;
-      let lngSum = 0;
-      group.forEach((o) => {
-        o.pin.setVisible(false);
-        latSum += o.pin.position.lat();
-        lngSum += o.pin.position.lng();
-      });
-      const center = new google.maps.LatLng(
-        latSum / group.length,
-        lngSum / group.length
-      );
-      const cm = new ClusterMarkerClass(
-        center,
-        group.map((o) => o.pin)
-      );
-      cm.setMap(map);
-      clusterMarkers.push(cm);
-    }
-  }
-}
-
-function expandCluster(cm) {
-  
-  if (expandedCluster && expandedCluster !== cm) {
-    const prev = expandedCluster;
-    prev.members.forEach((p) => {
-      p.setSpider(null);
-      p.setVisible(false);
-    });
-    prev.show();
-    expandedCluster = null;
-  }
-
-  expandedCluster = cm;
-  cm.hide(); 
-
-  const n = cm.members.length;
-  
-  const radius = 23 + n * 5;
-
-  let startAngle;
-  if (n === 2) {
-    startAngle = 0; 
-  } else if (n === 3) {
-    startAngle = -Math.PI / 2; 
-  } else {
-    startAngle = -Math.PI / 2 + Math.PI / n; 
-  }
-
-  cm.members.forEach((pin) => {
-    pin.setVisible(true);
-    pin.setSpider({ dx: 0, dy: 0, labelLeft: false });
-  });
-
-  requestAnimationFrame(() => {
-    cm.members.forEach((pin, idx) => {
-      const angle = startAngle + (2 * Math.PI * idx) / n;
-      const dx = Math.cos(angle) * radius;
-      const dy = Math.sin(angle) * radius;
-      const labelLeft = dx < -2; 
-      pin.setSpider({ dx: dx, dy: dy, labelLeft: labelLeft }, true);
-    });
-  });
-}
-
-function collapseSpider() {
-  if (!expandedCluster) return;
-  const cm = expandedCluster;
-  expandedCluster = null; 
-
-  cm.members.forEach((pin) => {
-    pin.setSpider({ dx: 0, dy: 0, labelLeft: false }, true);
-  });
-
-  setTimeout(() => {
-    cm.members.forEach((pin) => {
-      pin.setSpider(null);
-      pin.setVisible(false);
-    });
-    cm.show();
-  }, 200);
-}
-
-function toDate(str) {
-  if (!str) return null;
-  return new Date(str + 'T00:00:00');
-}
-
-function festivalDurationDays(f) {
-  if (!f.date_start) return 0;
-  const start = toDate(f.date_start);
-  const end = toDate(f.date_end) || start;
-  return Math.round((end - start) / 86400000) + 1;
-}
-
-function matchesDateFilter(f) {
-  return true;
-}
 
 function applyFilters() {
-  buildPinsForCurrentFilter(); 
-  renderPerfPins(); 
   rebuildSpotPlaces(); 
 }
 
@@ -883,195 +323,17 @@ function escapeHtml(s) {
     .replace(/"/g, '&quot;');
 }
 
-function setMetaRow(rowId, textId, value) {
-  const row = document.getElementById(rowId);
-  const txt = document.getElementById(textId);
-  const v = value && String(value).trim();
-  if (v) {
-    txt.textContent = cleanInline(v);
-    row.style.display = 'flex';
-  } else {
-    row.style.display = 'none';
-  }
-}
 
-function setupPanelImage(f) {
-  const box = document.getElementById('panel-img');
-  const img = document.getElementById('panel-img-el');
 
-  box.classList.remove('has-photo', 'pan-v', 'pan-h');
-  img.onload = null;
-  img.onerror = null;
 
-  const url = f.image_url && String(f.image_url).trim();
-  if (!url) {
-    img.removeAttribute('src'); 
-    return;
-  }
 
-  img.onload = function () {
-    box.classList.add('has-photo');
-    box.classList.remove('pan-v', 'pan-h');
-    const boxRatio = box.clientWidth / box.clientHeight;
-    const imgRatio = img.naturalWidth / img.naturalHeight;
-    if (!imgRatio || !boxRatio) return;
-    
-    if (imgRatio > boxRatio * 1.05) box.classList.add('pan-h');
-    else if (imgRatio < boxRatio * 0.95) box.classList.add('pan-v');
-    
-  };
-  img.onerror = function () {
-    
-    box.classList.remove('has-photo', 'pan-v', 'pan-h');
-    img.removeAttribute('src');
-  };
 
-  img.src = url;
-  
-  if (img.complete && img.naturalWidth) img.onload();
-}
 
-function openPhoto() {
-  const box = document.getElementById('panel-img');
-  if (!box.classList.contains('has-photo')) return;
-  if (currentFestival && currentFestival.image_url) {
-    window.open(currentFestival.image_url, '_blank');
-  }
-}
 
-function setupDescription(f) {
-  const wrap = document.getElementById('panel-desc');
-  const textEl = document.getElementById('panel-desc-text');
-  const moreBtn = document.getElementById('panel-desc-more');
 
-  const raw = f.description;
-  if (!raw || !String(raw).trim()) {
-    wrap.style.display = 'none';
-    return;
-  }
 
-  wrap.style.display = 'block';
-  wrap.classList.remove('expanded');
-  textEl.textContent = cleanText(raw);
-  moreBtn.textContent = 'More';
-  moreBtn.style.display = 'none'; 
-}
 
-function measureDesc() {
-  const wrap = document.getElementById('panel-desc');
-  if (wrap.style.display === 'none') return;
-  const textEl = document.getElementById('panel-desc-text');
-  const moreBtn = document.getElementById('panel-desc-more');
-  wrap.classList.remove('expanded');
-  const overflowing = textEl.scrollHeight > textEl.clientHeight + 2;
-  moreBtn.style.display = overflowing ? 'inline-block' : 'none';
-  moreBtn.textContent = 'More';
-}
 
-function toggleDesc() {
-  const wrap = document.getElementById('panel-desc');
-  const moreBtn = document.getElementById('panel-desc-more');
-  const expanded = wrap.classList.toggle('expanded');
-  moreBtn.textContent = expanded ? 'Less' : 'More';
-}
-
-function setupProgram(f) {
-  const wrap = document.getElementById('panel-program');
-  const body = document.getElementById('panel-program-body');
-  const moreBtn = document.getElementById('panel-program-more');
-  const raw = f.program;
-  if (!raw || !String(raw).trim()) {
-    wrap.style.display = 'none';
-    return;
-  }
-  wrap.style.display = 'block';
-  wrap.classList.remove('expanded');
-  body.textContent = cleanText(raw);
-  moreBtn.textContent = 'More';
-  moreBtn.style.display = 'none'; 
-}
-
-function measureProgram() {
-  const wrap = document.getElementById('panel-program');
-  if (wrap.style.display === 'none') return;
-  const body = document.getElementById('panel-program-body');
-  const moreBtn = document.getElementById('panel-program-more');
-  wrap.classList.remove('expanded');
-  const overflowing = body.scrollHeight > body.clientHeight + 2;
-  moreBtn.style.display = overflowing ? 'inline-block' : 'none';
-  moreBtn.textContent = 'More';
-}
-
-function toggleProgram() {
-  const wrap = document.getElementById('panel-program');
-  const moreBtn = document.getElementById('panel-program-more');
-  const expanded = wrap.classList.toggle('expanded');
-  moreBtn.textContent = expanded ? 'Less' : 'More';
-}
-
-function openFestivalPanel(f) {
-  const panel = document.getElementById('info-panel');
-  closeSpotPanel(); 
-  closePerfPanel(); 
-
-  document.getElementById('map-picker').classList.remove('show');
-
-  currentFestival = f; 
-
-  setupPanelImage(f);
-
-  const titleEl = document.getElementById('panel-title');
-  titleEl.textContent = f.title || 'Untitled';
-
-  setMetaRow('row-place', 'panel-place', f.place_name || f.location_name);
-  setMetaRow(
-    'row-date',
-    'panel-date',
-    f.date_start
-      ? f.date_start +
-          (f.date_end && f.date_end !== f.date_start
-            ? ' ~ ' + f.date_end
-            : '')
-      : ''
-  );
-  setMetaRow('row-time', 'panel-time', f.play_time);
-  setMetaRow('row-price', 'panel-price', f.price);
-
-  setupDescription(f);
-  setupProgram(f);
-
-  setupReviews(f);
-
-  panel.classList.remove('show');
-  void panel.offsetWidth; 
-  panel.classList.add('show');
-  panel.scrollTop = 0;
-
-  requestAnimationFrame(() => {
-    fitTitle(titleEl);
-    measureDesc();
-    measureProgram();
-  });
-}
-
-function fitTitle(el) {
-  const sizes = [1, 0.92, 0.85, 0.78]; 
-  
-  for (let i = 0; i < sizes.length; i++) {
-    el.style.fontSize = sizes[i] + 'rem';
-    if (el.scrollWidth <= el.clientWidth) break;
-  }
-}
-
-function closePanel() {
-  document.getElementById('info-panel').classList.remove('show');
-  document.getElementById('map-picker').classList.remove('show');
-  
-  if (selectedPin) {
-    selectedPin.setSelected(false);
-    selectedPin = null;
-  }
-}
 
 function selectPin(pin) {
   if (selectedPin && selectedPin !== pin) selectedPin.setSelected(false);
@@ -1079,124 +341,9 @@ function selectPin(pin) {
   pin.setSelected(true);
 }
 
-function setupReviews(f) {
-  const area = document.getElementById('panel-img');
-  const talkBtn = document.getElementById('talk-btn');
-  const row = document.getElementById('reaction-row');
 
-  area.classList.remove('reviews-open', 'form-open');
-  talkBtn.classList.remove('open');
-  document.getElementById('talk-label').textContent = 'Reviews';
 
-  const cid = f.content_id && String(f.content_id).trim();
-  currentContentId = cid || null;
-  currentReviews = [];
 
-  if (!cid) {
-    
-    row.style.display = 'none';
-    return;
-  }
-  row.style.display = 'flex';
-
-  const box = document.getElementById('rating-box');
-  box.textContent = 'Loading reviews…';
-  box.classList.add('none');
-
-  loadReviews(cid).then(() => {
-    
-    if (currentContentId !== cid) return;
-    renderRatingBox();
-    renderReviewList();
-  });
-}
-
-async function loadReviews(contentId) {
-  const { data, error } = await supabaseClient
-    .from('reviews')
-    .select('*')
-    .eq('content_id', contentId)
-    .order('created_at', { ascending: false });
-  if (error) {
-    console.log('review load error:', error.message);
-    currentReviews = [];
-    return;
-  }
-  currentReviews = data || [];
-}
-
-function renderRatingBox() {
-  const box = document.getElementById('rating-box');
-  if (currentReviews.length === 0) {
-    box.textContent = 'No reviews yet';
-    box.classList.add('none');
-    return;
-  }
-  box.classList.remove('none');
-  const avg =
-    currentReviews.reduce((s, r) => s + r.rating, 0) /
-    currentReviews.length;
-  box.textContent =
-    '⭐ ' + avg.toFixed(1) + ' | ' + currentReviews.length + ' ratings';
-}
-
-function renderReviewList() {
-  const list = document.getElementById('review-list');
-  if (currentReviews.length === 0) {
-    list.innerHTML = '<div class="rv-empty">No reviews yet!</div>';
-    return;
-  }
-  list.innerHTML = currentReviews
-    .map((r) => {
-      const stars =
-        '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
-      const liked = likedIds.has(r.id) ? ' liked' : '';
-      return (
-        '<div class="review">' +
-        '<div class="r-top">' +
-        '<span class="r-author">' +
-        escapeHtml(r.author) +
-        '</span>' +
-        '<span class="r-stars">' +
-        stars +
-        '</span>' +
-        '<span class="r-date">' +
-        formatReviewDate(r.created_at) +
-        '</span>' +
-        '</div>' +
-        '<div class="r-content">' +
-        escapeHtml(r.content) +
-        '</div>' +
-        '<div class="r-actions">' +
-        '<button class="like-btn' +
-        liked +
-        '" onclick="likeReview(' +
-        r.id +
-        ')">♥ <span>' +
-        r.likes +
-        '</span></button>' +
-        '<button class="del-btn" onclick="askDeleteReview(' +
-        r.id +
-        ')">🗑 Delete</button>' +
-        '</div>' +
-        '<div class="del-confirm" id="dc-' +
-        r.id +
-        '">' +
-        '<input type="text" inputmode="numeric" placeholder="Password" id="dcpw-' +
-        r.id +
-        '" />' +
-        '<button class="dc-ok" onclick="doDeleteReview(' +
-        r.id +
-        ')">Delete</button>' +
-        '<button class="dc-no" onclick="cancelDeleteReview(' +
-        r.id +
-        ')">Cancel</button>' +
-        '</div>' +
-        '</div>'
-      );
-    })
-    .join('');
-}
 
 function formatReviewDate(iso) {
   if (!iso) return '';
@@ -1207,158 +354,12 @@ function formatReviewDate(iso) {
   return m + '/' + day;
 }
 
-function toggleReviews() {
-  const area = document.getElementById('panel-img');
-  const btn = document.getElementById('talk-btn');
-  const label = document.getElementById('talk-label');
-  const open = !area.classList.contains('reviews-open');
-  closeReviewForm();
-  area.classList.toggle('reviews-open', open);
-  btn.classList.toggle('open', open);
-  label.textContent = open ? 'Hide reviews' : 'Reviews';
-  if (open) renderReviewList();
-}
 
-async function likeReview(id) {
-  if (likedIds.has(id)) {
-    toast('You already liked this review');
-    return;
-  }
-  const now = Date.now();
-  if (now - lastReviewLike < 10000) {
-    toast('You can like once every 10 seconds');
-    return;
-  }
-  const r = currentReviews.find((x) => x.id === id);
-  if (!r) return;
-  const newLikes = (r.likes || 0) + 1;
-  const { error } = await supabaseClient
-    .from('reviews')
-    .update({ likes: newLikes })
-    .eq('id', id);
-  if (error) {
-    toast('Please try again in a moment');
-    return;
-  }
-  r.likes = newLikes;
-  likedIds.add(id);
-  lastReviewLike = now;
-  renderReviewList();
-}
 
-function askDeleteReview(id) {
-  document
-    .querySelectorAll('.del-confirm')
-    .forEach((e) => e.classList.remove('show'));
-  const el = document.getElementById('dc-' + id);
-  if (el) el.classList.add('show');
-}
-function cancelDeleteReview(id) {
-  const el = document.getElementById('dc-' + id);
-  if (el) el.classList.remove('show');
-}
 
-async function doDeleteReview(id) {
-  const input = document.getElementById('dcpw-' + id);
-  const pw = input ? input.value.trim() : '';
-  if (!pw) {
-    toast('Please enter the password');
-    return;
-  }
-  
-  const { data, error } = await supabaseClient
-    .from('reviews')
-    .delete()
-    .eq('id', id)
-    .eq('password', pw)
-    .select();
-  if (error) {
-    toast('Please try again in a moment');
-    return;
-  }
-  if (!data || data.length === 0) {
-    toast('Wrong password');
-    return;
-  }
-  currentReviews = currentReviews.filter((x) => x.id !== id);
-  renderReviewList();
-  renderRatingBox();
-}
 
-function openReviewForm() {
-  document.getElementById('panel-img').classList.add('form-open');
-  document.getElementById('rv-author').value = '';
-  document.getElementById('rv-pw').value = '';
-  document.getElementById('rv-content').value = '';
-  document.getElementById('rv-form-msg').textContent = '';
-  pickedRating = 0;
-  paintStars(0);
-}
-function closeReviewForm() {
-  document.getElementById('panel-img').classList.remove('form-open');
-}
 
-function paintStars(n) {
-  document.querySelectorAll('#star-pick span').forEach((s) => {
-    s.classList.toggle('on', Number(s.dataset.v) <= n);
-  });
-}
 
-async function submitReview() {
-  const author = document.getElementById('rv-author').value.trim();
-  const pw = document.getElementById('rv-pw').value.trim();
-  const content = document.getElementById('rv-content').value.trim();
-  const msg = document.getElementById('rv-form-msg');
-
-  if (!currentContentId) return;
-  if (!author) {
-    msg.textContent = 'Please enter a name';
-    return;
-  }
-  if (!pw) {
-    msg.textContent = 'Please enter the password';
-    return;
-  }
-  if (pickedRating === 0) {
-    msg.textContent = 'Please pick a rating';
-    return;
-  }
-  if (!content) {
-    msg.textContent = 'Please write a review';
-    return;
-  }
-
-  const now = Date.now();
-  if (now - lastReviewWrite < 10000) {
-    msg.textContent = 'You can post again in 10 seconds';
-    return;
-  }
-
-  const { data, error } = await supabaseClient
-    .from('reviews')
-    .insert([
-      {
-        content_id: currentContentId,
-        author: author,
-        password: pw,
-        content: content,
-        rating: pickedRating,
-      },
-    ])
-    .select();
-
-  if (error) {
-    console.log('review submit error:', error.message);
-    msg.textContent = 'Failed to submit. Please try again in a moment.';
-    return;
-  }
-
-  lastReviewWrite = now;
-  if (data && data[0]) currentReviews.unshift(data[0]);
-  closeReviewForm();
-  renderReviewList();
-  renderRatingBox();
-}
 
 function toast(text) {
   const el = document.createElement('div');
@@ -1371,55 +372,8 @@ function toast(text) {
   setTimeout(() => el.remove(), 1500);
 }
 
-function searchFestival() {
-  if (!currentFestival) return;
-  const f = currentFestival;
 
-  let year;
-  if (f.date_start) {
-    year = f.date_start.slice(0, 4); 
-  } else {
-    year = String(new Date().getFullYear()); 
-  }
 
-  const parts = [year, f.place_name || f.location_name, f.title].filter(
-    (s) => s && String(s).trim()
-  );
-  const q = encodeURIComponent(parts.join(' '));
-  window.open('https://www.google.com/search?q=' + q, '_blank');
-}
-
-function toggleMapPicker() {
-  document.getElementById('map-picker').classList.toggle('show');
-}
-
-function openMap(type) {
-  if (!currentFestival) return;
-  const lat = currentFestival.latitude;
-  const lng = currentFestival.longitude;
-  const place = encodeURIComponent(
-    currentFestival.place_name ||
-      currentFestival.location_name ||
-      currentFestival.address ||
-      currentFestival.title ||
-      'Destination'
-  );
-  let url = '';
-
-  if (type === 'kakao') {
-    url = `https://map.kakao.com/?q=${place}`;
-  } else if (type === 'naver') {
-    url = `https://map.naver.com/v5/search/${place}`;
-  } else if (type === 'google') {
-    
-    url =
-      lat && lng
-        ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
-        : `https://www.google.com/maps/search/?api=1&query=${place}`;
-  }
-
-  if (url) window.open(url, '_blank');
-}
 
 function toggleFilter(el, type) {
   const activeClass = 'active-' + type;
@@ -1450,16 +404,6 @@ function toggleSpotTag(el, tag) {
   renderSpotPins();
 }
 
-function toggleGenre(el, genre) {
-  if (activeGenres.has(genre)) {
-    activeGenres.delete(genre);
-    el.classList.remove('active-perf');
-  } else {
-    activeGenres.add(genre);
-    el.classList.add('active-perf');
-  }
-  renderPerfPins();
-}
 
 function refreshMap() {
   renderSpotPins();
@@ -1470,35 +414,9 @@ function setViewMode() {
   refreshMap();
 }
 
-function clearFestivalPins() {
-  pinOverlays.forEach((p) => p.setMap(null));
-  pinOverlays = [];
-  clusterMarkers.forEach((c) => c.setMap(null));
-  clusterMarkers = [];
-  expandedCluster = null;
-}
 
-function clearPerfPins() {
-  perfOverlays.forEach((p) => p.setMap(null));
-  perfOverlays = [];
-}
 
-function isOngoingFestival(f) {
-  if (!f.date_start) return false; 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const start = toDate(f.date_start);
-  const end = toDate(f.date_end) || start;
-  return start <= today && today <= end;
-}
 
-function isPastFestival(f) {
-  if (!f.date_start) return false; 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const end = toDate(f.date_end) || toDate(f.date_start);
-  return end < today; 
-}
 
 function goToMyLocation() {
   const btn = document.getElementById('locate-btn');
@@ -2492,8 +1410,6 @@ function updateSpotCount() {
 
 function openSpotPanel(post) {
   currentSpot = post;
-  closePanel(); 
-  closePerfPanel(); 
   if (selectedPin) {
     selectedPin.setSelected(false); 
     selectedPin = null;
@@ -2674,135 +1590,12 @@ async function reportSpot() {
   toast('Report received. Thank you.');
 }
 
-(function initStarPicker() {
-  const pick = document.getElementById('star-pick');
-  if (!pick) return;
-  pick.querySelectorAll('span').forEach((s) => {
-    s.addEventListener('mouseover', () =>
-      paintStars(Number(s.dataset.v))
-    );
-    s.addEventListener('click', () => {
-      pickedRating = Number(s.dataset.v);
-      paintStars(pickedRating);
-    });
-  });
-  pick.addEventListener('mouseleave', () => paintStars(pickedRating));
-})();
 
-async function loadPerformances() {
-  const { data, error } = await supabaseClient
-    .from('performances')
-    .select('*, venues(*)')
-    .eq('is_active', true);
-  if (error) {
-    console.log('show load error:', error.message);
-    return;
-  }
-  
-  perfData = (data || []).filter(
-    (p) => p.venues && p.venues.latitude != null && p.venues.longitude != null
-  );
-  console.log('shows loaded:', perfData.length);
 
-  buildGenreCategories(); 
-  if (viewMode === 'festival') renderPerfPins();
-}
 
-function genreEmoji(g) {
-  if (!g) return '🎵';
-  if (g.includes('대중음악')) return '🎤';
-  if (g.includes('뮤지컬')) return '🎭';
-  if (g.includes('연극')) return '🎬';
-  if (g.includes('클래식') || g.includes('서양음악')) return '🎻';
-  if (g.includes('국악') || g.includes('한국음악')) return '🪕';
-  if (g.includes('무용')) return '💃';
-  if (g.includes('서커스') || g.includes('마술')) return '🎪';
-  if (g.includes('복합')) return '🎨';
-  if (g.includes('아동')) return '🧸';
-  if (g.includes('축제')) return '🎉';
-  return '🎵';
-}
 
-function buildGenreCategories() {
-  const host = document.getElementById('cat-perf-genres');
-  if (!host) return;
 
-  const counts = {};
-  perfData.forEach((p) => {
-    const g = p.genre || p.tags;
-    if (!g) return;
-    counts[g] = (counts[g] || 0) + 1;
-  });
-  const genres = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
-  activeGenres = new Set(genres); 
 
-  host.innerHTML = '';
-  genres.forEach((g) => {
-    const item = document.createElement('div');
-    item.className = 'filter-item active-perf';
-    item.innerHTML =
-      '<div class="filter-dot dot-perf"></div>' +
-      '<span class="filter-text">' +
-      escapeHtml(genreEmoji(g) + ' ' + g) +
-      '</span>' +
-      '<span class="filter-count">' +
-      counts[g] +
-      '</span>';
-    item.addEventListener('click', () => toggleGenre(item, g));
-    host.appendChild(item);
-  });
-}
-
-function renderPerfPins() {
-  clearPerfPins();
-  if (viewMode !== 'festival') return;
-  if (!PerfPinClass || !map) return;
-
-  perfData.forEach((p) => {
-    const g = p.genre || p.tags;
-    if (!g || !activeGenres.has(g)) return; 
-    if (festSearchQuery) {
-      
-      if (
-        !matchesFestSearch([
-          p.title,
-          p.genre,
-          p.tags,
-          p.place_name,
-          p.cast_members,
-          p.venues && p.venues.name,
-          p.venues && p.venues.address,
-        ])
-      )
-        return;
-    } else if (!matchesDateFilter(p)) {
-      return; 
-    }
-    const pin = new PerfPinClass(p);
-    pin.setMap(map);
-    perfOverlays.push(pin);
-  });
-}
-
-function runFestSearch() {
-  const input = document.getElementById('fest-search-input');
-  const q = input ? (input.value || '').trim() : '';
-  festSearchQuery = q;
-  const clearBtn = document.getElementById('fest-search-clear');
-  if (clearBtn) clearBtn.style.display = q ? 'block' : 'none';
-  buildPinsForCurrentFilter();
-  renderPerfPins();
-}
-
-function clearFestSearch() {
-  festSearchQuery = '';
-  const input = document.getElementById('fest-search-input');
-  if (input) input.value = '';
-  const clearBtn = document.getElementById('fest-search-clear');
-  if (clearBtn) clearBtn.style.display = 'none';
-  buildPinsForCurrentFilter();
-  renderPerfPins();
-}
 
 function setAllCategories(_mode, on) {
   ['spot', 'yt', 'news', 'resort', 'hotel'].forEach((t) => {
@@ -2816,64 +1609,8 @@ function setAllCategories(_mode, on) {
   renderLivePins();
 }
 
-function openPerfPanel(p) {
-  currentPerf = p;
-  closePanel(); 
-  closeSpotPanel(); 
 
-  const img = document.getElementById('pf-img');
-  img.src = p.image_url || '';
-  img.style.display = p.image_url ? 'block' : 'none';
 
-  document.getElementById('pf-title').textContent = p.title || 'Show';
-  setPerfMeta('pf-genre', p.genre || p.tags, genreEmoji(p.genre || p.tags) + ' ');
-  setPerfMeta('pf-place', p.place_name || (p.venues && p.venues.name), '📍 ');
-  const dates = p.date_start
-    ? p.date_start +
-      (p.date_end && p.date_end !== p.date_start ? ' ~ ' + p.date_end : '')
-    : '';
-  setPerfMeta('pf-date', dates, '📅 ');
-  setPerfMeta('pf-price', p.price, '💰 ');
-  setPerfMeta('pf-cast', p.cast_members, '👤 ');
-
-  const ticket = document.getElementById('pf-ticket');
-  if (p.ticket_url) {
-    ticket.href = p.ticket_url;
-    ticket.classList.remove('hidden');
-  } else {
-    ticket.classList.add('hidden');
-  }
-
-  const panel = document.getElementById('perf-panel');
-  panel.classList.remove('show');
-  void panel.offsetWidth; 
-  panel.classList.add('show');
-  panel.scrollTop = 0;
-  pushPopupState(); 
-}
-
-function setPerfMeta(id, val, prefix) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  if (val && String(val).trim()) {
-    el.textContent = prefix + String(val).trim();
-    el.style.display = 'block';
-  } else {
-    el.textContent = '';
-    el.style.display = 'none';
-  }
-}
-
-function closePerfPanel() {
-  const pn = document.getElementById('perf-panel');
-  const was = pn.classList.contains('show');
-  pn.classList.remove('show');
-  if (selectedPin) {
-    selectedPin.setSelected(false);
-    selectedPin = null;
-  }
-  if (was) afterManualPopupClose();
-}
 
 async function loadLiveVideos() {
   const { data, error } = await supabaseClient
@@ -3005,11 +1742,21 @@ function renderLivePins() {
   });
 }
 
+function setPerfMeta(id, val, prefix) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (val && String(val).trim()) {
+    el.textContent = prefix + String(val).trim();
+    el.style.display = 'block';
+  } else {
+    el.textContent = '';
+    el.style.display = 'none';
+  }
+}
+
 function openLivePanel(item) {
   currentLive = item;
-  closePanel();
   closeSpotPanel();
-  closePerfPanel();
 
   const badge = document.getElementById('lv-badge');
   if (badge) {
@@ -3419,8 +2166,6 @@ function setupLiveResize() {
     e.stopPropagation();
   });
 }
-
-loadFestivals();
 
 (function () {
   var bm = document.getElementById('bar-mode');

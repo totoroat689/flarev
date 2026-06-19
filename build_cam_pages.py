@@ -17,6 +17,7 @@
 import os
 import html
 import json
+import math
 from datetime import datetime, timezone
 from urllib.parse import quote
 
@@ -308,11 +309,66 @@ def render_page(cam, rank, nearby, menu_html):
     return out, thin
 
 
+def _haversine_km(lat1, lng1, lat2, lng2):
+    # 두 좌표(위도/경도) 사이의 거리를 km 단위로 계산
+    R = 6371.0
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dp = math.radians(lat2 - lat1)
+    dl = math.radians(lng2 - lng1)
+    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return 2 * R * math.asin(math.sqrt(a))
+
+
+# 같은 종류(kind)일 때 거리를 이 비율로 줄여서 더 가깝게 취급(=우선순위 가산점)
+SAME_KIND_FACTOR = 0.6
+
+
 def pick_nearby(cam, pool):
+    # 거리 우선: 현재 캠과 실제로 가까운 캠을 먼저, 같은 종류면 가산점으로 위로.
+    # 좌표가 없는 캠은 인기순으로 뒤에 채운다.
     me = cam.get("video_id")
-    same = [c for c in pool if c.get("video_id") != me and c.get("country") and c.get("country") == cam.get("country")]
-    others = [c for c in pool if c.get("video_id") != me and c not in same]
-    return (same + others)[:NEARBY_COUNT]
+    my_kind = cam.get("kind")
+    candidates = [c for c in pool if c.get("video_id") != me]
+
+    def has_coords(c):
+        return c.get("latitude") is not None and c.get("longitude") is not None
+
+    try:
+        my_lat = float(cam.get("latitude"))
+        my_lng = float(cam.get("longitude"))
+        my_has_coords = True
+    except (TypeError, ValueError):
+        my_has_coords = False
+
+    if my_has_coords:
+        with_coords = []
+        without_coords = []
+        for c in candidates:
+            if has_coords(c):
+                try:
+                    d = _haversine_km(my_lat, my_lng, float(c["latitude"]), float(c["longitude"]))
+                except (TypeError, ValueError):
+                    without_coords.append(c)
+                    continue
+                # 같은 종류면 유효 거리를 줄여 더 가깝게(=먼저) 보이도록
+                if my_kind and c.get("kind") == my_kind:
+                    d *= SAME_KIND_FACTOR
+                with_coords.append((d, c))
+            else:
+                without_coords.append(c)
+        with_coords.sort(key=lambda x: x[0])
+        # 좌표 없는 캠은 인기순으로 뒤에 채움
+        without_coords.sort(key=lambda c: -(c.get("like_count") or 0))
+        ordered = [c for _, c in with_coords] + without_coords
+    else:
+        # 현재 캠 좌표가 없으면 같은 나라 먼저, 그다음 인기순
+        same = [c for c in candidates if c.get("country") and c.get("country") == cam.get("country")]
+        others = [c for c in candidates if c not in same]
+        same.sort(key=lambda c: -(c.get("like_count") or 0))
+        others.sort(key=lambda c: -(c.get("like_count") or 0))
+        ordered = same + others
+
+    return ordered[:NEARBY_COUNT]
 
 
 def main():
@@ -913,7 +969,7 @@ BAR_CSS = """
   @keyframes logo-fall{0%,9%{opacity:0;transform:translateY(0) scale(0.4);}11%{opacity:1;transform:translateY(0) scale(1.3);}
     14%{opacity:1;transform:translateY(4px) scale(1);}30%{opacity:0.85;transform:translateY(40px) scale(0.85);}34%{opacity:0;transform:translateY(48px) scale(0.5);}100%{opacity:0;transform:translateY(48px) scale(0.5);}}
   .bar-link,.nav-trigger{font-family:'Noto Sans KR',sans-serif;font-size:0.86rem;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap;}
-  .bar-link{display:flex;align-items:center;} .bar-link:hover,.nav-drop:hover .nav-trigger{color:var(--text);}
+  .bar-link,.nav-trigger{display:inline-flex;align-items:center;line-height:1;} .bar-link{margin-top:2px;} .bar-link:hover,.nav-drop:hover .nav-trigger{color:var(--text);}
   .bar-spacer{flex:1;}
   .nav-drop{position:relative;flex-shrink:0;}
   .mega{position:absolute;top:calc(100% + 14px);left:0;width:min(620px,92vw);background:rgba(16,16,26,0.98);
@@ -944,7 +1000,7 @@ BAR_CSS = """
   .contact-btn:hover{color:var(--text);}
   @media(max-width:760px){
     #sidebar{gap:10px;padding:0 12px;}
-    .logo{font-size:0;} .logo span{font-size:1.35rem;} .logo-flare,.logo-light{display:none;}
+    .logo{font-size:1.3rem;letter-spacing:2px;} .logo span{font-size:1.3rem;} .logo-flare,.logo-light{display:none;}
     .bar-link,.nav-trigger,.contact-btn{font-size:0.78rem;}
     .mega{position:fixed;left:8px;right:8px;top:56px;width:auto;max-height:72vh;overflow:auto;}
     .mega-cats{width:auto;}

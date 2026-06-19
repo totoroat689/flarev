@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Flare[V] v3.8.0 / 2026-06-17 -->
+<!-- Flare[V] v3.8.3 / 2026-06-19 -->
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -184,19 +184,6 @@
         </div>
       </div>
 
-      <div id="fest-search">
-        <div class="ss-bar">
-          <input
-            id="fest-search-input"
-            type="text"
-            placeholder="Search festivals (e.g. EDM, musical)"
-            onkeydown="if(event.key==='Enter'){event.preventDefault();runFestSearch();}"
-            oninput="if(this.value===''){clearFestSearch();}"
-          />
-          <button class="ss-go" onclick="runFestSearch()">Search</button>
-          <button class="ss-go" id="fest-search-clear" style="display:none;" onclick="clearFestSearch()">✕</button>
-        </div>
-      </div>
 
       <button id="locate-btn" onclick="goToMyLocation()" title="Go to my location">🧭</button>
 
@@ -208,112 +195,6 @@
         <div class="ln-sub">Loading live cams from around the world…</div>
       </div>
 
-      <div id="info-panel">
-        <div class="panel-header">
-          <span class="panel-badge badge-festival" id="panel-badge">Festival</span>
-          <button class="panel-close" onclick="closePanel()">✕</button>
-        </div>
-
-        <div class="panel-img" id="panel-img">
-          <img id="panel-img-el" alt="Festival photo" onclick="openPhoto()" />
-          <span class="panel-img-emoji" id="panel-img-emoji">🎪</span>
-
-          <div class="reviews" id="reviews-panel">
-            <div class="reviews-head">
-              <span class="rv-title">Reviews</span>
-              <button class="write-btn" onclick="openReviewForm()">✏️ Write a review</button>
-            </div>
-            <div class="rv-list" id="review-list"></div>
-          </div>
-
-          <div class="rv-form" id="review-form">
-            <h4>Write a review</h4>
-            <div class="rv-form-scroll">
-              <div class="rv-field">
-                <label>Name</label>
-                <input id="rv-author" maxlength="12" placeholder="Display name" />
-              </div>
-              <div class="rv-field">
-                <label>Password</label>
-                <input id="rv-pw" maxlength="8" inputmode="numeric" placeholder="Number for deletion" />
-                <div class="rv-hint">A number used only to delete this review. Don't use a real password.</div>
-              </div>
-              <div class="rv-field">
-                <label>Rating</label>
-                <div class="star-pick" id="star-pick">
-                  <span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span>
-                </div>
-              </div>
-              <div class="rv-field">
-                <label>Review</label>
-                <textarea id="rv-content" rows="2" maxlength="60" placeholder="Leave a short review"></textarea>
-              </div>
-            </div>
-            <div class="rv-form-msg" id="rv-form-msg"></div>
-            <div class="rv-form-btns">
-              <button class="rv-no" onclick="closeReviewForm()">Cancel</button>
-              <button class="rv-ok" onclick="submitReview()">Submit</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="panel-body">
-          <div class="panel-title-row">
-            <span class="panel-title" id="panel-title">Festival name</span>
-            <button class="title-link-btn" id="title-link-btn" onclick="searchFestival()" title="Search on Google">⌕ Search</button>
-          </div>
-
-          <div class="reaction-row" id="reaction-row">
-            <div class="reaction-btn rating-box" id="rating-box">⭐ –</div>
-            <button class="reaction-btn talk-btn" id="talk-btn" onclick="toggleReviews()">
-              <span class="ic">💬</span><span id="talk-label">Reviews</span>
-            </button>
-          </div>
-
-          <div class="panel-meta">
-            <div class="meta-row" id="row-place">
-              <span class="meta-icon">📍</span><span id="panel-place"></span>
-            </div>
-            <div class="meta-row" id="row-date">
-              <span class="meta-icon">📅</span><span id="panel-date"></span>
-            </div>
-            <div class="meta-row" id="row-time">
-              <span class="meta-icon">🕐</span><span id="panel-time"></span>
-            </div>
-            <div class="meta-row" id="row-price">
-              <span class="meta-icon">💰</span><span id="panel-price"></span>
-            </div>
-          </div>
-
-          <div class="panel-desc" id="panel-desc">
-            <div class="desc-text" id="panel-desc-text"></div>
-            <span class="desc-more" id="panel-desc-more" onclick="toggleDesc()">More</span>
-          </div>
-
-          <div class="panel-program" id="panel-program">
-            <div class="program-head"><span class="meta-icon">📋</span><span>Program</span></div>
-            <div class="program-body" id="panel-program-body"></div>
-            <span class="program-more" id="panel-program-more" onclick="toggleProgram()">More</span>
-          </div>
-
-          <button class="nav-btn nav-festival" id="nav-btn" onclick="toggleMapPicker()">📍 Directions</button>
-
-          <div class="map-picker" id="map-picker">
-            <button class="map-app-btn" onclick="openMap('kakao')">
-              <img src="https://t1.kakaocdn.net/kakaocorp/kakaocorp/admin/5f6c93f6017800001bce0024.png" alt="Kakao Map" onerror="this.style.background='#FFE000';this.style.borderRadius='10px'"/>
-              Kakao Map
-            </button>
-            <button class="map-app-btn" onclick="openMap('naver')">
-              <img src="https://ssl.pstatic.net/static/maps/mantle/map-icon/2x/ico_naver_map_logo.png" alt="Naver Map" onerror="this.style.background='#03C75A';this.style.borderRadius='10px'"/>
-              Naver Map
-            </button>
-            <button class="map-app-btn" onclick="openMap('google')">
-              <img src="https://www.google.com/images/branding/googleg/1x/googleg_standard_color_128dp.png" alt="Google Maps" onerror="this.style.background='#4285F4';this.style.borderRadius='10px'"/>
-              Google Maps
-            </button>
-          </div>
-        </div>
-      </div>
 
       <div id="spot-panel">
         <div class="panel-header">
@@ -353,24 +234,6 @@
         </div>
       </div>
 
-      <div id="perf-panel">
-        <div class="panel-header">
-          <span class="panel-badge" style="background: var(--perf-bg); color: var(--perf); border: 1px solid rgba(255,217,61,0.35);">Show</span>
-          <button class="panel-close" onclick="closePerfPanel()">✕</button>
-        </div>
-        <div class="pf-imgbox" id="pf-imgbox">
-          <img id="pf-img" alt="Show poster" />
-        </div>
-        <div class="pf-body">
-          <div class="pf-title" id="pf-title"></div>
-          <div class="pf-meta" id="pf-genre"></div>
-          <div class="pf-meta" id="pf-place"></div>
-          <div class="pf-meta" id="pf-date"></div>
-          <div class="pf-meta" id="pf-price"></div>
-          <div class="pf-meta" id="pf-cast"></div>
-          <a id="pf-ticket" class="pf-ticket" href="#" target="_blank" rel="noopener noreferrer">🎟️ Get tickets</a>
-        </div>
-      </div>
 
       <div id="live-panel">
         <div class="panel-header">
