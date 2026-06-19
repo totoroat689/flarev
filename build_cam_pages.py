@@ -162,7 +162,7 @@ def build_bar(menu):
         '<div class="mega" id="live-mega"><div class="mega-body"><div class="mega-conts">' + "".join(conts) + '</div>'
         '<div class="mega-countries">' + "".join(grps) + '</div></div></div></div>'
         '<span class="bar-spacer"></span>'
-        '<a class="bar-link" href="/?contact=1">Message</a>'
+        '<a class="contact-btn" href="/?contact=1">Message</a>'
         '</nav>'
     )
     js = (
@@ -996,12 +996,13 @@ BAR_CSS = """
   .dot-spot{background:#ff8fa3;} .dot-yt{background:#ff4e45;} .dot-news{background:#4ea3ff;}
   .dot-resort{background:#6bffb8;} .dot-hotel{background:#f0c419;}
   .nav-disabled .filter-item{opacity:0.45;pointer-events:none;}
-  .contact-btn{font-family:'Noto Sans KR',sans-serif;font-size:0.86rem;font-weight:600;color:var(--muted);background:none;border:none;cursor:pointer;white-space:nowrap;flex-shrink:0;}
-  .contact-btn:hover{color:var(--text);}
+  .contact-btn{width:auto;margin:0;white-space:nowrap;padding:9px 14px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:0.8rem;font-family:'Noto Sans KR',sans-serif;font-weight:600;cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s;}
+  .contact-btn:hover{background:rgba(255,107,107,0.1);border-color:var(--festival);color:var(--text);}
   @media(max-width:760px){
     #sidebar{gap:10px;padding:0 12px;}
     .logo{font-size:1.3rem;letter-spacing:2px;} .logo span{font-size:1.3rem;} .logo-flare,.logo-light{display:none;}
-    .bar-link,.nav-trigger,.contact-btn{font-size:0.78rem;}
+    .bar-link,.nav-trigger{font-size:0.78rem;}
+    .contact-btn{padding:7px 9px;font-size:0.72rem;}
     .mega{position:fixed;left:8px;right:8px;top:56px;width:auto;max-height:72vh;overflow:auto;}
     .mega-cats{width:auto;}
   }

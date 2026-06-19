@@ -1,4 +1,4 @@
-// Flare[V] v3.8.3 / 2026-06-19
+// Flare[V] v3.8.4 / 2026-06-19
 const SUPABASE_URL = 'https://pbrbzjxdjqqmhvhzhwlp.supabase.co';
 const SUPABASE_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicmJ6anhkanFxbWh2aHpod2xwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjc3NTcsImV4cCI6MjA5NTMwMzc1N30.E6-GthxwIFN2-jy4ojf5ZxR7YcdPJULG6Mxj9LvkI1c';
@@ -239,6 +239,114 @@ function defineOverlayClasses() {
   }
   projectionHelper = new ProjectionHelper();
   projectionHelper.setMap(map);
+
+  SpotPinClass = class extends google.maps.OverlayView {
+    constructor(post, count) {
+      super();
+      this.post = post;
+      this.count = count || 1;
+      const p = post.places;
+      this.position = new google.maps.LatLng(p.latitude, p.longitude);
+      this.div = null;
+    }
+    onAdd() {
+      const div = document.createElement('div');
+      div.className = 'spot-pin';
+      div.style.position = 'absolute';
+      div.style.willChange = 'transform';
+      div.innerHTML =
+        '<span class="spot-ring"></span>' +
+        '<div class="spot-drop"></div>' +
+        (this.count > 1
+          ? '<span class="spot-count">' + this.count + '</span>'
+          : '') +
+        '<div class="spot-label">' +
+        escapeHtml(this.post.title || 'Spot') +
+        '</div>';
+      const self = this;
+      div.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openSpotPanel(self.post);
+      });
+      this.div = div;
+      this.getPanes().overlayMouseTarget.appendChild(div);
+    }
+    draw() {
+      if (!this.div) return;
+      const pt = this.getProjection().fromLatLngToDivPixel(this.position);
+      if (pt) {
+        this.div.style.transform =
+          'translate(' + (pt.x - 8) + 'px,' + (pt.y - 16) + 'px)';
+      }
+    }
+    setVisible(v) {
+      if (this.div) this.div.style.display = v ? 'block' : 'none';
+    }
+    onRemove() {
+      if (this.div) {
+        this.div.parentNode.removeChild(this.div);
+        this.div = null;
+      }
+    }
+  };
+
+  LivePinClass = class extends google.maps.OverlayView {
+    constructor(item, fan) {
+      super();
+      this.item = item;
+      this.fan = fan || null; 
+      this.position = new google.maps.LatLng(item.latitude, item.longitude);
+      this.div = null;
+    }
+    onAdd() {
+      const on = !!this.item.is_live;
+      const kind = this.item.kind || 'stream';
+      const isNews = kind === 'news';
+      let badgeText = 'LIVE';
+      if (kind === 'news') badgeText = 'NEWS';
+      else if (kind === 'resort') badgeText = 'RESORT';
+      else if (kind === 'hotel') badgeText = 'HOTEL';
+      const div = document.createElement('div');
+      div.className =
+        'live-pin' + (on ? ' on' : ' off') + ' kind-' + kind;
+      div.style.position = 'absolute';
+      div.style.willChange = 'transform';
+      div.innerHTML =
+        (on ? '<span class="live-ring"></span>' : '') +
+        '<div class="live-drop"></div>' +
+        (on ? '<div class="live-badge">' + badgeText + '</div>' : '') +
+        '<div class="live-label">' +
+        escapeHtml(this.item.title || 'Live') +
+        '</div>';
+      const self = this;
+      div.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openLivePanel(self.item);
+        selectPin(self);
+      });
+      this.div = div;
+      this.getPanes().overlayMouseTarget.appendChild(div);
+    }
+    draw() {
+      if (!this.div) return;
+      const pt = this.getProjection().fromLatLngToDivPixel(this.position);
+      if (pt) {
+        const dx = this.fan ? this.fan.dx : 0;
+        const dy = this.fan ? this.fan.dy : 0;
+        this.div.style.transform =
+          'translate(' + (pt.x - 8 + dx) + 'px,' + (pt.y - 16 + dy) + 'px)';
+      }
+    }
+    setSelected(isSel) {
+      if (this.div) this.div.classList.toggle('selected', isSel);
+    }
+    onRemove() {
+      if (this.div) {
+        this.div.parentNode.removeChild(this.div);
+        this.div = null;
+      }
+    }
+  };
 
   LiveClusterClass = class extends google.maps.OverlayView {
     constructor(group) {
