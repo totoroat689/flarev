@@ -1,0 +1,33 @@
+name: Manual add live cams
+
+# 수동 실행 전용: Actions 탭에서 "Run workflow"를 누르면 아래 입력칸이 뜹니다.
+# 거기에 유튜브 라이브 링크를 여러 개(공백/쉼표/줄바꿈으로 구분) 붙여넣고 실행하세요.
+on:
+  workflow_dispatch:
+    inputs:
+      urls:
+        description: "YouTube live URLs (공백/쉼표/줄바꿈으로 여러 개 가능)"
+        required: true
+        type: string
+
+jobs:
+  add:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install requests supabase anthropic
+
+      - name: Run manual add
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          MANUAL_URLS: ${{ inputs.urls }}
+        run: python manual_add.py
