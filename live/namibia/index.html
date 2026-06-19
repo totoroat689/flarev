@@ -46,6 +46,8 @@
   footer{margin-top:46px;padding-top:20px;border-top:1px solid var(--border);color:var(--muted);font-size:0.8rem;text-align:center;}
   @media(max-width:760px){.nav{gap:12px;font-size:0.8rem;} .mega{position:fixed;left:8px;right:8px;top:58px;transform:none;width:auto;max-height:70vh;overflow:auto;} .nav-drop:hover .mega{transform:none;} .mega-body{grid-template-columns:1fr;} .mega-conts{flex-direction:row;flex-wrap:wrap;border-right:none;border-bottom:1px solid var(--border);padding:0 0 8px;}}
 
+  html,body{scrollbar-width:none;-ms-overflow-style:none;}
+  html::-webkit-scrollbar,body::-webkit-scrollbar{display:none;}
   #sidebar{position:sticky;top:0;z-index:300;display:flex;align-items:center;gap:16px;height:58px;
     padding:0 18px;background:var(--sidebar);border-bottom:1px solid var(--border);overflow:visible;}
   #sidebar a,.nav-trigger,.bar-link,.mega a{text-decoration:none;}
