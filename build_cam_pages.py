@@ -459,8 +459,8 @@ __ROBOTS__
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 __JSONLD__
 <style>
-  :root{--bg:#0a0a0f;--panel:#14141f;--panel2:#1a1a26;--border:rgba(255,255,255,0.08);
-    --text:#f0f0f5;--muted:#7c7c92;--mint:#6bffb8;--mint-bg:rgba(107,255,184,0.12);
+  :root{--bg:#0a0a0f;--panel:#14141f;--panel2:#1a1a26;--border:rgba(255,255,255,0.07);
+    --text:#f0f0f5;--muted:#6b6b80;--sidebar:#10101a;--mint:#6bffb8;--mint-bg:rgba(107,255,184,0.12);
     --red:#ff4e45;--gold:#f0c419;--festival:#ff6b6b;}
   *{box-sizing:border-box;}
   body{margin:0;background:var(--bg);color:var(--text);
@@ -785,8 +785,8 @@ __BARCSS__
 
 
 SHARED_CSS = """
-  :root{--bg:#0a0a0f;--panel:#14141f;--panel2:#1a1a26;--border:rgba(255,255,255,0.08);
-    --text:#f0f0f5;--muted:#7c7c92;--mint:#6bffb8;--mint-bg:rgba(107,255,184,0.12);
+  :root{--bg:#0a0a0f;--panel:#14141f;--panel2:#1a1a26;--border:rgba(255,255,255,0.07);
+    --text:#f0f0f5;--muted:#6b6b80;--sidebar:#10101a;--mint:#6bffb8;--mint-bg:rgba(107,255,184,0.12);
     --red:#ff4e45;--gold:#f0c419;--festival:#ff6b6b;}
   *{box-sizing:border-box;}
   body{margin:0;background:var(--bg);color:var(--text);font-family:'Noto Sans KR',system-ui,-apple-system,sans-serif;line-height:1.6;}
@@ -954,7 +954,7 @@ def render_top_page(rows, menu_html, limit=50):
 
 BAR_CSS = """
   #sidebar{position:sticky;top:0;z-index:300;display:flex;align-items:center;gap:16px;height:58px;
-    padding:0 18px;background:rgba(10,10,15,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);overflow:visible;}
+    padding:0 18px;background:var(--sidebar);border-bottom:1px solid var(--border);overflow:visible;}
   #sidebar a,.nav-trigger,.bar-link,.mega a{text-decoration:none;}
   .logo-wrap{position:relative;flex-shrink:0;}
   .logo{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:3px;line-height:1;position:relative;z-index:2;display:inline-block;}
@@ -998,8 +998,8 @@ BAR_CSS = """
   .nav-disabled .filter-item{opacity:0.45;pointer-events:none;}
   .contact-btn{width:auto;margin:0;white-space:nowrap;padding:9px 14px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:0.8rem;font-family:'Noto Sans KR',sans-serif;font-weight:600;cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s;}
   .contact-btn:hover{background:rgba(255,107,107,0.1);border-color:var(--festival);color:var(--text);}
-  @media(max-width:760px){
-    #sidebar{gap:10px;padding:0 12px;}
+  @media(max-width:768px){
+    #sidebar{height:54px;gap:10px;padding:0 12px;}
     .logo{font-size:1.3rem;letter-spacing:2px;} .logo span{font-size:1.3rem;} .logo-flare,.logo-light{display:none;}
     .bar-link,.nav-trigger{font-size:0.78rem;}
     .contact-btn{padding:7px 9px;font-size:0.72rem;}
