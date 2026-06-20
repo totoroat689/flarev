@@ -1,4 +1,4 @@
-// Flare[V] v3.9.0 / 2026-06-19
+// Flare[V] v3.9.1 / 2026-06-19
 const SUPABASE_URL = 'https://pbrbzjxdjqqmhvhzhwlp.supabase.co';
 const SUPABASE_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicmJ6anhkanFxbWh2aHpod2xwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjc3NTcsImV4cCI6MjA5NTMwMzc1N30.E6-GthxwIFN2-jy4ojf5ZxR7YcdPJULG6Mxj9LvkI1c';
@@ -91,63 +91,21 @@ const darkStyle = [
   { elementType: 'geometry', stylers: [{ color: '#0d0d14' }] },
   { elementType: 'labels.text.fill', stylers: [{ color: '#6b6b80' }] },
   { elementType: 'labels.text.stroke', stylers: [{ color: '#0a0a0f' }] },
-  {
-    featureType: 'road',
-    elementType: 'geometry',
-    stylers: [{ color: '#1a1a2e' }],
-  },
-  {
-    featureType: 'road',
-    elementType: 'labels',
-    stylers: [{ visibility: 'off' }], 
-  },
-  {
-    featureType: 'road',
-    elementType: 'geometry.stroke',
-    stylers: [{ color: '#212135' }],
-  },
-  {
-    featureType: 'road.highway',
-    elementType: 'geometry',
-    stylers: [{ color: '#22223a' }],
-  },
-  {
-    featureType: 'water',
-    elementType: 'geometry',
-    stylers: [{ color: '#0b1a2b' }],
-  },
-  {
-    
-    featureType: 'poi',
-    elementType: 'labels.icon',
-    stylers: [{ visibility: 'on' }],
-  },
-  {
-    
-    featureType: 'poi',
-    elementType: 'labels.text.fill',
-    stylers: [{ color: '#9a9aae' }],
-  },
-  {
-    featureType: 'poi',
-    elementType: 'labels.text.stroke',
-    stylers: [{ color: '#0a0a0f' }],
-  },
-  {
-    featureType: 'poi',
-    elementType: 'geometry',
-    stylers: [{ color: '#111120' }],
-  },
-  {
-    featureType: 'poi.park',
-    elementType: 'geometry',
-    stylers: [{ color: '#0e1a0e' }],
-  },
-  {
-    featureType: 'transit',
-    elementType: 'geometry',
-    stylers: [{ color: '#141425' }],
-  },
+  { featureType: 'landscape.natural', elementType: 'geometry.fill', stylers: [{ color: '#11111c' }] },
+  { featureType: 'landscape.natural', elementType: 'labels.icon', stylers: [{ color: '#00142e' }] },
+  { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#111120' }] },
+  { featureType: 'poi', elementType: 'labels.icon', stylers: [{ color: '#06060a' }] },
+  { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#9a9aae' }] },
+  { featureType: 'poi', elementType: 'labels.text.stroke', stylers: [{ color: '#0a0a0f' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#0e1a0e' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#1a1a2e' }] },
+  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#212135' }] },
+  { featureType: 'road', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#22223a' }] },
+  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#141425' }] },
+  { featureType: 'transit.station.airport', elementType: 'labels.icon', stylers: [{ color: '#000042' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0b1a2b' }] },
+  { featureType: 'water', elementType: 'geometry.fill', stylers: [{ color: '#000000' }] },
 ];
 
 function initMap() {
@@ -1927,10 +1885,10 @@ function openLivePanel(item) {
   if (badge) {
     const k = item.kind || 'stream';
     let bt = 'LIVE', bg = 'rgba(255,78,69,0.15)', col = '#ff4e45', bd = 'rgba(255,78,69,0.4)';
-    if (k === 'news') { bt = 'NEWS'; bg = '#003333'; col = '#ffffff'; bd = 'rgba(0,51,51,0.6)'; }
+    if (k === 'news') { bt = 'NEWS'; bg = 'rgba(131,149,167,0.18)'; col = '#8395a7'; bd = 'rgba(131,149,167,0.5)'; }
     else if (k === 'resort') { bt = 'RESORT'; bg = 'rgba(240,196,25,0.15)'; col = '#f0c419'; bd = 'rgba(240,196,25,0.45)'; }
     else if (k === 'hotel') { bt = 'HOTEL'; bg = 'rgba(90,185,255,0.15)'; col = '#5ab9ff'; bd = 'rgba(90,185,255,0.45)'; }
-    else if (k === 'train') { bt = 'TRAIN'; bg = 'rgba(255,153,255,0.18)'; col = '#ff99ff'; bd = 'rgba(255,153,255,0.5)'; }
+    else if (k === 'train') { bt = 'TRAIN'; bg = 'rgba(38,222,129,0.15)'; col = '#26de81'; bd = 'rgba(38,222,129,0.45)'; }
     badge.textContent = bt;
     badge.style.background = bg;
     badge.style.color = col;
