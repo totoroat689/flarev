@@ -1,0 +1,33 @@
+name: Comment bot
+
+# 1시간에 3번(불규칙한 분), 하루 종일(UTC) 실행 → 봇 4명이 각자 다른 캠에 [AI] 댓글.
+# 수동 실행(Run workflow)도 가능 — 끄려면 이 워크플로를 Disable 하면 됩니다.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "7 * * * *"
+    - cron: "27 * * * *"
+    - cron: "49 * * * *"
+
+jobs:
+  comment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install supabase anthropic
+
+      - name: Run comment bot
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # 실행 시작 랜덤 지연(초). 시간 패턴을 더 흩뜨리고 싶으면 값을 올리세요.
+          # 주의: private 저장소면 이 sleep만큼 Actions 분이 소모됩니다. public이면 무료.
+          MAX_JITTER_SEC: "0"
+        run: python comment_bot.py
