@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Flare[V] v3.8.4 / 2026-06-19 -->
+<!-- Flare[V] v3.8.5 / 2026-06-19 -->
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -82,15 +82,6 @@
     <script defer src="/_vercel/insights/script.js"></script>
   </head>
   <body data-mode="live">
-    <h1 class="sr-only">Flare[V] — Live Web Cam Map: watch live cams around the world on one map</h1>
-    <p class="sr-only">
-      Flare[V] is a free live web cam map. Explore thousands of live cams from
-      around the world — city streets, beaches, ski resorts, hotels and local
-      news channels — placed as pins on an interactive map. Watch live streams in
-      real time, see the local time at each location, and save your favorite
-      live cams and spots.
-    </p>
-
     <button id="menu-toggle" onclick="toggleSidebar()">☰</button>
     <div id="sidebar-overlay" onclick="closeSidebar()"></div>
 
@@ -376,12 +367,12 @@
         <div class="spot-field">
           <label>Tags (at least 1)</label>
           <div class="spot-tags" id="spot-tags">
-            <button class="spot-tag" data-t="풍경">Scenery</button>
-            <button class="spot-tag" data-t="맛집">Food</button>
-            <button class="spot-tag" data-t="이색">Unique</button>
-            <button class="spot-tag" data-t="힐링">Relaxing</button>
-            <button class="spot-tag" data-t="놀라운">Amazing</button>
-            <button class="spot-tag live-tag" data-t="실시간 현장">Live spot</button>
+            <button class="spot-tag" data-t="Scenery">Scenery</button>
+            <button class="spot-tag" data-t="Food">Food</button>
+            <button class="spot-tag" data-t="Unique">Unique</button>
+            <button class="spot-tag" data-t="Relaxing">Relaxing</button>
+            <button class="spot-tag" data-t="Amazing">Amazing</button>
+            <button class="spot-tag live-tag" data-t="Live spot">Live spot</button>
           </div>
           <div class="live-note" id="spot-live-note">⏱ Live spots stay on the map for 24 hours only</div>
         </div>
@@ -398,6 +389,28 @@
         </div>
       </div>
     </div>
+
+    <footer class="seo-footer">
+      <div class="seo-inner">
+        <h1>Flare[V] — Live Web Cam Map: watch live cams around the world on one map</h1>
+        <p>
+          Flare[V] is a free live web cam map. Explore thousands of live cams from
+          around the world — city streets, beaches, ski resorts, hotels and local
+          news channels — placed as pins on an interactive map. Watch live streams
+          in real time, see the local time at each location, and save your favorite
+          live cams and spots.
+        </p>
+        <nav class="seo-featured" aria-label="Featured live cams">
+          <h2>Featured Live Cams</h2>
+          <ul>
+            <!--FEATURED_START-->
+            <li><a href="/top/">Browse all live cams ranked by popularity</a></li>
+            <!--FEATURED_END-->
+          </ul>
+        </nav>
+        <p class="seo-copy">© Flare[V] — live webcams from around the world.</p>
+      </div>
+    </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 

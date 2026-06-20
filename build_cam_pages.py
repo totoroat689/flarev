@@ -371,6 +371,41 @@ def pick_nearby(cam, pool):
     return ordered[:NEARBY_COUNT]
 
 
+def inject_featured_links(rows):
+    """홈 index.html의 <!--FEATURED_START--> ~ <!--FEATURED_END--> 구간에
+    인기 캠(좋아요 상위, 색인 가능) 링크를 자동으로 채워 넣는다 (SEO 내부링크/크롤링 경로)."""
+    idx_path = os.path.join(OUT_ROOT, "index.html")
+    if not os.path.exists(idx_path):
+        print("index.html 없음 — featured 링크 주입 건너뜀")
+        return
+    featured = [c for c in rows if not is_thin(c)][:20]
+    items = []
+    for c in featured:
+        slug = c.get("slug") or c.get("video_id")
+        if not slug:
+            continue
+        label = (c.get("title") or c.get("place_name") or slug).strip()
+        if len(label) > 70:
+            label = label[:67].rstrip() + "…"
+        items.append(f'            <li><a href="/cam/{esc(slug)}/">{esc(label)}</a></li>')
+    if not items:
+        print("featured 대상 없음 — 주입 건너뜀")
+        return
+    block = "<!--FEATURED_START-->\n" + "\n".join(items) + "\n            <!--FEATURED_END-->"
+    html_txt = open(idx_path, encoding="utf-8").read()
+    new_txt, n = _re.subn(
+        r"<!--FEATURED_START-->.*?<!--FEATURED_END-->",
+        lambda m: block,            # 람다 사용: 라벨 속 역슬래시/그룹참조 오해석 방지
+        html_txt, flags=_re.S,
+    )
+    if n == 0:
+        print("index.html에 FEATURED 마커 없음 — 주입 건너뜀")
+        return
+    with open(idx_path, "w", encoding="utf-8") as f:
+        f.write(new_txt)
+    print(f"🔗 홈 featured 링크 {len(items)}개 주입 완료")
+
+
 def main():
     sb = create_client(SUPABASE_URL, SUPABASE_KEY)
     res = (sb.table("live_videos").select("*").eq("is_active", True)
@@ -426,6 +461,8 @@ def main():
     with open(os.path.join(d, "index.html"), "w", encoding="utf-8") as f:
         f.write(render_top_page(rows, menu_html))
     print("🏆 순위 페이지 생성")
+
+    inject_featured_links(rows)
 
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     lines = ['<?xml version="1.0" encoding="UTF-8"?>',
@@ -953,9 +990,7 @@ def render_top_page(rows, menu_html, limit=50):
 
 
 BAR_CSS = """
-  html,body{scrollbar-width:none;-ms-overflow-style:none;}
-  html::-webkit-scrollbar,body::-webkit-scrollbar{display:none;}
-  #sidebar{position:sticky;top:0;z-index:300;display:flex;align-items:center;gap:16px;height:58px;
+  #sidebar{position:sticky;top:0;z-index:300;display:flex;align-items:center;gap:16px;height:58px;line-height:normal;
     padding:0 18px;background:var(--sidebar);border-bottom:1px solid var(--border);overflow:visible;}
   #sidebar a,.nav-trigger,.bar-link,.mega a{text-decoration:none;}
   .logo-wrap{position:relative;flex-shrink:0;}

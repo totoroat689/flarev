@@ -1,4 +1,4 @@
-// Flare[V] v3.8.4 / 2026-06-19
+// Flare[V] v3.8.5 / 2026-06-19
 const SUPABASE_URL = 'https://pbrbzjxdjqqmhvhzhwlp.supabase.co';
 const SUPABASE_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicmJ6anhkanFxbWh2aHpod2xwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjc3NTcsImV4cCI6MjA5NTMwMzc1N30.E6-GthxwIFN2-jy4ojf5ZxR7YcdPJULG6Mxj9LvkI1c';
@@ -19,7 +19,7 @@ let myLocationMarker = null;
 let activeCategories = { spot: true, yt: true, news: true, resort: true, hotel: true };
 
 
-const SPOT_TAGS = ['풍경', '맛집', '이색', '힐링', '놀라운', '실시간 현장'];
+const SPOT_TAGS = ['Scenery', 'Food', 'Unique', 'Relaxing', 'Amazing', 'Live spot'];
 let activeSpotTags = new Set(SPOT_TAGS);
 
 
@@ -1294,7 +1294,7 @@ function parseExifDate(buf) {
       else chosenSpotTags.delete(name);
       document
         .getElementById('spot-live-note')
-        .classList.toggle('show', chosenSpotTags.has('실시간 현장'));
+        .classList.toggle('show', chosenSpotTags.has('Live spot'));
     });
   });
 })();
@@ -1393,7 +1393,7 @@ async function saveSpot() {
       placeId = placeRes.data[0].id;
     }
 
-    const isLive = chosenSpotTags.has('실시간 현장');
+    const isLive = chosenSpotTags.has('Live spot');
     const postRes = await supabaseClient
       .from('posts')
       .insert([

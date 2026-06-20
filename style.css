@@ -1,4 +1,4 @@
-/* Flare[V] v3.8.4 / 2026-06-19 */
+/* Flare[V] v3.8.5 / 2026-06-19 */
 :root {
   --bg: #0a0a0f;
   --sidebar: #10101a;
@@ -44,8 +44,7 @@ body {
   font-family: 'Noto Sans KR', sans-serif;
   background: var(--bg);
   color: var(--text);
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
   display: flex;
 }
 
@@ -520,7 +519,8 @@ body[data-mode='live'] #live-notice {
 }
 
 #map-container {
-  flex: 1;
+  height: calc(100vh - 58px);
+  flex-shrink: 0;
   position: relative;
 }
 
@@ -1945,6 +1945,7 @@ body { flex-direction: column; }
   width: auto; min-width: 0; height: 58px; flex-direction: row; align-items: center;
   gap: 16px; padding: 0 18px; border-right: none; border-bottom: 1px solid var(--border);
   overflow: visible; transform: none !important; box-shadow: none; flex-shrink: 0; z-index: 300;
+  position: sticky; top: 0;
 }
 #sidebar::-webkit-scrollbar { display: none; }
 .logo-wrap { padding: 0; border-bottom: none; overflow: visible; flex-shrink: 0; position: relative; }
@@ -2104,3 +2105,36 @@ body.spot-picking #upload-btn { display: none !important; }
   margin-top: 2px;
 }
 
+
+/* ===== SEO footer (visible, crawlable) ===== */
+.seo-footer {
+  flex-shrink: 0;
+  background: var(--sidebar);
+  border-top: 1px solid var(--border);
+  padding: 40px 20px 56px;
+}
+.seo-inner { max-width: 1000px; margin: 0 auto; }
+.seo-footer h1 {
+  font-size: 1.15rem; font-weight: 700; color: var(--text);
+  margin: 0 0 14px; line-height: 1.4;
+}
+.seo-footer p {
+  font-size: 0.92rem; color: var(--muted); line-height: 1.7;
+  margin: 0 0 24px; max-width: 760px;
+}
+.seo-featured h2 { font-size: 0.95rem; font-weight: 700; color: var(--text); margin: 0 0 12px; }
+.seo-featured ul {
+  list-style: none; padding: 0; margin: 0; display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px 20px;
+}
+.seo-featured a {
+  color: var(--muted); text-decoration: none; font-size: 0.88rem;
+  line-height: 1.9; transition: color 0.15s;
+}
+.seo-featured a:hover { color: var(--live); text-decoration: underline; }
+.seo-copy { margin-top: 28px; font-size: 0.8rem; color: var(--muted); }
+@media (max-width: 768px) {
+  #map-container { height: calc(100vh - 54px); }
+  .seo-footer { padding: 28px 16px 44px; }
+  .seo-footer h1 { font-size: 1.05rem; }
+}
