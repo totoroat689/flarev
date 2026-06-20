@@ -203,7 +203,7 @@ def main():
 
         existing_authors = set((r.get("author") or "").lower() for r in existing)
         username = dedupe_author(username, used_names, existing_authors)
-        content = "[AI] " + comment
+        content = comment
 
         row = {
             "content_id": cam["video_id"],
