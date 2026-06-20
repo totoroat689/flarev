@@ -75,22 +75,15 @@ def yt_get(url, params, tries=3):
 # 검색어 목록 — 여기에 추가/삭제만 하면 됨 (검색어 1개당 약 100~150유닛)
 # 검색어마다 다른 웹캠이 잡혀서, 합치면 수백 개 후보가 모임
 SEARCH_QUERIES = [
-    "Camera trực tiếpe",
-    "กล้องถ่ายทอดสด",
-    "Kamera langsung",
-    "Kamera langsung",
-    "ກ້ອງຖ່າຍທອດສົດ",
-    "တိုက်ရိုက်ကင်မရာ",
-#    "webcam live",
-#    "live cam 4k",
-#    "live camera",
-#    "beach live cam",
-#    "city live stream",
-#    "라이브 캠",
-#    "실시간 라이브 캠",
-#    "live webcam 24/7",
-#    "resort live cam",
-#    "hotel live cam",
+    "webcam live",
+    "beach live cam",
+    "city live stream",
+    "라이브 캠",
+    "live webcam 24/7",
+    "resort live cam",
+    "hotel live cam",
+    "train live",
+    "store live",
 ]
 SEARCH_PAGES = 2               # 검색어당 페이지 수 (1페이지=50개, 100유닛). 2 = 검색어당 약 200유닛
 MAX_TO_REFINE = 500            # Claude로 정제할 최대 후보 수 (인기순 상위부터). 500=사실상 전부
@@ -275,7 +268,8 @@ def _refine_batch(chunk, by_id):
         '  "timezone": IANA timezone (e.g. "Asia/Seoul", "Europe/Rome"),\n'
         '  "kind": one of "news" (news channel / live news broadcast), '
         '"resort" (holiday resort / ski resort / beach resort cam), '
-        '"hotel" (hotel cam), or "stream" (general scenery / city / nature webcam),\n'
+        '"hotel" (hotel cam), "train" (train / railway / on-board or railway-station live cam), '
+        'or "stream" (general scenery / city / nature webcam),\n'
         '  "description": one short English sentence (max 80 chars),\n'
         '  "seo_intro": 2-3 English sentences describing what this cam shows and where '
         "(only if the title/description give enough to say something true; otherwise \"\"),\n"
@@ -288,6 +282,7 @@ def _refine_batch(chunk, by_id):
         "If the location itself is unclear, set skip=true.\n"
         'A news-station live (e.g. 24h news channel) is kind="news"; '
         'a resort cam is kind="resort"; a hotel cam is kind="hotel"; '
+        'a train / railway / station cam is kind="train"; '
         'general street/beach/nature scenery cams are kind="stream".\n\n'
         "List:\n" + json.dumps(brief, ensure_ascii=False)
     )
@@ -342,7 +337,7 @@ def _refine_batch(chunk, by_id):
             "latitude": float(lat),
             "longitude": float(lng),
             "timezone": p.get("timezone") or None,
-            "kind": (p.get("kind") if p.get("kind") in ("news", "resort", "hotel") else "stream"),
+            "kind": (p.get("kind") if p.get("kind") in ("news", "resort", "hotel", "train") else "stream"),
             "channel_id": by_id[vid]["channel_id"],
             "channel_title": by_id[vid].get("channel_title") or None,
             "seo_intro": (p.get("seo_intro") or "").strip()[:600] or None,

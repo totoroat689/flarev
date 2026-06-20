@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Flare[V] v3.8.5 / 2026-06-19 -->
+<!-- Flare[V] v3.9.0 / 2026-06-19 -->
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -114,6 +114,9 @@
             </div>
             <div class="filter-item active-hotel" data-cat="hotel" onclick="toggleFilter(this,'hotel')">
               <div class="filter-dot dot-hotel"></div><span class="filter-text">Hotel</span><span class="filter-count" id="cnt-hotel">0</span>
+            </div>
+            <div class="filter-item active-train" data-cat="train" onclick="toggleFilter(this,'train')">
+              <div class="filter-dot dot-train"></div><span class="filter-text">Train Live</span><span class="filter-count" id="cnt-train">0</span>
             </div>
           </div>
         </div>
@@ -247,6 +250,7 @@
           <div class="lv-title lv-title-link" id="lv-title" onclick="lvOpenFullPage()"></div>
           <div class="lv-meta" id="lv-time"></div>
           <div class="lv-meta lv-place-link" id="lv-place" onclick="lvGoToLocation()"></div>
+          <div class="lv-meta lv-weather" id="lv-weather" style="display:none"></div>
           <div class="panel-desc lv-desc" id="lv-desc">
             <div class="desc-text" id="lv-desc-text"></div>
             <span class="desc-more" id="lv-desc-more" onclick="lvToggleDesc()">More</span>

@@ -149,6 +149,7 @@ def build_bar(menu):
         '<div class="filter-item active-news"><div class="filter-dot dot-news"></div><span class="filter-text">Local news</span></div>'
         '<div class="filter-item active-resort"><div class="filter-dot dot-resort"></div><span class="filter-text">Resort</span></div>'
         '<div class="filter-item active-hotel"><div class="filter-dot dot-hotel"></div><span class="filter-text">Hotel</span></div>'
+        '<div class="filter-item active-train"><div class="filter-dot dot-train"></div><span class="filter-text">Train Live</span></div>'
         '</div></div></div>'
     )
 
@@ -550,6 +551,9 @@ __JSONLD__
   .crumb{font-size:0.75rem;color:var(--muted);margin-bottom:12px;}
   .crumb a:hover{color:var(--mint);}
   h1{font-size:1.55rem;line-height:1.3;margin:0 0 18px;}
+  .cam-weather{font-size:0.85rem;color:var(--muted);margin:-6px 0 18px;display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+  .wx-unit{cursor:pointer;border-bottom:1px dashed currentColor;}
+  .wx-unit:hover{opacity:0.8;}
   .grid{display:grid;grid-template-columns:600px 1fr;gap:28px;align-items:start;transition:grid-template-columns .25s ease;}
   .grid.theater{grid-template-columns:1fr;} .grid.theater .left{position:static;}
   .left{position:sticky;top:80px;align-self:start;}
@@ -634,6 +638,7 @@ __BARCSS__
   <div class="wrap">
     <div class="crumb"><a href="/">Home</a> › <a href="__CRUMB_HREF__">__CRUMB_COUNTRY__</a> › __H1__</div>
     <h1>__H1__</h1>
+    <div class="cam-weather" id="cam-weather" style="display:none"></div>
     <div class="grid" id="grid">
       <div class="left">
         <div class="videowrap" id="videowrap">
@@ -681,6 +686,35 @@ __BARCSS__
 
 <script>
   var TZ="__TZ__", LAT=parseFloat("__LAT__"), LNG=parseFloat("__LNG__"), LIVESTART="__LIVESTART__", VID="__VID__";
+
+  // ---- Weather (Open-Meteo, free, no key) ----
+  function wxUnit(){try{return localStorage.getItem('flarev_unit')==='f'?'f':'c';}catch(e){return 'c';}}
+  function wxSetUnit(u){try{localStorage.setItem('flarev_unit',u);}catch(e){}}
+  function wxText(code){
+    if(code===0)return['\u2600\ufe0f','Clear'];if(code===1)return['\U0001F324\ufe0f','Mainly clear'];
+    if(code===2)return['\u26c5','Partly cloudy'];if(code===3)return['\u2601\ufe0f','Overcast'];
+    if(code===45||code===48)return['\U0001F32B\ufe0f','Fog'];if(code>=51&&code<=57)return['\U0001F326\ufe0f','Drizzle'];
+    if(code>=61&&code<=67)return['\U0001F327\ufe0f','Rain'];if(code>=71&&code<=77)return['\U0001F328\ufe0f','Snow'];
+    if(code>=80&&code<=82)return['\U0001F327\ufe0f','Showers'];if(code===85||code===86)return['\U0001F328\ufe0f','Snow showers'];
+    if(code>=95)return['\u26c8\ufe0f','Thunderstorm'];return['\U0001F321\ufe0f','Weather'];
+  }
+  var _wxData=null;
+  function wxRender(){
+    var el=document.getElementById('cam-weather'); if(!el||!_wxData)return;
+    var u=wxUnit(), temp=u==='f'?Math.round(_wxData.t*9/5+32):Math.round(_wxData.t), w=wxText(_wxData.code);
+    el.style.display='';
+    el.innerHTML=w[0]+' '+w[1]+' \u00b7 \U0001F321\ufe0f <span class="wx-unit" title="Switch C / F">'+temp+'\u00b0'+(u==='f'?'F':'C')+'</span> \u00b7 \U0001F4A7 '+_wxData.h+'%';
+    var ut=el.querySelector('.wx-unit');
+    if(ut)ut.onclick=function(){wxSetUnit(wxUnit()==='c'?'f':'c');wxRender();};
+  }
+  function loadWx(){
+    if(isNaN(LAT)||isNaN(LNG))return;
+    fetch('https://api.open-meteo.com/v1/forecast?latitude='+LAT+'&longitude='+LNG+'&current=temperature_2m,relative_humidity_2m,weather_code')
+      .then(function(r){return r.json();})
+      .then(function(j){var c=j&&j.current;if(!c||typeof c.temperature_2m!=='number')return;_wxData={t:c.temperature_2m,h:c.relative_humidity_2m,code:c.weather_code};wxRender();})
+      .catch(function(){});
+  }
+  loadWx();
 
   // ---- 일출/일몰 계산 (SunCalc 핵심 축약, MIT) ----
   var rad=Math.PI/180,dayMs=864e5,J1970=2440588,J2000=2451545;
@@ -1030,8 +1064,8 @@ BAR_CSS = """
   .filter-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:9px;font-size:0.84rem;}
   .filter-item .filter-text{flex:1;}
   .filter-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
-  .dot-spot{background:#ff8fa3;} .dot-yt{background:#ff4e45;} .dot-news{background:#4ea3ff;}
-  .dot-resort{background:#6bffb8;} .dot-hotel{background:#f0c419;}
+  .dot-spot{background:#ff8fa3;} .dot-yt{background:#ff4e45;} .dot-news{background:#003333;}
+  .dot-resort{background:#6bffb8;} .dot-hotel{background:#f0c419;} .dot-train{background:#ff99ff;}
   .nav-disabled .filter-item{opacity:0.45;pointer-events:none;}
   .contact-btn{width:auto;margin:0;white-space:nowrap;padding:9px 14px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:0.8rem;font-family:'Noto Sans KR',sans-serif;font-weight:600;cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s;}
   .contact-btn:hover{background:rgba(255,107,107,0.1);border-color:var(--festival);color:var(--text);}

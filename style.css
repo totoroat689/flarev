@@ -1,4 +1,4 @@
-/* Flare[V] v3.8.5 / 2026-06-19 */
+/* Flare[V] v3.9.0 / 2026-06-19 */
 :root {
   --bg: #0a0a0f;
   --sidebar: #10101a;
@@ -1828,25 +1828,25 @@ body.spot-picking #menu-toggle { display: none !important; }
   border-color: rgba(43, 209, 108, 0.3);
 }
 .dot-news {
-  background: #2bd16c;
-  box-shadow: 0 0 8px rgba(43, 209, 108, 0.8);
+  background: #003333;
+  box-shadow: 0 0 8px rgba(0, 51, 51, 0.8);
 }
 
 .filter-item:not(.active-festival):not(.active-spot):not(.active-cctv):not(.active-yt):not(.active-news):not(.active-tag):not(.active-perf):hover {
   background: rgba(255, 255, 255, 0.04);
 }
 
-.live-pin.kind-news .live-ring { border-color: rgba(43, 209, 108, 0.55); }
+.live-pin.kind-news .live-ring { border-color: rgba(0, 51, 51, 0.6); }
 .live-pin.kind-news.on .live-drop::before {
-  background: radial-gradient(circle at 35% 35%, #8af0b4, #2bd16c);
-  box-shadow: 0 0 10px rgba(43, 209, 108, 0.85), 0 0 18px rgba(43, 209, 108, 0.4);
+  background: radial-gradient(circle at 35% 35%, #1a5555, #003333);
+  box-shadow: 0 0 10px rgba(0, 51, 51, 0.85), 0 0 18px rgba(0, 51, 51, 0.4);
 }
-.live-pin.kind-news .live-badge { background: #2bd16c; }
-.live-pin.kind-news .live-label { border-color: rgba(43, 209, 108, 0.4); }
+.live-pin.kind-news .live-badge { background: #003333; color: #ffffff; }
+.live-pin.kind-news .live-label { border-color: rgba(0, 51, 51, 0.45); }
 
 .live-cluster.kind-news {
-  background: rgba(43, 209, 108, 0.9);
-  box-shadow: 0 0 12px rgba(43, 209, 108, 0.7);
+  background: rgba(0, 51, 51, 0.92);
+  box-shadow: 0 0 12px rgba(0, 51, 51, 0.7);
 }
 .live-cluster.kind-news.off {
   background: rgba(90, 90, 110, 0.9);
@@ -1911,6 +1911,7 @@ body.spot-picking #menu-toggle { display: none !important; }
 }
 .dot-resort { background: #f0c419; box-shadow: 0 0 8px rgba(240, 196, 25, 0.8); }
 .dot-hotel { background: #5ab9ff; box-shadow: 0 0 8px rgba(90, 185, 255, 0.8); }
+.dot-train { background: #ff99ff; box-shadow: 0 0 8px rgba(255, 153, 255, 0.8); }
 .filter-item:not(.active-festival):not(.active-spot):not(.active-cctv):not(.active-yt):not(.active-news):not(.active-resort):not(.active-hotel):not(.active-tag):not(.active-perf):hover {
   background: rgba(255, 255, 255, 0.04);
 }
@@ -1937,6 +1938,17 @@ body.spot-picking #menu-toggle { display: none !important; }
 .live-cluster.kind-hotel {
   background: rgba(90, 185, 255, 0.92);
   box-shadow: 0 0 12px rgba(90, 185, 255, 0.7);
+}
+.live-pin.kind-train .live-ring { border-color: rgba(255, 153, 255, 0.6); }
+.live-pin.kind-train.on .live-drop::before {
+  background: radial-gradient(circle at 35% 35%, #ffd6ff, #ff99ff);
+  box-shadow: 0 0 10px rgba(255, 153, 255, 0.85), 0 0 18px rgba(255, 153, 255, 0.4);
+}
+.live-pin.kind-train .live-badge { background: #ff99ff; color: #4a004a; }
+.live-pin.kind-train .live-label { border-color: rgba(255, 153, 255, 0.4); }
+.live-cluster.kind-train {
+  background: rgba(255, 153, 255, 0.92);
+  box-shadow: 0 0 12px rgba(255, 153, 255, 0.7);
 }
 
 /* ===== v3.5 상단바 통일 ===== */
@@ -2138,3 +2150,8 @@ body.spot-picking #upload-btn { display: none !important; }
   .seo-footer { padding: 28px 16px 44px; }
   .seo-footer h1 { font-size: 1.05rem; }
 }
+
+/* ===== Weather line (live panel) ===== */
+.lv-weather { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.wx-unit { cursor: pointer; border-bottom: 1px dashed currentColor; }
+.wx-unit:hover { opacity: 0.8; }

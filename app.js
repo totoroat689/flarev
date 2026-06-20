@@ -1,4 +1,4 @@
-// Flare[V] v3.8.5 / 2026-06-19
+// Flare[V] v3.9.0 / 2026-06-19
 const SUPABASE_URL = 'https://pbrbzjxdjqqmhvhzhwlp.supabase.co';
 const SUPABASE_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicmJ6anhkanFxbWh2aHpod2xwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjc3NTcsImV4cCI6MjA5NTMwMzc1N30.E6-GthxwIFN2-jy4ojf5ZxR7YcdPJULG6Mxj9LvkI1c';
@@ -16,7 +16,7 @@ let selectedPin = null;
 let projectionHelper = null; 
 let myLocationMarker = null; 
 
-let activeCategories = { spot: true, yt: true, news: true, resort: true, hotel: true };
+let activeCategories = { spot: true, yt: true, news: true, resort: true, hotel: true, train: true };
 
 
 const SPOT_TAGS = ['Scenery', 'Food', 'Unique', 'Relaxing', 'Amazing', 'Live spot'];
@@ -114,7 +114,7 @@ const darkStyle = [
   {
     featureType: 'water',
     elementType: 'geometry',
-    stylers: [{ color: '#070710' }],
+    stylers: [{ color: '#0b1a2b' }],
   },
   {
     
@@ -306,6 +306,7 @@ function defineOverlayClasses() {
       if (kind === 'news') badgeText = 'NEWS';
       else if (kind === 'resort') badgeText = 'RESORT';
       else if (kind === 'hotel') badgeText = 'HOTEL';
+      else if (kind === 'train') badgeText = 'TRAIN';
       const div = document.createElement('div');
       div.className =
         'live-pin' + (on ? ' on' : ' off') + ' kind-' + kind;
@@ -1706,7 +1707,7 @@ async function reportSpot() {
 
 
 function setAllCategories(_mode, on) {
-  ['spot', 'yt', 'news', 'resort', 'hotel'].forEach((t) => {
+  ['spot', 'yt', 'news', 'resort', 'hotel', 'train'].forEach((t) => {
     activeCategories[t] = on;
   });
   document.querySelectorAll('#cat-list .filter-item').forEach((el) => {
@@ -1739,12 +1740,13 @@ async function loadLiveVideos() {
   if (notice) notice.classList.toggle('has-live', liveData.length > 0);
 
   const kc = (k) => liveData.filter((v) => (v.kind || 'stream') === k).length;
-  const streamN = liveData.filter((v) => ['stream', 'live', null, undefined, ''].includes(v.kind) || (v.kind !== 'news' && v.kind !== 'resort' && v.kind !== 'hotel')).length;
+  const streamN = liveData.filter((v) => ['stream', 'live', null, undefined, ''].includes(v.kind) || (v.kind !== 'news' && v.kind !== 'resort' && v.kind !== 'hotel' && v.kind !== 'train')).length;
   const setC = (id, n) => { const e = document.getElementById(id); if (e) e.textContent = n; };
   setC('cnt-yt', streamN);
   setC('cnt-news', kc('news'));
   setC('cnt-resort', kc('resort'));
   setC('cnt-hotel', kc('hotel'));
+  setC('cnt-train', kc('train'));
 
   renderLivePins();
   renderSpotPins();
@@ -1824,6 +1826,7 @@ function liveKindOn(item) {
   if (k === 'news') return activeCategories.news;
   if (k === 'resort') return activeCategories.resort;
   if (k === 'hotel') return activeCategories.hotel;
+  if (k === 'train') return activeCategories.train;
   return activeCategories.yt;
 }
 
@@ -1862,6 +1865,60 @@ function setPerfMeta(id, val, prefix) {
   }
 }
 
+// ===== Weather (Open-Meteo, free, no API key) =====
+function fvGetUnit() { try { return localStorage.getItem('flarev_unit') === 'f' ? 'f' : 'c'; } catch (e) { return 'c'; } }
+function fvSetUnit(u) { try { localStorage.setItem('flarev_unit', u); } catch (e) {} }
+function fvWxText(code) {
+  if (code === 0) return ['☀️', 'Clear'];
+  if (code === 1) return ['🌤️', 'Mainly clear'];
+  if (code === 2) return ['⛅', 'Partly cloudy'];
+  if (code === 3) return ['☁️', 'Overcast'];
+  if (code === 45 || code === 48) return ['🌫️', 'Fog'];
+  if (code >= 51 && code <= 57) return ['🌦️', 'Drizzle'];
+  if (code >= 61 && code <= 67) return ['🌧️', 'Rain'];
+  if (code >= 71 && code <= 77) return ['🌨️', 'Snow'];
+  if (code >= 80 && code <= 82) return ['🌧️', 'Showers'];
+  if (code === 85 || code === 86) return ['🌨️', 'Snow showers'];
+  if (code >= 95) return ['⛈️', 'Thunderstorm'];
+  return ['🌡️', 'Weather'];
+}
+function fvRenderWx(el, data) {
+  if (!el || !data) return;
+  const u = fvGetUnit();
+  const temp = u === 'f' ? Math.round(data.t * 9 / 5 + 32) : Math.round(data.t);
+  const wx = fvWxText(data.code);
+  el.innerHTML =
+    wx[0] + ' ' + wx[1] +
+    ' · 🌡️ <span class="wx-unit" role="button" tabindex="0" title="Switch °C / °F">' +
+    temp + '°' + (u === 'f' ? 'F' : 'C') + '</span> · 💧 ' + data.h + '%';
+  const ut = el.querySelector('.wx-unit');
+  if (ut) ut.onclick = function (e) {
+    e.stopPropagation();
+    fvSetUnit(fvGetUnit() === 'c' ? 'f' : 'c');
+    document.querySelectorAll('[data-wx]').forEach(function (n) {
+      try { fvRenderWx(n, JSON.parse(n.getAttribute('data-wx'))); } catch (err) {}
+    });
+  };
+}
+function loadWeather(item, elId) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  const lat = parseFloat(item.latitude), lng = parseFloat(item.longitude);
+  if (isNaN(lat) || isNaN(lng)) { el.style.display = 'none'; el.removeAttribute('data-wx'); return; }
+  el.style.display = '';
+  el.textContent = '⛅ …';
+  fetch('https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lng + '&current=temperature_2m,relative_humidity_2m,weather_code')
+    .then(function (r) { return r.json(); })
+    .then(function (j) {
+      const c = j && j.current;
+      if (!c || typeof c.temperature_2m !== 'number') { el.style.display = 'none'; return; }
+      const data = { t: c.temperature_2m, h: c.relative_humidity_2m, code: c.weather_code };
+      el.setAttribute('data-wx', JSON.stringify(data));
+      fvRenderWx(el, data);
+    })
+    .catch(function () { el.style.display = 'none'; });
+}
+
 function openLivePanel(item) {
   currentLive = item;
   closeSpotPanel();
@@ -1870,9 +1927,10 @@ function openLivePanel(item) {
   if (badge) {
     const k = item.kind || 'stream';
     let bt = 'LIVE', bg = 'rgba(255,78,69,0.15)', col = '#ff4e45', bd = 'rgba(255,78,69,0.4)';
-    if (k === 'news') { bt = 'NEWS'; bg = 'rgba(43,209,108,0.15)'; col = '#2bd16c'; bd = 'rgba(43,209,108,0.45)'; }
+    if (k === 'news') { bt = 'NEWS'; bg = '#003333'; col = '#ffffff'; bd = 'rgba(0,51,51,0.6)'; }
     else if (k === 'resort') { bt = 'RESORT'; bg = 'rgba(240,196,25,0.15)'; col = '#f0c419'; bd = 'rgba(240,196,25,0.45)'; }
     else if (k === 'hotel') { bt = 'HOTEL'; bg = 'rgba(90,185,255,0.15)'; col = '#5ab9ff'; bd = 'rgba(90,185,255,0.45)'; }
+    else if (k === 'train') { bt = 'TRAIN'; bg = 'rgba(255,153,255,0.18)'; col = '#ff99ff'; bd = 'rgba(255,153,255,0.5)'; }
     badge.textContent = bt;
     badge.style.background = bg;
     badge.style.color = col;
@@ -1905,6 +1963,7 @@ function openLivePanel(item) {
   const vpBtn = document.getElementById('lv-viewpage');
   if (vpBtn) vpBtn.style.display = item.slug ? '' : 'none';
   setPerfMeta('lv-place', item.place_name, '📍 ');
+  loadWeather(item, 'lv-weather');
   lvSetupDesc(item.description);
 
   startLiveClock(item.timezone);
