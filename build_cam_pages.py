@@ -1,6 +1,6 @@
 # ============================================
 # Flare[V] 캠 상세페이지 생성기  (build_cam_pages.py)
-# 버전: 2.1 / 2026-06-22
+# 버전: 2.2 / 2026-06-22
 # 역할: live_videos 에서 좋아요 상위 N개 → /cam/<slug>/index.html 정적 페이지 생성.
 #       + sitemap.xml, "근처 캠"(실제 썸네일), 내용 빈약하면 noindex 자동.
 # v2.0 변경:
@@ -162,19 +162,35 @@ def build_bar(menu):
         '<div class="nav-drop"><span class="nav-trigger">Live cams</span>'
         '<div class="mega" id="live-mega"><div class="mega-body"><div class="mega-conts">' + "".join(conts) + '</div>'
         '<div class="mega-countries">' + "".join(grps) + '</div></div></div></div>'
+        '<div class="nav-drop" id="service-drop"><span class="nav-trigger">Service</span>'
+        '<div class="mega mega-service">'
+        '<a class="svc-item" href="/?contact=1"><span class="svc-ic">✉️</span><span class="svc-tx"><b>Send a message</b><small>Contact the developer</small></span></a>'
+        '<a class="svc-item" id="svc-install" onclick="pwaInstall()"><span class="svc-ic">✨</span><span class="svc-tx"><b>Add Flare[V]</b><small id="svc-install-sub">Watch live cams right from your home screen!</small></span></a>'
+        '<div class="svc-hint" id="svc-install-hint"></div>'
+        '</div></div>'
         '<span class="bar-spacer"></span>'
-        '<a class="contact-btn" href="/?contact=1">Message</a>'
         '</nav>'
     )
     js = (
-        "<script>(function(){var root=document.getElementById('live-mega');if(!root)return;"
-        "function show(c){root.querySelectorAll('.cont').forEach(function(b){b.classList.toggle('on',b.dataset.c===c);});"
+        "<script>(function(){var root=document.getElementById('live-mega');"
+        "if(root){function show(c){root.querySelectorAll('.cont').forEach(function(b){b.classList.toggle('on',b.dataset.c===c);});"
         "root.querySelectorAll('.cgrp').forEach(function(g){g.classList.toggle('on',g.dataset.c===c);});}"
         "root.querySelectorAll('.cont').forEach(function(b){"
         "b.addEventListener('mouseenter',function(){show(b.dataset.c);});"
-        "b.addEventListener('click',function(){show(b.dataset.c);});});"
-        "document.querySelectorAll('.nav-drop').forEach(function(dd){var tr=dd.querySelector('.nav-trigger');"
-        "if(tr)tr.addEventListener('click',function(){if(window.innerWidth<=760)dd.classList.toggle('open');});});"
+        "b.addEventListener('click',function(){show(b.dataset.c);});});}"
+        "document.querySelectorAll('#sidebar .nav-drop').forEach(function(dd){var tr=dd.querySelector('.nav-trigger');if(!tr)return;"
+        "tr.addEventListener('click',function(){document.querySelectorAll('#sidebar .nav-drop').forEach(function(o){if(o!==dd)o.classList.remove('open');});dd.classList.toggle('open');});});"
+        "document.addEventListener('click',function(e){if(e.target.closest('#sidebar .nav-drop'))return;"
+        "document.querySelectorAll('#sidebar .nav-drop.open').forEach(function(o){o.classList.remove('open');});});"
+        "var dip=null;window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();dip=e;});"
+        "window.addEventListener('appinstalled',function(){dip=null;var s=document.getElementById('svc-install-sub');if(s)s.textContent='Installed';});"
+        "function pwaStandalone(){return window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;}"
+        "window.pwaInstall=function(){var h=document.getElementById('svc-install-hint');"
+        "if(pwaStandalone()){if(h){h.textContent='The app is already installed.';h.classList.add('show');}return;}"
+        "if(dip){dip.prompt();dip=null;return;}"
+        "if(h){if(/iphone|ipad|ipod/i.test(navigator.userAgent)){h.innerHTML='On iPhone / iPad: tap the <b>Share</b> button, then <b>\"Add to Home Screen.\"</b>';}"
+        "else{h.innerHTML='Open this site in Chrome, then use the browser menu and choose <b>Install app</b>.';}h.classList.add('show');}};"
+        "if(pwaStandalone()){var si=document.getElementById('svc-install');if(si)si.style.display='none';}"
         "})();</script>"
     )
     return nav + js
@@ -592,6 +608,8 @@ __JSONLD__
   .mapbtn:hover{background:#1c4a3c;}
   .sharebtn{cursor:pointer;font-family:inherit;margin-top:9px;background:#2a1418;color:#ffb3b3;border:1px solid rgba(255,107,107,0.3);}
   .sharebtn:hover{background:#3a1a20;}
+  .btnrow{display:flex;gap:8px;margin-top:12px;}
+  .btnrow .mapbtn{flex:1;width:auto;margin-top:0;padding:11px 8px;font-size:0.8rem;}
   .right section{margin-bottom:32px;} .right section:first-child{margin-top:4px;}
   .right h2{font-size:1.1rem;margin:0 0 10px;}
   .right p{color:#d8d8e2;font-size:0.94rem;}
@@ -657,8 +675,10 @@ __BARCSS__
         <table class="facts">
             __FACTS__
         </table>
+        <div class="btnrow">
         <a class="mapbtn" href="__MAPHREF__">🗺 Open in map</a>
-        <button class="mapbtn sharebtn" onclick="sharePage()">🔗 Share this page</button>
+        <button class="mapbtn sharebtn" onclick="sharePage()">🔗 Share</button>
+        </div>
       </div>
       <div class="right">
         __ABOUT__
@@ -1060,13 +1080,13 @@ BAR_CSS = """
   @keyframes logo-fall{0%,9%{opacity:0;transform:translateY(0) scale(0.4);}11%{opacity:1;transform:translateY(0) scale(1.3);}
     14%{opacity:1;transform:translateY(4px) scale(1);}30%{opacity:0.85;transform:translateY(40px) scale(0.85);}34%{opacity:0;transform:translateY(48px) scale(0.5);}100%{opacity:0;transform:translateY(48px) scale(0.5);}}
   .bar-link,.nav-trigger{font-family:'Noto Sans KR',sans-serif;font-size:0.86rem;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap;}
-  .bar-link,.nav-trigger{display:inline-flex;align-items:center;line-height:1;} .bar-link{margin-top:2px;} .bar-link:hover,.nav-drop:hover .nav-trigger{color:var(--text);}
+  .bar-link,.nav-trigger{display:inline-flex;align-items:center;line-height:1;} .bar-link{margin-top:2px;} .bar-link:hover{color:var(--text);} #sidebar .nav-drop.open .nav-trigger{color:var(--text);}
   .bar-spacer{flex:1;}
   .nav-drop{position:relative;flex-shrink:0;}
   .mega{position:absolute;top:calc(100% + 14px);left:0;width:min(620px,92vw);background:rgba(16,16,26,0.98);
     backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:16px;padding:14px;box-shadow:0 24px 60px rgba(0,0,0,0.6);
     opacity:0;visibility:hidden;transform:translateY(8px);transition:opacity .2s ease,transform .2s ease;z-index:320;}
-  .nav-drop:hover .mega,.nav-drop.open .mega{opacity:1;visibility:visible;transform:translateY(0);}
+  .nav-drop.open .mega{opacity:1;visibility:visible;transform:translateY(0);}
   .mega::before{content:"";position:absolute;top:-14px;left:0;right:0;height:14px;}
   .mega-body{display:grid;grid-template-columns:150px 1fr;gap:10px;}
   .mega-conts{display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--border);padding-right:8px;}
@@ -1089,13 +1109,33 @@ BAR_CSS = """
   .nav-disabled .filter-item{opacity:0.45;pointer-events:none;}
   .contact-btn{width:auto;margin:0;white-space:nowrap;padding:9px 14px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:0.8rem;font-family:'Noto Sans KR',sans-serif;font-weight:600;cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s;}
   .contact-btn:hover{background:rgba(255,107,107,0.1);border-color:var(--festival);color:var(--text);}
+  .mega-service{width:min(320px,92vw);padding:8px;}
+  .svc-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;cursor:pointer;color:var(--text);text-decoration:none;}
+  .svc-item:hover{background:rgba(255,255,255,0.06);}
+  .svc-ic{font-size:1.05rem;width:22px;text-align:center;flex-shrink:0;}
+  .svc-tx{display:flex;flex-direction:column;line-height:1.25;}
+  .svc-tx b{font-size:0.86rem;font-weight:700;}
+  .svc-tx small{font-size:0.72rem;color:var(--muted);}
+  .svc-hint{display:none;padding:8px 12px 4px;font-size:0.74rem;color:var(--muted);line-height:1.55;}
+  .svc-hint.show{display:block;}
+  #svc-install{position:relative;overflow:hidden;background:linear-gradient(135deg,rgba(255,107,107,0.13),rgba(107,255,184,0.06));border:1px solid rgba(255,107,107,0.22);animation:svcGlow 3.2s ease-in-out infinite;}
+  #svc-install:hover{background:linear-gradient(135deg,rgba(255,107,107,0.2),rgba(107,255,184,0.1));}
+  #svc-install .svc-tx b{background:linear-gradient(90deg,#ff8a8a,#ffd2d2 45%,#8affc8);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;}
+  #svc-install .svc-ic{animation:svcSpark 2.4s ease-in-out infinite;}
+  #svc-install::after{content:"";position:absolute;top:0;left:-75%;width:55%;height:100%;pointer-events:none;background:linear-gradient(115deg,transparent,rgba(255,255,255,0.22),transparent);transform:skewX(-18deg);opacity:0;}
+  #svc-install:hover::after{animation:svcShine 0.9s ease;}
+  @keyframes svcGlow{0%,100%{box-shadow:0 0 0 rgba(255,107,107,0);}50%{box-shadow:0 0 13px rgba(255,107,107,0.22);}}
+  @keyframes svcSpark{0%,100%{transform:scale(1);opacity:0.9;}50%{transform:scale(1.18);opacity:1;}}
+  @keyframes svcShine{0%{left:-75%;opacity:0;}20%{opacity:1;}100%{left:130%;opacity:0;}}
   @media(max-width:768px){
-    #sidebar{height:54px;gap:10px;padding:0 12px;}
-    .logo{font-size:1.3rem;letter-spacing:2px;} .logo span{font-size:1.3rem;} .logo-flare,.logo-light{display:none;}
-    .bar-link,.nav-trigger{font-size:0.78rem;}
+    #sidebar{height:54px;gap:14px;padding:0 12px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+    #sidebar::-webkit-scrollbar{display:none;}
+    .bar-spacer{display:none;}
+    .logo{font-size:1.12rem;letter-spacing:1px;} .logo span{font-size:1.12rem;} .logo-flare,.logo-light{display:none;}
+    .bar-link,.nav-trigger{font-size:0.74rem;}
     .contact-btn{padding:7px 9px;font-size:0.72rem;}
     .mega{position:fixed;left:8px;right:8px;top:56px;width:auto;max-height:72vh;overflow:auto;}
-    .mega-cats{width:auto;}
+    .mega-cats,.mega-service{width:auto;}
   }
 """
 

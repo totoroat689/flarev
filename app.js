@@ -1,4 +1,4 @@
-// Flare[V] v3.9.3 / 2026-06-22
+// Flare[V] v3.9.4 / 2026-06-22
 const SUPABASE_URL = 'https://pbrbzjxdjqqmhvhzhwlp.supabase.co';
 const SUPABASE_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicmJ6anhkanFxbWh2aHpod2xwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjc3NTcsImV4cCI6MjA5NTMwMzc1N30.E6-GthxwIFN2-jy4ojf5ZxR7YcdPJULG6Mxj9LvkI1c';
@@ -538,7 +538,7 @@ function toggleFilter(el, type) {
   }
   if (type === 'spot') {
     renderSpotPins();
-  } else if (type === 'yt' || type === 'news' || type === 'resort' || type === 'hotel') {
+  } else if (type === 'yt' || type === 'news' || type === 'resort' || type === 'hotel' || type === 'train') {
     renderLivePins();
   } else {
     applyFilters();

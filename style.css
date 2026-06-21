@@ -1,4 +1,4 @@
-/* Flare[V] v3.9.3 / 2026-06-22 */
+/* Flare[V] v3.9.4 / 2026-06-22 */
 :root {
   --bg: #0a0a0f;
   --sidebar: #10101a;
@@ -1909,6 +1909,10 @@ body.spot-picking #menu-toggle { display: none !important; }
   background: rgba(90, 185, 255, 0.12);
   border-color: rgba(90, 185, 255, 0.3);
 }
+.filter-item.active-train {
+  background: rgba(38, 222, 129, 0.12);
+  border-color: rgba(38, 222, 129, 0.3);
+}
 .dot-resort { background: #f0c419; box-shadow: 0 0 8px rgba(240, 196, 25, 0.8); }
 .dot-hotel { background: #5ab9ff; box-shadow: 0 0 8px rgba(90, 185, 255, 0.8); }
 .dot-train { background: #26de81; box-shadow: 0 0 8px rgba(38, 222, 129, 0.8); }
@@ -2219,17 +2223,14 @@ body.spot-picking #upload-btn { display: none !important; }
 }
 
 @media (min-width: 769px) {
-  .mega-service { left: auto; right: 0; width: min(300px, 92vw); }
+  .mega-service { left: 0; right: auto; width: min(320px, 92vw); }
 }
 
 .lv-share {
-  margin-top: 8px; padding: 8px 14px; border-radius: 9px;
-  background: rgba(107, 255, 184, 0.12); color: var(--live);
-  border: 1px solid rgba(107, 255, 184, 0.3);
-  font-size: 0.78rem; font-weight: 700; cursor: pointer;
-  font-family: 'Noto Sans KR', sans-serif;
+  display: inline-flex; align-items: center; gap: 6px; margin: 4px 0 2px; padding: 9px 15px;
+  border-radius: 11px; border: 1px solid rgba(107,255,184,0.45); background: var(--mint-bg);
+  color: var(--mint); font-weight: 800; font-size: 0.82rem; cursor: pointer; font-family: 'Noto Sans KR', sans-serif;
 }
-.lv-share:hover { background: rgba(107, 255, 184, 0.2); }
 
 .nav-drop:hover .mega { opacity: 0; visibility: hidden; transform: translateY(8px); }
 .nav-drop:hover .nav-trigger { color: var(--muted); }
