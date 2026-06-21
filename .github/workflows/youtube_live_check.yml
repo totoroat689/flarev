@@ -9,7 +9,7 @@ name: YouTube Live Checker
 
 on:
   schedule:
-    - cron: "*/30 * * * *" # 30분마다
+    - cron: "13,43 * * * *" # 매시 13분·43분 (정각 혼잡 회피, 30분 간격 유지)
   workflow_dispatch: {} # 수동 실행 버튼
 
 jobs:
