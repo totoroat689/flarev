@@ -1,4 +1,4 @@
-// Flare[V] v3.9.2 / 2026-06-22
+// Flare[V] v3.9.3 / 2026-06-22
 const SUPABASE_URL = 'https://pbrbzjxdjqqmhvhzhwlp.supabase.co';
 const SUPABASE_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicmJ6anhkanFxbWh2aHpod2xwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjc3NTcsImV4cCI6MjA5NTMwMzc1N30.E6-GthxwIFN2-jy4ojf5ZxR7YcdPJULG6Mxj9LvkI1c';
@@ -2475,7 +2475,6 @@ function buildHomeMegamenu() {
     var tr = dd.querySelector('.nav-trigger');
     if (!tr) return;
     tr.addEventListener('click', function () {
-      if (window.innerWidth > 768) return;
       document.querySelectorAll('#sidebar .nav-drop').forEach(function (o) {
         if (o !== dd) o.classList.remove('open');
       });
@@ -2483,7 +2482,6 @@ function buildHomeMegamenu() {
     });
   });
   document.addEventListener('click', function (e) {
-    if (window.innerWidth > 768) return;
     if (e.target.closest('#sidebar .nav-drop')) return;
     document.querySelectorAll('#sidebar .nav-drop.open').forEach(function (o) { o.classList.remove('open'); });
   });

@@ -1,4 +1,4 @@
-/* Flare[V] v3.9.2 / 2026-06-22 */
+/* Flare[V] v3.9.3 / 2026-06-22 */
 :root {
   --bg: #0a0a0f;
   --sidebar: #10101a;
@@ -2167,7 +2167,7 @@ body.spot-picking #upload-btn { display: none !important; }
   100% { opacity: 0; }
 }
 
-/* ===== v3.9.2 Service 드롭다운 + 공유 버튼 + 모바일 상단바 ===== */
+/* ===== v3.9.3 Service + Install 강조 + 클릭 드롭다운 + 모바일 상단바 ===== */
 .svc-item {
   display: flex; align-items: center; gap: 11px;
   padding: 10px 12px; border-radius: 10px; cursor: pointer;
@@ -2184,6 +2184,40 @@ body.spot-picking #upload-btn { display: none !important; }
 }
 .svc-hint.show { display: block; }
 
+#svc-install {
+  position: relative; overflow: hidden;
+  background: linear-gradient(135deg, rgba(255,107,107,0.13), rgba(107,255,184,0.06));
+  border: 1px solid rgba(255,107,107,0.22);
+  animation: svcGlow 3.2s ease-in-out infinite;
+}
+#svc-install:hover { background: linear-gradient(135deg, rgba(255,107,107,0.2), rgba(107,255,184,0.1)); }
+#svc-install .svc-tx b {
+  background: linear-gradient(90deg, #ff8a8a, #ffd2d2 45%, #8affc8);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+#svc-install .svc-ic { animation: svcSpark 2.4s ease-in-out infinite; }
+#svc-install::after {
+  content: ""; position: absolute; top: 0; left: -75%;
+  width: 55%; height: 100%; pointer-events: none;
+  background: linear-gradient(115deg, transparent, rgba(255,255,255,0.22), transparent);
+  transform: skewX(-18deg); opacity: 0;
+}
+#svc-install:hover::after { animation: svcShine 0.9s ease; }
+@keyframes svcGlow {
+  0%, 100% { box-shadow: 0 0 0 rgba(255,107,107,0); }
+  50% { box-shadow: 0 0 13px rgba(255,107,107,0.22); }
+}
+@keyframes svcSpark {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.18); opacity: 1; }
+}
+@keyframes svcShine {
+  0% { left: -75%; opacity: 0; }
+  20% { opacity: 1; }
+  100% { left: 130%; opacity: 0; }
+}
+
 @media (min-width: 769px) {
   .mega-service { left: auto; right: 0; width: min(300px, 92vw); }
 }
@@ -2197,15 +2231,23 @@ body.spot-picking #upload-btn { display: none !important; }
 }
 .lv-share:hover { background: rgba(107, 255, 184, 0.2); }
 
+.nav-drop:hover .mega { opacity: 0; visibility: hidden; transform: translateY(8px); }
+.nav-drop:hover .nav-trigger { color: var(--muted); }
+#sidebar .nav-drop.open .mega { opacity: 1; visibility: visible; transform: none; }
+#sidebar .nav-drop.open .nav-trigger { color: var(--text); }
+
 @media (max-width: 768px) {
   #sidebar {
+    gap: 14px;
     overflow-x: auto; overflow-y: hidden;
     -webkit-overflow-scrolling: touch; scrollbar-width: none;
   }
   #sidebar::-webkit-scrollbar { display: none; }
   .bar-spacer { display: none; }
+  .bar-link, .nav-trigger { font-size: 0.76rem; }
 }
 @media (max-width: 600px) {
-  #sidebar { gap: 9px; padding: 0 13px; }
-  .bar-link, .nav-trigger { font-size: 0.76rem; }
+  #sidebar { gap: 12px; padding: 0 12px; }
+  .logo, .logo span { font-size: 1.12rem; letter-spacing: 1px; }
+  .bar-link, .nav-trigger { font-size: 0.72rem; }
 }
