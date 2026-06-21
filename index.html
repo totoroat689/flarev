@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Flare[V] v3.9.0 / 2026-06-19 -->
+<!-- Flare[V] v3.9.2 / 2026-06-22 -->
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -12,6 +12,9 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#0a0a0f" />
 
     <title>Flare[V] — Live Web Cam Map | Watch Live Cams Around the World</title>
     <meta
@@ -425,5 +428,13 @@
       async
       defer
     ></script>
+
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", function () {
+          navigator.serviceWorker.register("/sw.js");
+        });
+      }
+    </script>
   </body>
 </html>

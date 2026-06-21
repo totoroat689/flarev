@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<!-- Flare[V] offline v1 / 2026-06-22 -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>Offline — Flare[V]</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #0a0a0f;
+        color: #f0f0f5;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif;
+      }
+      .wrap {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 24px;
+        box-sizing: border-box;
+      }
+      .pin {
+        width: 72px;
+        height: 72px;
+        margin-bottom: 20px;
+      }
+      h1 {
+        font-size: 22px;
+        margin: 0 0 10px;
+        letter-spacing: 0.5px;
+      }
+      p {
+        margin: 0 0 24px;
+        color: #6b6b80;
+        max-width: 320px;
+        line-height: 1.5;
+      }
+      button {
+        background: #ff6b6b;
+        color: #0a0a0f;
+        border: 0;
+        border-radius: 10px;
+        padding: 12px 24px;
+        font-size: 15px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .brand {
+        margin-top: 28px;
+        color: #6b6b80;
+        font-size: 13px;
+        letter-spacing: 1px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <svg class="pin" viewBox="0 0 512 512" aria-hidden="true">
+        <path
+          fill="#ff6b6b"
+          d="M256 40c-86 0-156 70-156 156 0 104 156 280 156 280s156-176 156-280c0-86-70-156-156-156z"
+        />
+        <circle cx="256" cy="196" r="62" fill="#6bffb8" />
+      </svg>
+      <h1>You're offline</h1>
+      <p>
+        Flare[V] shows live cams in real time, so it needs an internet
+        connection. Reconnect and try again.
+      </p>
+      <button onclick="location.reload()">Retry</button>
+      <div class="brand">FLARE[V]</div>
+    </div>
+  </body>
+</html>
