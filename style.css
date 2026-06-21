@@ -1,4 +1,4 @@
-/* Flare[V] v3.9.1 / 2026-06-19 */
+/* Flare[V] v3.9.2 / 2026-06-22 */
 :root {
   --bg: #0a0a0f;
   --sidebar: #10101a;
@@ -2165,4 +2165,47 @@ body.spot-picking #upload-btn { display: none !important; }
   0% { transform: scale(0.8); opacity: 0.8; }
   70% { transform: scale(1.8); opacity: 0; }
   100% { opacity: 0; }
+}
+
+/* ===== v3.9.2 Service 드롭다운 + 공유 버튼 + 모바일 상단바 ===== */
+.svc-item {
+  display: flex; align-items: center; gap: 11px;
+  padding: 10px 12px; border-radius: 10px; cursor: pointer;
+  color: var(--text); text-decoration: none;
+}
+.svc-item:hover { background: rgba(255, 255, 255, 0.06); }
+.svc-ic { font-size: 1.05rem; width: 22px; text-align: center; flex-shrink: 0; }
+.svc-tx { display: flex; flex-direction: column; line-height: 1.25; }
+.svc-tx b { font-size: 0.86rem; font-weight: 700; }
+.svc-tx small { font-size: 0.72rem; color: var(--muted); }
+.svc-hint {
+  display: none; padding: 8px 12px 4px; font-size: 0.74rem;
+  color: var(--muted); line-height: 1.55;
+}
+.svc-hint.show { display: block; }
+
+@media (min-width: 769px) {
+  .mega-service { left: auto; right: 0; width: min(300px, 92vw); }
+}
+
+.lv-share {
+  margin-top: 8px; padding: 8px 14px; border-radius: 9px;
+  background: rgba(107, 255, 184, 0.12); color: var(--live);
+  border: 1px solid rgba(107, 255, 184, 0.3);
+  font-size: 0.78rem; font-weight: 700; cursor: pointer;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+.lv-share:hover { background: rgba(107, 255, 184, 0.2); }
+
+@media (max-width: 768px) {
+  #sidebar {
+    overflow-x: auto; overflow-y: hidden;
+    -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  }
+  #sidebar::-webkit-scrollbar { display: none; }
+  .bar-spacer { display: none; }
+}
+@media (max-width: 600px) {
+  #sidebar { gap: 9px; padding: 0 13px; }
+  .bar-link, .nav-trigger { font-size: 0.76rem; }
 }

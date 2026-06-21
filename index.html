@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Flare[V] v3.9.2 / 2026-06-22 -->
+<!-- Flare[V] v3.9.3 / 2026-06-22 -->
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -134,7 +134,20 @@
 
       <div class="bar-spacer"></div>
 
-      <button class="contact-btn" onclick="openContact()">Message</button>
+      <div class="nav-drop" id="service-drop">
+        <span class="nav-trigger">Service</span>
+        <div class="mega mega-service">
+          <a class="svc-item" onclick="openContact()">
+            <span class="svc-ic">✉️</span>
+            <span class="svc-tx"><b>Send a message</b><small>Contact the developer</small></span>
+          </a>
+          <a class="svc-item" id="svc-install" onclick="pwaInstall()">
+            <span class="svc-ic">⤓</span>
+            <span class="svc-tx"><b>Install app</b><small id="svc-install-sub">Add Flare[V] to your home screen</small></span>
+          </a>
+          <div class="svc-hint" id="svc-install-hint"></div>
+        </div>
+      </div>
 
       <div class="login-wrap">
         <button class="login-btn" onclick="openModal()">Log in / Sign up</button>
@@ -260,6 +273,7 @@
           </div>
 
           <button id="lv-viewpage" class="lv-viewpage" onclick="lvOpenFullPage()" style="display:none;">📄 View page →</button>
+          <button id="lv-share" class="lv-share" onclick="lvShare()">🔗 Share</button>
 
           <div class="lv-reviews" id="lv-reviews">
             <div class="lv-rv-head">

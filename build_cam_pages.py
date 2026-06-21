@@ -1,6 +1,6 @@
 # ============================================
 # Flare[V] 캠 상세페이지 생성기  (build_cam_pages.py)
-# 버전: 2.0 / 2026-06-17
+# 버전: 2.1 / 2026-06-22
 # 역할: live_videos 에서 좋아요 상위 N개 → /cam/<slug>/index.html 정적 페이지 생성.
 #       + sitemap.xml, "근처 캠"(실제 썸네일), 내용 빈약하면 noindex 자동.
 # v2.0 변경:
@@ -590,6 +590,8 @@ __JSONLD__
   .mapbtn{display:block;width:100%;text-align:center;margin-top:12px;padding:12px;border-radius:12px;
     background:#173e33;color:#9af5cd;font-weight:800;font-size:0.85rem;border:1px solid rgba(107,255,184,0.25);}
   .mapbtn:hover{background:#1c4a3c;}
+  .sharebtn{cursor:pointer;font-family:inherit;margin-top:9px;background:#2a1418;color:#ffb3b3;border:1px solid rgba(255,107,107,0.3);}
+  .sharebtn:hover{background:#3a1a20;}
   .right section{margin-bottom:32px;} .right section:first-child{margin-top:4px;}
   .right h2{font-size:1.1rem;margin:0 0 10px;}
   .right p{color:#d8d8e2;font-size:0.94rem;}
@@ -656,6 +658,7 @@ __BARCSS__
             __FACTS__
         </table>
         <a class="mapbtn" href="__MAPHREF__">🗺 Open in map</a>
+        <button class="mapbtn sharebtn" onclick="sharePage()">🔗 Share this page</button>
       </div>
       <div class="right">
         __ABOUT__
@@ -850,6 +853,23 @@ __BARCSS__
   }
   window.cmtOpen=cmtOpen;window.cmtClose=cmtClose;window.cmtSubmit=cmtSubmit;
   loadComments();
+
+  function pgToast(t){
+    var el=document.createElement('div');el.textContent=t;
+    el.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:8px 14px;border-radius:20px;font-size:0.78rem;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.4);';
+    document.body.appendChild(el);setTimeout(function(){el.remove();},1500);
+  }
+  function pgCopyFallback(url){
+    try{var t=document.createElement('textarea');t.value=url;t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();pgToast('Link copied');}
+    catch(e){pgToast('Copy failed');}
+  }
+  function sharePage(){
+    var url=location.href;
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(url).then(function(){pgToast('Link copied');},function(){pgCopyFallback(url);});
+    }else{pgCopyFallback(url);}
+  }
+  window.sharePage=sharePage;
 </script>
 </body>
 </html>"""

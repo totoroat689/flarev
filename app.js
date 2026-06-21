@@ -1,4 +1,4 @@
-// Flare[V] v3.9.1 / 2026-06-19
+// Flare[V] v3.9.2 / 2026-06-22
 const SUPABASE_URL = 'https://pbrbzjxdjqqmhvhzhwlp.supabase.co';
 const SUPABASE_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicmJ6anhkanFxbWh2aHpod2xwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjc3NTcsImV4cCI6MjA5NTMwMzc1N30.E6-GthxwIFN2-jy4ojf5ZxR7YcdPJULG6Mxj9LvkI1c';
@@ -439,8 +439,93 @@ function toast(text) {
   setTimeout(() => el.remove(), 1500);
 }
 
+var deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', function (e) {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+});
+window.addEventListener('appinstalled', function () {
+  deferredInstallPrompt = null;
+  var sub = document.getElementById('svc-install-sub');
+  if (sub) sub.textContent = 'Installed';
+});
+function pwaIsStandalone() {
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true
+  );
+}
+function pwaIsIOS() {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent);
+}
+async function pwaInstall() {
+  var hint = document.getElementById('svc-install-hint');
+  if (pwaIsStandalone()) {
+    if (hint) {
+      hint.textContent = 'The app is already installed.';
+      hint.classList.add('show');
+    }
+    return;
+  }
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    try {
+      await deferredInstallPrompt.userChoice;
+    } catch (e) {}
+    deferredInstallPrompt = null;
+    return;
+  }
+  if (hint) {
+    if (pwaIsIOS()) {
+      hint.innerHTML =
+        'On iPhone / iPad: tap the <b>Share</b> button, then <b>"Add to Home Screen."</b>';
+    } else {
+      hint.innerHTML =
+        'Open this site in Chrome, then use the browser menu and choose <b>Install app</b> / <b>Add to Home screen.</b>';
+    }
+    hint.classList.add('show');
+  }
+}
 
+function lvShare() {
+  if (!currentLiveItem) return;
+  var url =
+    location.origin + '/?cam=' + encodeURIComponent(currentLiveItem.video_id);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(
+      function () {
+        toast('Link copied');
+      },
+      function () {
+        lvShareFallback(url);
+      }
+    );
+  } else {
+    lvShareFallback(url);
+  }
+}
+function lvShareFallback(url) {
+  try {
+    var t = document.createElement('textarea');
+    t.value = url;
+    t.style.position = 'fixed';
+    t.style.opacity = '0';
+    document.body.appendChild(t);
+    t.select();
+    document.execCommand('copy');
+    t.remove();
+    toast('Link copied');
+  } catch (e) {
+    toast('Copy failed');
+  }
+}
 
+document.addEventListener('DOMContentLoaded', function () {
+  if (pwaIsStandalone()) {
+    var si = document.getElementById('svc-install');
+    if (si) si.style.display = 'none';
+  }
+});
 
 function toggleFilter(el, type) {
   const activeClass = 'active-' + type;
