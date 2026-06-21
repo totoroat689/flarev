@@ -110,6 +110,8 @@
   .mapbtn{display:block;width:100%;text-align:center;margin-top:12px;padding:12px;border-radius:12px;
     background:#173e33;color:#9af5cd;font-weight:800;font-size:0.85rem;border:1px solid rgba(107,255,184,0.25);}
   .mapbtn:hover{background:#1c4a3c;}
+  .sharebtn{cursor:pointer;font-family:inherit;margin-top:9px;background:#2a1418;color:#ffb3b3;border:1px solid rgba(255,107,107,0.3);}
+  .sharebtn:hover{background:#3a1a20;}
   .right section{margin-bottom:32px;} .right section:first-child{margin-top:4px;}
   .right h2{font-size:1.1rem;margin:0 0 10px;}
   .right p{color:#d8d8e2;font-size:0.94rem;}
@@ -225,8 +227,7 @@
         </div>
         <div class="chips">
           <span class="chip live" id="chip-live"><span class="dot"></span> LIVE</span>
-          <span class="chip rank" data-tip="28 likes">🔥 #722 most liked</span>
-          <span class="chip" data-tip="45 watching right now">👀 45 watching</span>
+          <span class="chip rank" data-tip="33 likes">🔥 #723 most liked</span>
           <span class="chip see dn" id="chip-dn">🕐 —</span>
         </div>
         <table class="facts">
@@ -234,12 +235,12 @@
             <tr><td class="k">Country</td><td class="v">United States</td></tr>
             <tr><td class="k">Local time</td><td class="v lt">—</td></tr>
             <tr><td class="k">Coordinates</td><td class="v">27.994, -81.760</td></tr>
-            <tr><td class="k">Watching now</td><td class="v">45</td></tr>
-            <tr><td class="k">Total views</td><td class="v">1K</td></tr>
-            <tr><td class="k">Likes</td><td class="v">28</td></tr>
+            <tr><td class="k">Total views</td><td class="v">2K</td></tr>
+            <tr><td class="k">Likes</td><td class="v">33</td></tr>
             <tr><td class="k">Channel</td><td class="v">Florida Beach Channel</td></tr>
         </table>
         <a class="mapbtn" href="https://flarev.co/?cam=GL7QU5c5nPQ">🗺 Open in map</a>
+        <button class="mapbtn sharebtn" onclick="sharePage()">🔗 Share this page</button>
       </div>
       <div class="right">
         
@@ -434,6 +435,23 @@
   }
   window.cmtOpen=cmtOpen;window.cmtClose=cmtClose;window.cmtSubmit=cmtSubmit;
   loadComments();
+
+  function pgToast(t){
+    var el=document.createElement('div');el.textContent=t;
+    el.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:8px 14px;border-radius:20px;font-size:0.78rem;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.4);';
+    document.body.appendChild(el);setTimeout(function(){el.remove();},1500);
+  }
+  function pgCopyFallback(url){
+    try{var t=document.createElement('textarea');t.value=url;t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();pgToast('Link copied');}
+    catch(e){pgToast('Copy failed');}
+  }
+  function sharePage(){
+    var url=location.href;
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(url).then(function(){pgToast('Link copied');},function(){pgCopyFallback(url);});
+    }else{pgCopyFallback(url);}
+  }
+  window.sharePage=sharePage;
 </script>
 </body>
 </html>
