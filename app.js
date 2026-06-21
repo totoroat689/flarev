@@ -1,4 +1,4 @@
-// Flare[V] v3.9.4 / 2026-06-22
+// Flare[V] v3.9.5 / 2026-06-22
 const SUPABASE_URL = 'https://pbrbzjxdjqqmhvhzhwlp.supabase.co';
 const SUPABASE_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicmJ6anhkanFxbWh2aHpod2xwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjc3NTcsImV4cCI6MjA5NTMwMzc1N30.E6-GthxwIFN2-jy4ojf5ZxR7YcdPJULG6Mxj9LvkI1c';
@@ -25,13 +25,14 @@ let activeSpotTags = new Set(SPOT_TAGS);
 
 let liveData = []; 
 let liveGroups = []; 
-let liveOverlays = []; 
+let liveRendered = new Map();
+let selectedLiveId = null; 
 let LivePinClass = null;
 let LiveClusterClass = null;
 let currentLive = null; 
 let expandedLiveGroup = null; 
 
-let spotOverlays = []; 
+let spotRendered = new Map(); 
 let spotData = []; 
 let pendingLatLng = null; 
 let pendingPlace = null; 
@@ -172,6 +173,12 @@ function initMap() {
   });
   
   setupLongPress();
+
+  map.addListener('idle', () => {
+    if (!LivePinClass) return;
+    renderLivePins();
+    renderSpotPins();
+  });
 
   loadSpots(); 
   loadLiveVideos(); 
@@ -405,6 +412,7 @@ function escapeHtml(s) {
 function selectPin(pin) {
   if (selectedPin && selectedPin !== pin) selectedPin.setSelected(false);
   selectedPin = pin;
+  selectedLiveId = pin && pin.item ? pin.item.video_id : null;
   pin.setSelected(true);
 }
 
@@ -1539,20 +1547,34 @@ function distMeters(lat1, lng1, lat2, lng2) {
 }
 
 function renderSpotPins() {
-  spotOverlays.forEach((s) => s.setMap(null));
-  spotOverlays = [];
+  if (!SpotPinClass || !map) {
+    updateSpotCount();
+    return;
+  }
+  const pb = fvPaddedBounds(0.25);
+  const desired = new Map();
   if (activeCategories.spot) {
     spotPlaces.forEach((place) => {
-      addSpotPin(place.posts[0], place.posts.length);
+      if (!fvInBounds(pb, place.latitude, place.longitude)) return;
+      const count = place.posts.length;
+      desired.set('P|' + place.id + '|' + count, {
+        post: place.posts[0], count: count,
+      });
     });
   }
+  spotRendered.forEach((overlay, key) => {
+    if (!desired.has(key)) {
+      overlay.setMap(null);
+      spotRendered.delete(key);
+    }
+  });
+  desired.forEach((d, key) => {
+    if (spotRendered.has(key)) return;
+    const pin = new SpotPinClass(d.post, d.count);
+    pin.setMap(map);
+    spotRendered.set(key, pin);
+  });
   updateSpotCount();
-}
-function addSpotPin(post, count) {
-  if (!SpotPinClass || !map) return;
-  const pin = new SpotPinClass(post, count);
-  pin.setMap(map);
-  spotOverlays.push(pin);
 }
 
 function updateSpotCount() {
@@ -1566,6 +1588,7 @@ function openSpotPanel(post) {
     selectedPin.setSelected(false); 
     selectedPin = null;
   }
+  selectedLiveId = null;
   document.getElementById('sp-map-picker').classList.remove('show');
 
   const place = post.places || {};
@@ -1848,20 +1871,40 @@ function buildLiveGroups() {
   liveGroups = Object.values(byKey);
 }
 
-function clearLivePins() {
-  liveOverlays.forEach((p) => p.setMap(null));
-  liveOverlays = [];
+function fvPaddedBounds(marginFrac) {
+  if (!map || !map.getBounds) return null;
+  const b = map.getBounds();
+  if (!b) return null;
+  const ne = b.getNorthEast();
+  const sw = b.getSouthWest();
+  const south = sw.lat();
+  const north = ne.lat();
+  const west = sw.lng();
+  const east = ne.lng();
+  const crosses = east < west;
+  const latPad = (north - south) * marginFrac;
+  let lngSpan = east - west;
+  if (crosses) lngSpan += 360;
+  const lngPad = lngSpan * marginFrac;
+  return {
+    south: south - latPad,
+    north: north + latPad,
+    west: west - lngPad,
+    east: east + lngPad,
+    crosses: crosses,
+  };
 }
 
-function addLivePin(item, fan) {
-  const pin = new LivePinClass(item, fan);
-  pin.setMap(map);
-  liveOverlays.push(pin);
+function fvInBounds(pb, lat, lng) {
+  if (!pb) return true;
+  if (lat < pb.south || lat > pb.north) return false;
+  if (pb.crosses) return lng >= pb.west || lng <= pb.east;
+  return lng >= pb.west && lng <= pb.east;
 }
-function addLiveCluster(group) {
-  const c = new LiveClusterClass(group);
-  c.setMap(map);
-  liveOverlays.push(c);
+
+function clearLivePins() {
+  liveRendered.forEach((o) => o.setMap(null));
+  liveRendered.clear();
 }
 
 function liveKindOn(item) {
@@ -1874,26 +1917,64 @@ function liveKindOn(item) {
 }
 
 function renderLivePins() {
-  clearLivePins();
   if (!LivePinClass || !map) return;
+  const pb = fvPaddedBounds(0.25);
 
+  const desired = new Map();
   liveGroups.forEach((g) => {
-    const vis = g.items.filter(liveKindOn); 
+    if (!fvInBounds(pb, g.lat, g.lng)) return;
+    const vis = g.items.filter(liveKindOn);
     if (vis.length === 0) return;
     if (vis.length === 1) {
-      addLivePin(vis[0], null);
+      const it = vis[0];
+      desired.set('S|' + it.video_id + '|' + (it.is_live ? 1 : 0), {
+        cls: 'pin', item: it, fan: null,
+      });
     } else if (expandedLiveGroup === g.key) {
-      
       const N = vis.length;
       const R = 36;
       vis.forEach((it, i) => {
         const ang = (2 * Math.PI / N) * i - Math.PI / 2;
-        addLivePin(it, { dx: Math.cos(ang) * R, dy: Math.sin(ang) * R });
+        desired.set('F|' + it.video_id + '|' + N + '|' + (it.is_live ? 1 : 0), {
+          cls: 'pin', item: it, fan: { dx: Math.cos(ang) * R, dy: Math.sin(ang) * R },
+        });
       });
     } else {
-      addLiveCluster({ ...g, items: vis }); 
+      const anyOn = vis.some((it) => it.is_live);
+      desired.set('C|' + g.key + '|' + vis.length + '|' + (anyOn ? 1 : 0), {
+        cls: 'cluster', group: { ...g, items: vis },
+      });
     }
   });
+
+  liveRendered.forEach((overlay, key) => {
+    if (!desired.has(key)) {
+      overlay.setMap(null);
+      liveRendered.delete(key);
+    }
+  });
+
+  desired.forEach((d, key) => {
+    if (liveRendered.has(key)) return;
+    const overlay =
+      d.cls === 'pin'
+        ? new LivePinClass(d.item, d.fan)
+        : new LiveClusterClass(d.group);
+    overlay.setMap(map);
+    liveRendered.set(key, overlay);
+  });
+
+  if (selectedLiveId) {
+    let found = null;
+    liveRendered.forEach((overlay) => {
+      if (overlay.item && overlay.setSelected) {
+        const sel = overlay.item.video_id === selectedLiveId;
+        overlay.setSelected(sel);
+        if (sel) found = overlay;
+      }
+    });
+    if (found) selectedPin = found;
+  }
 }
 
 function setPerfMeta(id, val, prefix) {
@@ -2053,6 +2134,7 @@ function closeLivePanel() {
     selectedPin.setSelected(false);
     selectedPin = null;
   }
+  selectedLiveId = null;
   if (was) afterManualPopupClose();
 }
 
