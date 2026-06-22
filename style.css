@@ -1,4 +1,4 @@
-/* Flare[V] v3.9.4 / 2026-06-22 */
+/* Flare[V] v3.9.5 / 2026-06-22 */
 :root {
   --bg: #0a0a0f;
   --sidebar: #10101a;
@@ -2251,4 +2251,13 @@ body.spot-picking #upload-btn { display: none !important; }
   #sidebar { gap: 12px; padding: 0 12px; }
   .logo, .logo span { font-size: 1.12rem; letter-spacing: 1px; }
   .bar-link, .nav-trigger { font-size: 0.72rem; }
+}
+
+/* ===== v3.9.5 핀 등장 애니메이션 (부드러운 스케일+페이드) ===== */
+@keyframes pin-in {
+  from { opacity: 0; scale: 0.7; }
+  to { opacity: 1; scale: 1; }
+}
+.live-pin, .spot-pin, .live-cluster {
+  animation: pin-in 0.3s ease-out both;
 }

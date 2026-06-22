@@ -1,4 +1,4 @@
-// Flare[V] v3.9.5 / 2026-06-22
+// Flare[V] v3.9.6 / 2026-06-22
 const SUPABASE_URL = 'https://pbrbzjxdjqqmhvhzhwlp.supabase.co';
 const SUPABASE_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicmJ6anhkanFxbWh2aHpod2xwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjc3NTcsImV4cCI6MjA5NTMwMzc1N30.E6-GthxwIFN2-jy4ojf5ZxR7YcdPJULG6Mxj9LvkI1c';
@@ -315,9 +315,10 @@ function defineOverlayClasses() {
   };
 
   LiveClusterClass = class extends google.maps.OverlayView {
-    constructor(group) {
+    constructor(group, opts) {
       super();
       this.group = group;
+      this.grid = !!(opts && opts.grid);
       this.position = new google.maps.LatLng(group.lat, group.lng);
       this.div = null;
     }
@@ -335,8 +336,13 @@ function defineOverlayClasses() {
       const self = this;
       div.addEventListener('click', (e) => {
         e.stopPropagation();
-        expandedLiveGroup = self.group.key; 
-        renderLivePins();
+        if (self.grid) {
+          map.panTo(self.position);
+          map.setZoom(Math.min((map.getZoom() || 7) + 3, 16));
+        } else {
+          expandedLiveGroup = self.group.key; 
+          renderLivePins();
+        }
       });
       this.div = div;
       this.getPanes().overlayMouseTarget.appendChild(div);
@@ -1871,6 +1877,9 @@ function buildLiveGroups() {
   liveGroups = Object.values(byKey);
 }
 
+const GRID_CLUSTER_MAX_ZOOM = 6;
+const GRID_CELL_PX = 64;
+
 function fvPaddedBounds(marginFrac) {
   if (!map || !map.getBounds) return null;
   const b = map.getBounds();
@@ -1916,36 +1925,81 @@ function liveKindOn(item) {
   return activeCategories.yt;
 }
 
+function fvAddGroupDesired(desired, g, vis) {
+  if (vis.length === 1) {
+    const it = vis[0];
+    desired.set('S|' + it.video_id + '|' + (it.is_live ? 1 : 0), {
+      cls: 'pin', item: it, fan: null,
+    });
+  } else if (expandedLiveGroup === g.key) {
+    const N = vis.length;
+    const R = 36;
+    vis.forEach((it, i) => {
+      const ang = (2 * Math.PI / N) * i - Math.PI / 2;
+      desired.set('F|' + it.video_id + '|' + N + '|' + (it.is_live ? 1 : 0), {
+        cls: 'pin', item: it, fan: { dx: Math.cos(ang) * R, dy: Math.sin(ang) * R },
+      });
+    });
+  } else {
+    const anyOn = vis.some((it) => it.is_live);
+    desired.set('C|' + g.key + '|' + vis.length + '|' + (anyOn ? 1 : 0), {
+      cls: 'cluster', group: { ...g, items: vis },
+    });
+  }
+}
+
 function renderLivePins() {
   if (!LivePinClass || !map) return;
   const pb = fvPaddedBounds(0.25);
+  const zoom = map.getZoom ? map.getZoom() : 12;
+  const proj = map.getProjection ? map.getProjection() : null;
+  const useGrid = !!proj && zoom != null && zoom <= GRID_CLUSTER_MAX_ZOOM;
 
   const desired = new Map();
-  liveGroups.forEach((g) => {
-    if (!fvInBounds(pb, g.lat, g.lng)) return;
-    const vis = g.items.filter(liveKindOn);
-    if (vis.length === 0) return;
-    if (vis.length === 1) {
-      const it = vis[0];
-      desired.set('S|' + it.video_id + '|' + (it.is_live ? 1 : 0), {
-        cls: 'pin', item: it, fan: null,
-      });
-    } else if (expandedLiveGroup === g.key) {
-      const N = vis.length;
-      const R = 36;
-      vis.forEach((it, i) => {
-        const ang = (2 * Math.PI / N) * i - Math.PI / 2;
-        desired.set('F|' + it.video_id + '|' + N + '|' + (it.is_live ? 1 : 0), {
-          cls: 'pin', item: it, fan: { dx: Math.cos(ang) * R, dy: Math.sin(ang) * R },
+
+  if (useGrid) {
+    const scale = Math.pow(2, zoom);
+    const cells = new Map();
+    liveGroups.forEach((g) => {
+      if (!fvInBounds(pb, g.lat, g.lng)) return;
+      const vis = g.items.filter(liveKindOn);
+      if (vis.length === 0) return;
+      const p = proj.fromLatLngToPoint(new google.maps.LatLng(g.lat, g.lng));
+      const cx = Math.floor((p.x * scale) / GRID_CELL_PX);
+      const cy = Math.floor((p.y * scale) / GRID_CELL_PX);
+      const cellKey = cx + '_' + cy;
+      let cell = cells.get(cellKey);
+      if (!cell) {
+        cell = { members: [], items: [], latSum: 0, lngSum: 0 };
+        cells.set(cellKey, cell);
+      }
+      cell.members.push({ g: g, vis: vis });
+      vis.forEach((it) => cell.items.push(it));
+      cell.latSum += g.lat;
+      cell.lngSum += g.lng;
+    });
+    cells.forEach((cell, cellKey) => {
+      if (cell.members.length === 1) {
+        fvAddGroupDesired(desired, cell.members[0].g, cell.members[0].vis);
+      } else {
+        const n = cell.members.length;
+        const cLat = cell.latSum / n;
+        const cLng = cell.lngSum / n;
+        const anyOn = cell.items.some((it) => it.is_live);
+        desired.set('G|' + cellKey + '|' + cell.items.length + '|' + (anyOn ? 1 : 0), {
+          cls: 'grid',
+          group: { items: cell.items, key: 'grid_' + cellKey, lat: cLat, lng: cLng },
         });
-      });
-    } else {
-      const anyOn = vis.some((it) => it.is_live);
-      desired.set('C|' + g.key + '|' + vis.length + '|' + (anyOn ? 1 : 0), {
-        cls: 'cluster', group: { ...g, items: vis },
-      });
-    }
-  });
+      }
+    });
+  } else {
+    liveGroups.forEach((g) => {
+      if (!fvInBounds(pb, g.lat, g.lng)) return;
+      const vis = g.items.filter(liveKindOn);
+      if (vis.length === 0) return;
+      fvAddGroupDesired(desired, g, vis);
+    });
+  }
 
   liveRendered.forEach((overlay, key) => {
     if (!desired.has(key)) {
@@ -1956,10 +2010,14 @@ function renderLivePins() {
 
   desired.forEach((d, key) => {
     if (liveRendered.has(key)) return;
-    const overlay =
-      d.cls === 'pin'
-        ? new LivePinClass(d.item, d.fan)
-        : new LiveClusterClass(d.group);
+    let overlay;
+    if (d.cls === 'pin') {
+      overlay = new LivePinClass(d.item, d.fan);
+    } else if (d.cls === 'grid') {
+      overlay = new LiveClusterClass(d.group, { grid: true });
+    } else {
+      overlay = new LiveClusterClass(d.group);
+    }
     overlay.setMap(map);
     liveRendered.set(key, overlay);
   });
