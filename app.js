@@ -1,4 +1,4 @@
-// Flare[V] v3.9.8 / 2026-06-22
+// Flare[V] v3.9.9 / 2026-06-22
 const SUPABASE_URL = 'https://pbrbzjxdjqqmhvhzhwlp.supabase.co';
 const SUPABASE_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicmJ6anhkanFxbWh2aHpod2xwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjc3NTcsImV4cCI6MjA5NTMwMzc1N30.E6-GthxwIFN2-jy4ojf5ZxR7YcdPJULG6Mxj9LvkI1c';
@@ -176,14 +176,19 @@ function initMap() {
 
   map.addListener('idle', () => {
     if (!LivePinClass) return;
-    renderLivePins();
-    renderSpotPins();
+    if (fvRenderTimer) clearTimeout(fvRenderTimer);
+    fvRenderTimer = setTimeout(() => {
+      fvRenderTimer = null;
+      renderLivePins();
+      renderSpotPins();
+    }, PIN_RENDER_DELAY_MS);
   });
 
-  map.addListener('zoom_changed', () => {
-    if (!LivePinClass) return;
-    renderLivePins();
-    renderSpotPins();
+  map.addListener('bounds_changed', () => {
+    if (fvRenderTimer) {
+      clearTimeout(fvRenderTimer);
+      fvRenderTimer = null;
+    }
   });
 
   loadSpots(); 
@@ -1885,6 +1890,8 @@ function buildLiveGroups() {
 
 const GRID_CLUSTER_MAX_ZOOM = 6;
 const GRID_CELL_PX = 64;
+const PIN_RENDER_DELAY_MS = 120;
+let fvRenderTimer = null;
 
 function fvPaddedBounds(marginFrac) {
   if (!map || !map.getBounds) return null;
@@ -1976,25 +1983,35 @@ function renderLivePins() {
       const cellKey = cx + '_' + cy;
       let cell = cells.get(cellKey);
       if (!cell) {
-        cell = { members: [], items: [], latSum: 0, lngSum: 0, wSum: 0 };
+        cell = { members: [], items: [] };
         cells.set(cellKey, cell);
       }
       cell.members.push({ g: g, vis: vis });
       vis.forEach((it) => cell.items.push(it));
-      cell.latSum += g.lat * vis.length;
-      cell.lngSum += g.lng * vis.length;
-      cell.wSum += vis.length;
     });
     cells.forEach((cell, cellKey) => {
       if (cell.members.length === 1) {
         fvAddGroupDesired(desired, cell.members[0].g, cell.members[0].vis);
       } else {
-        const cLat = cell.latSum / cell.wSum;
-        const cLng = cell.lngSum / cell.wSum;
+        let aLat = cell.members[0].g.lat;
+        let aLng = cell.members[0].g.lng;
+        let best = -1;
+        cell.members.forEach((m) => {
+          let s = 0;
+          m.vis.forEach((it) => {
+            const v = it.like_count || 0;
+            if (v > s) s = v;
+          });
+          if (s > best) {
+            best = s;
+            aLat = m.g.lat;
+            aLng = m.g.lng;
+          }
+        });
         const anyOn = cell.items.some((it) => it.is_live);
         desired.set('G|' + cellKey + '|' + cell.items.length + '|' + (anyOn ? 1 : 0), {
           cls: 'grid',
-          group: { items: cell.items, key: 'grid_' + cellKey, lat: cLat, lng: cLng },
+          group: { items: cell.items, key: 'grid_' + cellKey, lat: aLat, lng: aLng },
         });
       }
     });
