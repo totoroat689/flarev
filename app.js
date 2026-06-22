@@ -1,4 +1,4 @@
-// Flare[V] v3.9.6 / 2026-06-22
+// Flare[V] v3.9.7 / 2026-06-22
 const SUPABASE_URL = 'https://pbrbzjxdjqqmhvhzhwlp.supabase.co';
 const SUPABASE_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicmJ6anhkanFxbWh2aHpod2xwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjc3NTcsImV4cCI6MjA5NTMwMzc1N30.E6-GthxwIFN2-jy4ojf5ZxR7YcdPJULG6Mxj9LvkI1c';
@@ -352,7 +352,7 @@ function defineOverlayClasses() {
       const pt = this.getProjection().fromLatLngToDivPixel(this.position);
       if (pt) {
         this.div.style.transform =
-          'translate(' + (pt.x - 14) + 'px,' + (pt.y - 14) + 'px)';
+          'translate(' + (pt.x - 14) + 'px,' + (pt.y - 22) + 'px)';
       }
     }
     onRemove() {
@@ -1970,21 +1970,21 @@ function renderLivePins() {
       const cellKey = cx + '_' + cy;
       let cell = cells.get(cellKey);
       if (!cell) {
-        cell = { members: [], items: [], latSum: 0, lngSum: 0 };
+        cell = { members: [], items: [], latSum: 0, lngSum: 0, wSum: 0 };
         cells.set(cellKey, cell);
       }
       cell.members.push({ g: g, vis: vis });
       vis.forEach((it) => cell.items.push(it));
-      cell.latSum += g.lat;
-      cell.lngSum += g.lng;
+      cell.latSum += g.lat * vis.length;
+      cell.lngSum += g.lng * vis.length;
+      cell.wSum += vis.length;
     });
     cells.forEach((cell, cellKey) => {
       if (cell.members.length === 1) {
         fvAddGroupDesired(desired, cell.members[0].g, cell.members[0].vis);
       } else {
-        const n = cell.members.length;
-        const cLat = cell.latSum / n;
-        const cLng = cell.lngSum / n;
+        const cLat = cell.latSum / cell.wSum;
+        const cLng = cell.lngSum / cell.wSum;
         const anyOn = cell.items.some((it) => it.is_live);
         desired.set('G|' + cellKey + '|' + cell.items.length + '|' + (anyOn ? 1 : 0), {
           cls: 'grid',
