@@ -1,4 +1,4 @@
-// Flare[V] v3.9.9 / 2026-06-22
+// Flare[V] v3.9.10 / 2026-06-22
 const SUPABASE_URL = 'https://pbrbzjxdjqqmhvhzhwlp.supabase.co';
 const SUPABASE_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicmJ6anhkanFxbWh2aHpod2xwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjc3NTcsImV4cCI6MjA5NTMwMzc1N30.E6-GthxwIFN2-jy4ojf5ZxR7YcdPJULG6Mxj9LvkI1c';
@@ -1888,6 +1888,7 @@ function buildLiveGroups() {
   liveGroups = Object.values(byKey);
 }
 
+const GRID_CLUSTER_ENABLED = false;
 const GRID_CLUSTER_MAX_ZOOM = 6;
 const GRID_CELL_PX = 64;
 const PIN_RENDER_DELAY_MS = 120;
@@ -1966,7 +1967,7 @@ function renderLivePins() {
   const pb = fvPaddedBounds(0.25);
   const zoom = map.getZoom ? map.getZoom() : 12;
   const proj = map.getProjection ? map.getProjection() : null;
-  const useGrid = !!proj && zoom != null && zoom <= GRID_CLUSTER_MAX_ZOOM;
+  const useGrid = GRID_CLUSTER_ENABLED && !!proj && zoom != null && zoom <= GRID_CLUSTER_MAX_ZOOM;
 
   const desired = new Map();
 
