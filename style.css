@@ -1,4 +1,4 @@
-/* Flare[V] v3.9.6 / 2026-06-22 */
+/* Flare[V] v3.9.7 / 2026-06-22 */
 :root {
   --bg: #0a0a0f;
   --sidebar: #10101a;
@@ -1717,14 +1717,23 @@ body.spot-picking #menu-toggle { display: none !important; }
 .live-cluster {
   width: 28px; height: 28px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 0.8rem; font-weight: 800; color: #fff; cursor: pointer;
-  background: rgba(255, 78, 69, 0.9); border: 2px solid rgba(255, 255, 255, 0.7);
-  box-shadow: 0 0 12px rgba(255, 78, 69, 0.7);
+  font-size: 0.8rem; font-weight: 800; color: #ff8a80; cursor: pointer;
+  background: rgba(10, 10, 15, 0.28); border: 2px solid #ff5e54;
+  box-shadow: 0 0 8px rgba(255, 94, 84, 0.35);
 }
+.live-cluster::before {
+  content: ""; position: absolute; inset: -2px; border-radius: 50%; pointer-events: none;
+  background: conic-gradient(from 0deg, transparent 0 70%, #ff5e54 88%, transparent 100%);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+  animation: cluster-spin 2.8s linear infinite;
+}
+@keyframes cluster-spin { to { transform: rotate(360deg); } }
 .live-cluster.off {
-  background: rgba(90, 90, 110, 0.9);
-  box-shadow: 0 0 8px rgba(90, 90, 110, 0.5);
+  background: rgba(10, 10, 15, 0.28); border-color: #6b6b80; color: #9a9aae;
+  box-shadow: none;
 }
+.live-cluster.off::before { display: none; }
 
 #live-panel {
   position: absolute; right: 24px; top: 24px; width: 360px;
@@ -1845,12 +1854,15 @@ body.spot-picking #menu-toggle { display: none !important; }
 .live-pin.kind-news .live-label { border-color: rgba(131, 149, 167, 0.45); }
 
 .live-cluster.kind-news {
-  background: rgba(131, 149, 167, 0.92);
-  box-shadow: 0 0 12px rgba(131, 149, 167, 0.7);
+  background: rgba(10, 10, 15, 0.28); border-color: #8395a7; color: #aeb9c6;
+  box-shadow: 0 0 8px rgba(131, 149, 167, 0.3);
+}
+.live-cluster.kind-news::before {
+  background: conic-gradient(from 0deg, transparent 0 70%, #8395a7 88%, transparent 100%);
 }
 .live-cluster.kind-news.off {
-  background: rgba(90, 90, 110, 0.9);
-  box-shadow: 0 0 8px rgba(90, 90, 110, 0.5);
+  background: rgba(10, 10, 15, 0.28); border-color: #6b6b80; color: #9a9aae;
+  box-shadow: none;
 }
 
 .seg2 {
