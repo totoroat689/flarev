@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Flare[V] v3.9.4 / 2026-06-22 -->
+<!-- Flare[V] v3.9.5 / 2026-06-23 -->
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -156,6 +156,44 @@
 
     <div id="map-container">
       <div id="map"></div>
+
+      <div id="fv-chat" class="fv-chat-open">
+        <div class="fv-chat-head">
+          <span class="fv-chat-title">Live chat</span>
+          <span class="fv-chat-count" id="fv-chat-count"></span>
+        </div>
+        <div class="fv-chat-list" id="fv-chat-list"></div>
+        <div class="fv-chat-foot">
+          <input
+            id="fv-chat-name"
+            class="fv-chat-name"
+            type="text"
+            maxlength="20"
+            autocomplete="off"
+            placeholder="Your name"
+          />
+          <div class="fv-chat-inputrow">
+            <input
+              id="fv-chat-input"
+              class="fv-chat-input"
+              type="text"
+              maxlength="300"
+              autocomplete="off"
+              placeholder="Say something..."
+              onkeydown="if(event.key==='Enter'){event.preventDefault();fvChatSend();}"
+            />
+            <button class="fv-chat-send" onclick="fvChatSend()">Send</button>
+          </div>
+        </div>
+        <button
+          class="fv-chat-toggle"
+          id="fv-chat-toggle"
+          onclick="fvChatToggle()"
+          aria-label="Toggle chat"
+        >
+          <span class="fv-chat-toggle-ico" id="fv-chat-toggle-ico">‹</span>
+        </button>
+      </div>
 
       <div id="spot-search">
         <div class="ss-bar">
