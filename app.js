@@ -1891,7 +1891,7 @@ function buildLiveGroups() {
 const GRID_CLUSTER_ENABLED = true;
 const GRID_CLUSTER_MAX_ZOOM = 6;
 const GRID_CELL_PX = 64;
-const PIN_RENDER_DELAY_MS = 120;
+const PIN_RENDER_DELAY_MS = 0;
 let fvRenderTimer = null;
 
 function fvPaddedBounds(marginFrac) {
