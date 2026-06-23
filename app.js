@@ -1,4 +1,4 @@
-// Flare[V] v3.9.12 / 2026-06-23
+// Flare[V] v3.9.11 / 2026-06-22
 const SUPABASE_URL = 'https://pbrbzjxdjqqmhvhzhwlp.supabase.co';
 const SUPABASE_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicmJ6anhkanFxbWh2aHpod2xwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjc3NTcsImV4cCI6MjA5NTMwMzc1N30.E6-GthxwIFN2-jy4ojf5ZxR7YcdPJULG6Mxj9LvkI1c';
@@ -2652,19 +2652,23 @@ function buildHomeMegamenu() {
 })();
 
 
-const FV_CHAT_NICK_MAX = 20;
 const FV_CHAT_MSG_MAX = 300;
 const FV_CHAT_KEEP = 500;
 const FV_CHAT_POLL_MS = 5000;
+const FV_CHAT_BG_MS = 8000;
 const FV_CHAT_COOLDOWN_MS = 3000;
 const FV_CHAT_COLORS = [
   '#ff8a80', '#7fd1ff', '#b6ff8a', '#ffd27f',
   '#d7a8ff', '#80f0d0', '#ff9ecd', '#a0c4ff',
 ];
 
+const fvChatNick = 'guest_' + Math.floor(1000 + Math.random() * 9000);
 let fvChatTimer = null;
+let fvChatBgTimer = null;
 let fvChatLastSend = 0;
 let fvChatLoading = false;
+let fvChatLastSeen = 0;
+let fvChatBaselineSet = false;
 let fvChatNoticeShown = false;
 
 function fvChatIsOpen() {
@@ -2735,6 +2739,14 @@ function fvChatRender(rows) {
   const countEl = document.getElementById('fv-chat-count');
   if (countEl) countEl.textContent = rows && rows.length ? String(rows.length) : '';
 
+  if (rows && rows.length) {
+    const newest = new Date(rows[rows.length - 1].created_at).getTime();
+    if (!isNaN(newest)) {
+      fvChatLastSeen = newest;
+      fvChatBaselineSet = true;
+    }
+  }
+
   if (nearBottom) list.scrollTop = list.scrollHeight;
 }
 
@@ -2768,8 +2780,38 @@ async function fvChatLoad() {
   }
 }
 
+async function fvChatPeek() {
+  try {
+    const res = await supabaseClient
+      .from('chat_messages')
+      .select('created_at')
+      .order('created_at', { ascending: false })
+      .limit(1);
+    if (res.error) throw res.error;
+    const rows = res.data || [];
+    if (!rows.length) return;
+    const newest = new Date(rows[0].created_at).getTime();
+    if (isNaN(newest)) return;
+    if (!fvChatBaselineSet) {
+      fvChatLastSeen = newest;
+      fvChatBaselineSet = true;
+      return;
+    }
+    if (newest > fvChatLastSeen) {
+      fvChatLastSeen = newest;
+      if (!fvChatIsOpen()) fvChatNotify();
+    }
+  } catch (e) {
+    console.error('chat peek error:', e);
+  }
+}
+
+function fvChatNotify() {
+  const fab = document.getElementById('fv-chat-fab');
+  if (fab) fab.classList.add('fv-chat-fab-new');
+}
+
 async function fvChatSend() {
-  const nameEl = document.getElementById('fv-chat-name');
   const inputEl = document.getElementById('fv-chat-input');
   if (!inputEl) return;
 
@@ -2782,14 +2824,7 @@ async function fvChatSend() {
     return;
   }
 
-  let name = (nameEl && nameEl.value ? nameEl.value : '').trim();
-  if (!name) {
-    name = 'guest' + Math.floor(1000 + Math.random() * 9000);
-    if (nameEl) nameEl.value = name;
-  }
-  name = name.slice(0, FV_CHAT_NICK_MAX);
-
-  const payload = { nickname: name, message: msg.slice(0, FV_CHAT_MSG_MAX) };
+  const payload = { nickname: fvChatNick, message: msg.slice(0, FV_CHAT_MSG_MAX) };
 
   try {
     const res = await supabaseClient.from('chat_messages').insert(payload);
@@ -2799,11 +2834,13 @@ async function fvChatSend() {
     await fvChatLoad();
   } catch (e) {
     console.error('chat send error:', e);
-    const txt = (e && (e.message || e.details || '')) + '';
+    const txt = (e && (e.message || e.details || e.hint || '')) + '';
     if (txt.indexOf('rate_limited') !== -1) {
       toast('You are sending too fast. Please slow down.');
-    } else if (txt.toLowerCase().indexOf('check') !== -1) {
-      toast('Name must be 1-20 and message 1-300 characters.');
+    } else if (txt.toLowerCase().indexOf('row-level') !== -1 ||
+               txt.toLowerCase().indexOf('permission') !== -1 ||
+               txt.toLowerCase().indexOf('policy') !== -1) {
+      toast('Chat is not set up yet. Please try again later.');
     } else {
       toast('Could not send. Please try again in a moment.');
     }
@@ -2824,12 +2861,29 @@ function fvChatStopPolling() {
   }
 }
 
+function fvChatStartBg() {
+  fvChatStopBg();
+  fvChatBgTimer = setInterval(function () {
+    if (!document.hidden && !fvChatIsOpen()) fvChatPeek();
+  }, FV_CHAT_BG_MS);
+}
+
+function fvChatStopBg() {
+  if (fvChatBgTimer) {
+    clearInterval(fvChatBgTimer);
+    fvChatBgTimer = null;
+  }
+}
+
 function fvChatToggle() {
   const box = document.getElementById('fv-chat');
   const fab = document.getElementById('fv-chat-fab');
   if (!box) return;
   const open = box.classList.toggle('fv-chat-open');
-  if (fab) fab.classList.toggle('fv-chat-fab-on', open);
+  if (fab) {
+    fab.classList.toggle('fv-chat-fab-on', open);
+    if (open) fab.classList.remove('fv-chat-fab-new');
+  }
   if (open) {
     fvChatLoad();
     fvChatStartPolling();
@@ -2840,11 +2894,33 @@ function fvChatToggle() {
   }
 }
 
+document.addEventListener('DOMContentLoaded', function () {
+  if (!document.getElementById('fv-chat-fab')) return;
+  const pill = document.getElementById('fv-chat-me-pill');
+  if (pill) {
+    const dot = document.createElement('span');
+    dot.className = 'fv-chat-me-dot';
+    dot.style.background = fvChatColor(fvChatNick);
+    const nm = document.createElement('span');
+    nm.textContent = fvChatNick;
+    pill.appendChild(dot);
+    pill.appendChild(nm);
+  }
+  fvChatPeek();
+  fvChatStartBg();
+});
+
 document.addEventListener('visibilitychange', function () {
   if (document.hidden) {
     fvChatStopPolling();
-  } else if (fvChatIsOpen()) {
-    fvChatLoad();
-    fvChatStartPolling();
+    fvChatStopBg();
+  } else {
+    fvChatStartBg();
+    if (fvChatIsOpen()) {
+      fvChatLoad();
+      fvChatStartPolling();
+    } else {
+      fvChatPeek();
+    }
   }
 });

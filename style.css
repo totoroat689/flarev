@@ -2366,6 +2366,29 @@ body.spot-picking #upload-btn { display: none !important; }
   color: #8a8a93;
 }
 
+.fv-chat-me-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.6rem;
+  color: #b6b6be;
+  background: rgba(255, 255, 255, 0.06);
+  border: 0.5px solid rgba(255, 255, 255, 0.08);
+  padding: 2px 8px 2px 6px;
+  border-radius: 999px;
+  max-width: 120px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.fv-chat-me-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
 .fv-chat-close {
   margin-left: auto;
   background: transparent;
@@ -2447,17 +2470,10 @@ body.spot-picking #upload-btn { display: none !important; }
 
 .fv-chat-foot {
   flex: 0 0 auto;
-  padding: 8px 11px 10px;
+  padding: 9px 11px 10px;
   border-top: 0.5px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.03);
   border-radius: 0 0 14px 14px;
-}
-
-.fv-chat-me {
-  font-size: 0.64rem;
-  font-weight: 600;
-  margin-bottom: 6px;
-  opacity: 0.85;
 }
 
 .fv-chat-inputrow {
