@@ -1718,7 +1718,7 @@ body.spot-picking #menu-toggle { display: none !important; }
   width: 28px; height: 28px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   font-size: 0.8rem; font-weight: 800; color: #ff8a80; cursor: pointer;
-  background: rgba(10, 10, 15, 0.28); border: 2px solid #ff5e54;
+  background: rgba(10, 10, 15, 0.72); border: 2px solid #ff5e54;
   box-shadow: 0 0 8px rgba(255, 94, 84, 0.35);
 }
 .live-cluster::before {
