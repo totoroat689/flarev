@@ -2264,3 +2264,228 @@ body.spot-picking #upload-btn { display: none !important; }
   .logo, .logo span { font-size: 1.12rem; letter-spacing: 1px; }
   .bar-link, .nav-trigger { font-size: 0.72rem; }
 }
+/* ===== Flare[V] Live Chat (append to bottom of style.css) ===== */
+
+#fv-chat {
+  position: absolute;
+  left: 0;
+  top: 64px;
+  bottom: 14px;
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  background: rgba(10, 10, 15, 0.9);
+  border: 0.5px solid rgba(255, 255, 255, 0.08);
+  border-left: none;
+  border-radius: 0 12px 12px 0;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  z-index: 600;
+  transition: transform 0.28s ease;
+  overflow: visible;
+}
+
+#fv-chat.fv-chat-closed {
+  transform: translateX(-100%);
+}
+
+.fv-chat-head {
+  flex: 0 0 auto;
+  padding: 9px 12px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.07);
+}
+
+.fv-chat-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #f0f0f5;
+  letter-spacing: 0.2px;
+}
+
+.fv-chat-count {
+  font-size: 0.66rem;
+  color: #8a8a93;
+}
+
+.fv-chat-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 6px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+.fv-chat-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.fv-chat-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 3px;
+}
+
+.fv-chat-empty {
+  color: #7a7a82;
+  font-size: 0.72rem;
+  text-align: center;
+  margin: auto 0;
+  padding: 16px 8px;
+}
+
+.fv-msg {
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: #d8d8de;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.fv-msg-name {
+  font-weight: 600;
+  margin-right: 5px;
+}
+
+.fv-msg-name::after {
+  content: ':';
+  color: #6f6f77;
+  font-weight: 400;
+  margin-left: 1px;
+}
+
+.fv-msg-text {
+  color: #d8d8de;
+}
+
+.fv-msg-time {
+  margin-left: 5px;
+  font-size: 0.6rem;
+  color: #5f5f67;
+  white-space: nowrap;
+}
+
+.fv-chat-foot {
+  flex: 0 0 auto;
+  padding: 8px 10px 9px;
+  border-top: 0.5px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.fv-chat-name {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.06);
+  border: 0.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #f0f0f5;
+  font-size: 0.72rem;
+  padding: 5px 8px;
+  margin-bottom: 6px;
+  outline: none;
+}
+
+.fv-chat-name:focus {
+  border-color: rgba(255, 94, 84, 0.55);
+}
+
+.fv-chat-name::placeholder {
+  color: #6f6f77;
+}
+
+.fv-chat-inputrow {
+  display: flex;
+  gap: 6px;
+}
+
+.fv-chat-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.06);
+  border: 0.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #f0f0f5;
+  font-size: 0.74rem;
+  padding: 6px 9px;
+  outline: none;
+}
+
+.fv-chat-input:focus {
+  border-color: rgba(255, 94, 84, 0.55);
+}
+
+.fv-chat-input::placeholder {
+  color: #6f6f77;
+}
+
+.fv-chat-send {
+  flex: 0 0 auto;
+  background: #ff5e54;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.05s ease;
+}
+
+.fv-chat-send:hover {
+  background: #ff7068;
+}
+
+.fv-chat-send:active {
+  transform: scale(0.96);
+}
+
+.fv-chat-toggle {
+  position: absolute;
+  right: -16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 48px;
+  background: rgba(14, 14, 20, 0.95);
+  border: 0.5px solid rgba(255, 255, 255, 0.12);
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+  color: #d0d0d6;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  z-index: 601;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.fv-chat-toggle:hover {
+  background: rgba(255, 94, 84, 0.85);
+  color: #fff;
+}
+
+.fv-chat-toggle-ico {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+@media (max-width: 640px) {
+  #fv-chat {
+    width: 80vw;
+    max-width: 300px;
+    top: 56px;
+    bottom: 10px;
+  }
+  .fv-msg {
+    font-size: 0.78rem;
+  }
+}
