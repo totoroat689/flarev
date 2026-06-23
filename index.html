@@ -157,10 +157,23 @@
     <div id="map-container">
       <div id="map"></div>
 
-      <div id="fv-chat" class="fv-chat-open">
+      <button
+        id="fv-chat-fab"
+        class="fv-chat-fab"
+        onclick="fvChatToggle()"
+        aria-label="Open live chat"
+        title="Live chat"
+      >💬</button>
+
+      <div id="fv-chat" class="fv-chat" role="dialog" aria-label="Live chat">
         <div class="fv-chat-head">
           <span class="fv-chat-title">Live chat</span>
           <span class="fv-chat-count" id="fv-chat-count"></span>
+          <button
+            class="fv-chat-close"
+            onclick="fvChatToggle()"
+            aria-label="Close chat"
+          >✕</button>
         </div>
         <div class="fv-chat-list" id="fv-chat-list"></div>
         <div class="fv-chat-foot">
@@ -185,14 +198,6 @@
             <button class="fv-chat-send" onclick="fvChatSend()">Send</button>
           </div>
         </div>
-        <button
-          class="fv-chat-toggle"
-          id="fv-chat-toggle"
-          onclick="fvChatToggle()"
-          aria-label="Toggle chat"
-        >
-          <span class="fv-chat-toggle-ico" id="fv-chat-toggle-ico">‹</span>
-        </button>
       </div>
 
       <div id="spot-search">

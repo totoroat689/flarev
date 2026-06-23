@@ -2826,25 +2826,19 @@ function fvChatStopPolling() {
 
 function fvChatToggle() {
   const box = document.getElementById('fv-chat');
-  const ico = document.getElementById('fv-chat-toggle-ico');
+  const fab = document.getElementById('fv-chat-fab');
   if (!box) return;
   const open = box.classList.toggle('fv-chat-open');
-  box.classList.toggle('fv-chat-closed', !open);
-  if (ico) ico.textContent = open ? '‹' : '›';
+  if (fab) fab.classList.toggle('fv-chat-fab-on', open);
   if (open) {
     fvChatLoad();
     fvChatStartPolling();
+    const inputEl = document.getElementById('fv-chat-input');
+    if (inputEl) setTimeout(function () { inputEl.focus(); }, 50);
   } else {
     fvChatStopPolling();
   }
 }
-
-document.addEventListener('DOMContentLoaded', function () {
-  const box = document.getElementById('fv-chat');
-  if (!box) return;
-  fvChatLoad();
-  if (fvChatIsOpen()) fvChatStartPolling();
-});
 
 document.addEventListener('visibilitychange', function () {
   if (document.hidden) {
