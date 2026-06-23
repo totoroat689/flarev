@@ -1,4 +1,4 @@
-// Flare[V] v3.9.11 / 2026-06-22
+// Flare[V] v3.9.12 / 2026-06-23
 const SUPABASE_URL = 'https://pbrbzjxdjqqmhvhzhwlp.supabase.co';
 const SUPABASE_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicmJ6anhkanFxbWh2aHpod2xwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjc3NTcsImV4cCI6MjA5NTMwMzc1N30.E6-GthxwIFN2-jy4ojf5ZxR7YcdPJULG6Mxj9LvkI1c';
@@ -2650,3 +2650,207 @@ function buildHomeMegamenu() {
     document.querySelectorAll('#sidebar .nav-drop.open').forEach(function (o) { o.classList.remove('open'); });
   });
 })();
+
+
+const FV_CHAT_NICK_MAX = 20;
+const FV_CHAT_MSG_MAX = 300;
+const FV_CHAT_KEEP = 500;
+const FV_CHAT_POLL_MS = 5000;
+const FV_CHAT_COOLDOWN_MS = 3000;
+const FV_CHAT_COLORS = [
+  '#ff8a80', '#7fd1ff', '#b6ff8a', '#ffd27f',
+  '#d7a8ff', '#80f0d0', '#ff9ecd', '#a0c4ff',
+];
+
+let fvChatTimer = null;
+let fvChatLastSend = 0;
+let fvChatLoading = false;
+let fvChatNoticeShown = false;
+
+function fvChatIsOpen() {
+  const box = document.getElementById('fv-chat');
+  return box ? box.classList.contains('fv-chat-open') : false;
+}
+
+function fvChatColor(name) {
+  let h = 0;
+  const s = String(name || '');
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return FV_CHAT_COLORS[h % FV_CHAT_COLORS.length];
+}
+
+function fvChatTimeAgo(iso) {
+  if (!iso) return '';
+  const t = new Date(iso).getTime();
+  if (isNaN(t)) return '';
+  const sec = Math.max(0, Math.floor((Date.now() - t) / 1000));
+  if (sec < 60) return 'now';
+  const min = Math.floor(sec / 60);
+  if (min < 60) return min + 'm';
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return hr + 'h';
+  const day = Math.floor(hr / 24);
+  return day + 'd';
+}
+
+function fvChatRender(rows) {
+  const list = document.getElementById('fv-chat-list');
+  if (!list) return;
+
+  const nearBottom =
+    list.scrollHeight - list.scrollTop - list.clientHeight < 60;
+
+  list.innerHTML = '';
+
+  if (!rows || rows.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'fv-chat-empty';
+    empty.textContent = 'No messages yet. Say hi!';
+    list.appendChild(empty);
+  } else {
+    rows.forEach(function (r) {
+      const row = document.createElement('div');
+      row.className = 'fv-msg';
+
+      const nm = document.createElement('span');
+      nm.className = 'fv-msg-name';
+      nm.style.color = fvChatColor(r.nickname);
+      nm.textContent = r.nickname;
+
+      const tx = document.createElement('span');
+      tx.className = 'fv-msg-text';
+      tx.textContent = r.message;
+
+      const tm = document.createElement('span');
+      tm.className = 'fv-msg-time';
+      tm.textContent = fvChatTimeAgo(r.created_at);
+
+      row.appendChild(nm);
+      row.appendChild(tx);
+      row.appendChild(tm);
+      list.appendChild(row);
+    });
+  }
+
+  const countEl = document.getElementById('fv-chat-count');
+  if (countEl) countEl.textContent = rows && rows.length ? String(rows.length) : '';
+
+  if (nearBottom) list.scrollTop = list.scrollHeight;
+}
+
+async function fvChatLoad() {
+  if (fvChatLoading) return;
+  fvChatLoading = true;
+  try {
+    const res = await supabaseClient
+      .from('chat_messages')
+      .select('nickname,message,created_at')
+      .order('created_at', { ascending: false })
+      .limit(FV_CHAT_KEEP);
+    if (res.error) throw res.error;
+    const rows = (res.data || []).slice().reverse();
+    fvChatRender(rows);
+  } catch (e) {
+    console.error('chat load error:', e);
+    if (!fvChatNoticeShown) {
+      const list = document.getElementById('fv-chat-list');
+      if (list) {
+        list.innerHTML = '';
+        const note = document.createElement('div');
+        note.className = 'fv-chat-empty';
+        note.textContent = 'Chat is getting ready...';
+        list.appendChild(note);
+      }
+      fvChatNoticeShown = true;
+    }
+  } finally {
+    fvChatLoading = false;
+  }
+}
+
+async function fvChatSend() {
+  const nameEl = document.getElementById('fv-chat-name');
+  const inputEl = document.getElementById('fv-chat-input');
+  if (!inputEl) return;
+
+  const msg = (inputEl.value || '').trim();
+  if (!msg) return;
+
+  const now = Date.now();
+  if (now - fvChatLastSend < FV_CHAT_COOLDOWN_MS) {
+    toast('Please wait a moment before sending again.');
+    return;
+  }
+
+  let name = (nameEl && nameEl.value ? nameEl.value : '').trim();
+  if (!name) {
+    name = 'guest' + Math.floor(1000 + Math.random() * 9000);
+    if (nameEl) nameEl.value = name;
+  }
+  name = name.slice(0, FV_CHAT_NICK_MAX);
+
+  const payload = { nickname: name, message: msg.slice(0, FV_CHAT_MSG_MAX) };
+
+  try {
+    const res = await supabaseClient.from('chat_messages').insert(payload);
+    if (res.error) throw res.error;
+    fvChatLastSend = now;
+    inputEl.value = '';
+    await fvChatLoad();
+  } catch (e) {
+    console.error('chat send error:', e);
+    const txt = (e && (e.message || e.details || '')) + '';
+    if (txt.indexOf('rate_limited') !== -1) {
+      toast('You are sending too fast. Please slow down.');
+    } else if (txt.toLowerCase().indexOf('check') !== -1) {
+      toast('Name must be 1-20 and message 1-300 characters.');
+    } else {
+      toast('Could not send. Please try again in a moment.');
+    }
+  }
+}
+
+function fvChatStartPolling() {
+  fvChatStopPolling();
+  fvChatTimer = setInterval(function () {
+    if (fvChatIsOpen() && !document.hidden) fvChatLoad();
+  }, FV_CHAT_POLL_MS);
+}
+
+function fvChatStopPolling() {
+  if (fvChatTimer) {
+    clearInterval(fvChatTimer);
+    fvChatTimer = null;
+  }
+}
+
+function fvChatToggle() {
+  const box = document.getElementById('fv-chat');
+  const ico = document.getElementById('fv-chat-toggle-ico');
+  if (!box) return;
+  const open = box.classList.toggle('fv-chat-open');
+  box.classList.toggle('fv-chat-closed', !open);
+  if (ico) ico.textContent = open ? '‹' : '›';
+  if (open) {
+    fvChatLoad();
+    fvChatStartPolling();
+  } else {
+    fvChatStopPolling();
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  const box = document.getElementById('fv-chat');
+  if (!box) return;
+  fvChatLoad();
+  if (fvChatIsOpen()) fvChatStartPolling();
+});
+
+document.addEventListener('visibilitychange', function () {
+  if (document.hidden) {
+    fvChatStopPolling();
+  } else if (fvChatIsOpen()) {
+    fvChatLoad();
+    fvChatStartPolling();
+  }
+});
