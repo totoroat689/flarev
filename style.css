@@ -2267,21 +2267,20 @@ body.spot-picking #upload-btn { display: none !important; }
 
 .fv-chat-fab {
   position: absolute;
-  left: 14px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 46px;
-  height: 46px;
+  left: 24px;
+  top: 24px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  border: 0.5px solid rgba(255, 255, 255, 0.14);
-  background: rgba(14, 14, 20, 0.82);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid var(--border);
+  background: rgba(20, 20, 31, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   color: #fff;
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   line-height: 1;
   cursor: pointer;
-  z-index: 499;
+  z-index: 150;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2291,7 +2290,7 @@ body.spot-picking #upload-btn { display: none !important; }
 
 .fv-chat-fab:hover {
   background: rgba(255, 94, 84, 0.9);
-  transform: translateY(-50%) scale(1.06);
+  transform: scale(1.06);
 }
 
 .fv-chat-fab-on {
@@ -2299,9 +2298,27 @@ body.spot-picking #upload-btn { display: none !important; }
   pointer-events: none;
 }
 
+.fv-chat-fab-new {
+  background: rgba(255, 94, 84, 0.95);
+  color: #fff;
+  animation: fv-fab-pulse 1.4s ease-out infinite;
+}
+
+@keyframes fv-fab-pulse {
+  0% {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 0 0 rgba(255, 94, 84, 0.55);
+  }
+  70% {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 0 13px rgba(255, 94, 84, 0);
+  }
+  100% {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 0 0 rgba(255, 94, 84, 0);
+  }
+}
+
 .fv-chat {
   position: absolute;
-  left: 14px;
+  left: 24px;
   top: 50%;
   width: 320px;
   height: min(440px, 70vh);
@@ -2430,31 +2447,17 @@ body.spot-picking #upload-btn { display: none !important; }
 
 .fv-chat-foot {
   flex: 0 0 auto;
-  padding: 9px 11px 10px;
+  padding: 8px 11px 10px;
   border-top: 0.5px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.03);
   border-radius: 0 0 14px 14px;
 }
 
-.fv-chat-name {
-  width: 100%;
-  box-sizing: border-box;
-  background: rgba(255, 255, 255, 0.07);
-  border: 0.5px solid rgba(255, 255, 255, 0.12);
-  border-radius: 7px;
-  color: #f2f2f6;
-  font-size: 0.74rem;
-  padding: 6px 9px;
+.fv-chat-me {
+  font-size: 0.64rem;
+  font-weight: 600;
   margin-bottom: 6px;
-  outline: none;
-}
-
-.fv-chat-name:focus {
-  border-color: rgba(255, 94, 84, 0.6);
-}
-
-.fv-chat-name::placeholder {
-  color: #6f6f77;
+  opacity: 0.85;
 }
 
 .fv-chat-inputrow {
@@ -2508,8 +2511,9 @@ body.spot-picking #upload-btn { display: none !important; }
   .fv-chat-fab {
     width: 42px;
     height: 42px;
-    font-size: 1.15rem;
-    left: 12px;
+    font-size: 1.12rem;
+    left: 16px;
+    top: 16px;
   }
   .fv-chat {
     left: 12px;
