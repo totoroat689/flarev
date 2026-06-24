@@ -1,0 +1,113 @@
+name: capture_test
+
+on:
+  workflow_dispatch:
+    inputs:
+      video_id:
+        description: "YouTube video ID to test"
+        required: true
+        default: "009kOq0x4ZI"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Show target
+        run: echo "Testing video_id = ${{ github.event.inputs.video_id }}"
+
+      - name: Install tools (yt-dlp + ffmpeg)
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y ffmpeg
+          sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
+          sudo chmod a+rx /usr/local/bin/yt-dlp
+          yt-dlp --version
+          ffmpeg -version | head -1
+
+      - name: "TEST 3 - print stream URL (.m3u8)"
+        id: streamurl
+        continue-on-error: true
+        run: |
+          VID="${{ github.event.inputs.video_id }}"
+          echo "=== Trying to get live stream URL ==="
+          URL=$(yt-dlp -g -f "best[protocol^=m3u8]/best" "https://www.youtube.com/watch?v=${VID}" 2>err.log | head -1)
+          if [ -n "$URL" ]; then
+            echo "STREAM URL FOUND:"
+            echo "$URL"
+            echo "found=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "STREAM URL NOT FOUND. Error log:"
+            cat err.log || true
+            echo "found=no" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: "TEST 3 - extract one frame (frame.jpg)"
+        continue-on-error: true
+        run: |
+          VID="${{ github.event.inputs.video_id }}"
+          echo "=== Trying to extract one frame from live ==="
+          URL=$(yt-dlp -g -f "best[protocol^=m3u8]/best" "https://www.youtube.com/watch?v=${VID}" 2>/dev/null | head -1)
+          if [ -z "$URL" ]; then
+            echo "No stream URL, cannot extract frame."
+            exit 0
+          fi
+          ffmpeg -y -i "$URL" -frames:v 1 -q:v 2 frame.jpg 2>ff.log || true
+          if [ -f frame.jpg ]; then
+            echo "SUCCESS: frame.jpg created."
+            ls -la frame.jpg
+          else
+            echo "FAILED: no frame.jpg. ffmpeg log tail:"
+            tail -20 ff.log || true
+          fi
+
+      - name: "TEST 1 - iframe capture (Playwright)"
+        continue-on-error: true
+        run: |
+          VID="${{ github.event.inputs.video_id }}"
+          npm init -y >/dev/null 2>&1
+          npm install playwright >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null 2>&1
+
+          cat > page.html <<HTMLEOF
+          <!DOCTYPE html>
+          <html><head><meta charset="utf-8"></head>
+          <body style="margin:0;background:#222">
+            <iframe id="yt" width="640" height="360" style="border:0"
+              src="https://www.youtube.com/embed/${VID}?autoplay=1&mute=1"
+              allow="autoplay"></iframe>
+          </body></html>
+          HTMLEOF
+
+          cat > shot.js <<'JSEOF'
+          const { chromium } = require('playwright');
+          (async () => {
+            const browser = await chromium.launch();
+            const page = await browser.newPage({ viewport: { width: 660, height: 380 } });
+            const path = 'file://' + process.cwd() + '/page.html';
+            await page.goto(path);
+            await page.waitForTimeout(9000);
+            await page.screenshot({ path: 'iframe_result.jpg', type: 'jpeg', quality: 80 });
+            console.log('iframe_result.jpg saved');
+            await browser.close();
+          })();
+          JSEOF
+
+          node shot.js || echo "playwright capture failed"
+          ls -la iframe_result.jpg || echo "no iframe_result.jpg"
+
+      - name: Summary
+        run: |
+          echo "================ RESULT SUMMARY ================"
+          echo "[TEST 3 stream url] found = ${{ steps.streamurl.outputs.found }}"
+          [ -f frame.jpg ] && echo "[TEST 3 frame] frame.jpg EXISTS (open it to check the scene)" || echo "[TEST 3 frame] frame.jpg MISSING"
+          [ -f iframe_result.jpg ] && echo "[TEST 1 iframe] iframe_result.jpg EXISTS (open it: is the video area black?)" || echo "[TEST 1 iframe] iframe_result.jpg MISSING"
+          echo "==============================================="
+
+      - name: Upload result images
+        uses: actions/upload-artifact@v4
+        with:
+          name: capture-test-results
+          path: |
+            frame.jpg
+            iframe_result.jpg
+          if-no-files-found: warn
