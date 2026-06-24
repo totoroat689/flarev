@@ -1,0 +1,111 @@
+name: capture_test_a
+
+on:
+  workflow_dispatch:
+    inputs:
+      video_id:
+        description: "YouTube video ID to test"
+        required: true
+        default: "009kOq0x4ZI"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Show target
+        run: echo "Testing video_id = ${{ github.event.inputs.video_id }}"
+
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y ffmpeg
+          ffmpeg -version | head -1
+
+      - name: Install deno (JS runtime for yt-dlp)
+        run: |
+          curl -fsSL https://deno.land/install.sh | sh
+          echo "$HOME/.deno/bin" >> "$GITHUB_PATH"
+
+      - name: Verify deno
+        run: |
+          deno --version || echo "deno not on PATH yet"
+
+      - name: Install yt-dlp (latest)
+        run: |
+          sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
+          sudo chmod a+rx /usr/local/bin/yt-dlp
+          yt-dlp --version
+
+      - name: "Attempt 1 - default web client (+deno)"
+        continue-on-error: true
+        run: |
+          VID="${{ github.event.inputs.video_id }}"
+          echo "=== Attempt 1: default ==="
+          yt-dlp -g -f "best[protocol^=m3u8]/best" \
+            "https://www.youtube.com/watch?v=${VID}" 2>a1.log | head -1 | tee url1.txt
+          echo "--- log ---"; tail -15 a1.log || true
+
+      - name: "Attempt 2 - android client"
+        continue-on-error: true
+        run: |
+          VID="${{ github.event.inputs.video_id }}"
+          echo "=== Attempt 2: player_client=android ==="
+          yt-dlp -g -f "best[protocol^=m3u8]/best" \
+            --extractor-args "youtube:player_client=android" \
+            "https://www.youtube.com/watch?v=${VID}" 2>a2.log | head -1 | tee url2.txt
+          echo "--- log ---"; tail -15 a2.log || true
+
+      - name: "Attempt 3 - tv/ios client"
+        continue-on-error: true
+        run: |
+          VID="${{ github.event.inputs.video_id }}"
+          echo "=== Attempt 3: player_client=tv,ios ==="
+          yt-dlp -g -f "best[protocol^=m3u8]/best" \
+            --extractor-args "youtube:player_client=tv,ios" \
+            "https://www.youtube.com/watch?v=${VID}" 2>a3.log | head -1 | tee url3.txt
+          echo "--- log ---"; tail -15 a3.log || true
+
+      - name: "Pick a working URL + extract frame"
+        continue-on-error: true
+        run: |
+          URL=""
+          for f in url2.txt url3.txt url1.txt; do
+            if [ -s "$f" ]; then
+              CAND=$(head -1 "$f")
+              case "$CAND" in
+                http*) URL="$CAND"; echo "Using URL from $f"; break;;
+              esac
+            fi
+          done
+
+          if [ -z "$URL" ]; then
+            echo "RESULT: No stream URL from any attempt (still blocked)."
+            exit 0
+          fi
+
+          echo "STREAM URL FOUND:"
+          echo "$URL"
+          ffmpeg -y -i "$URL" -frames:v 1 -q:v 2 frame.jpg 2>ff.log || true
+          if [ -f frame.jpg ]; then
+            echo "SUCCESS: frame.jpg created."
+            ls -la frame.jpg
+          else
+            echo "URL ok but frame extract failed. ffmpeg log tail:"
+            tail -20 ff.log || true
+          fi
+
+      - name: Summary
+        run: |
+          echo "================ RESULT SUMMARY ================"
+          for f in url1.txt url2.txt url3.txt; do
+            if [ -s "$f" ]; then echo "[$f] $(head -c 60 "$f")..."; else echo "[$f] empty"; fi
+          done
+          [ -f frame.jpg ] && echo "[FRAME] frame.jpg EXISTS - open it to check the scene" || echo "[FRAME] frame.jpg MISSING"
+          echo "==============================================="
+
+      - name: Upload frame
+        uses: actions/upload-artifact@v4
+        with:
+          name: capture-test-a-result
+          path: frame.jpg
+          if-no-files-found: warn
