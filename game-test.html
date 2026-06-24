@@ -1,0 +1,227 @@
+<!-- game-test.html  v1.0  |  Flare[V] 영유권 미니게임 데모 (한국 시군구) -->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>영유권 데모 · 시군구</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:rgba(16,21,30,.86); --line:rgba(255,255,255,.10);
+    --txt:#e8edf4; --dim:#8b97a8; --accent:#ffcc4d;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;color:var(--txt);background:var(--bg)}
+  #map{position:absolute;inset:0}
+
+  /* ── 좌측 패널 (리더보드 + 컨트롤) ── */
+  #panel{
+    position:absolute;top:14px;left:14px;width:280px;max-width:calc(100vw - 28px);
+    background:var(--panel);backdrop-filter:blur(10px);border:1px solid var(--line);
+    border-radius:16px;padding:16px 16px 12px;z-index:5;
+    box-shadow:0 16px 50px rgba(0,0,0,.5);
+  }
+  #panel h1{margin:0;font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);font-weight:700}
+  #lead{margin-top:10px;padding:12px;border-radius:12px;background:rgba(255,204,77,.08);border:1px solid rgba(255,204,77,.25)}
+  #lead .lab{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+  #lead .who{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:18px;font-weight:800}
+  #lead .who .sw{width:14px;height:14px;border-radius:4px;flex:0 0 auto}
+  #lead .sub{margin-top:4px;font-size:12px;color:var(--dim)}
+
+  .ctrl{margin-top:14px}
+  .ctrl .lab{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
+  .seg{display:flex;gap:6px}
+  .seg button{flex:1;padding:8px 0;font-size:13px;font-weight:700;color:var(--txt);
+    background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:9px;cursor:pointer;transition:.15s}
+  .seg button:hover{background:rgba(255,255,255,.12)}
+  .seg button.on{background:var(--accent);color:#1a1300;border-color:var(--accent)}
+
+  #board{margin-top:14px;max-height:38vh;overflow:auto}
+  #board .row{display:flex;align-items:center;gap:9px;padding:6px 4px;font-size:13px;border-bottom:1px solid rgba(255,255,255,.04)}
+  #board .rk{width:18px;text-align:right;color:var(--dim);font-variant-numeric:tabular-nums}
+  #board .sw{width:12px;height:12px;border-radius:3px;flex:0 0 auto}
+  #board .nm{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #board .ct{color:var(--dim);font-variant-numeric:tabular-nums}
+  #board .ct b{color:var(--txt)}
+
+  #hint{position:absolute;bottom:14px;left:14px;z-index:5;font-size:12px;color:var(--dim);
+    background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;backdrop-filter:blur(8px)}
+
+  /* ── 키 미설정 안내 ── */
+  #notice{position:absolute;inset:0;display:none;place-items:center;z-index:50;background:#0d1117;padding:24px}
+  #notice .card{max-width:520px;background:#141b26;border:1px solid var(--line);border-radius:18px;padding:28px 30px;line-height:1.7}
+  #notice h2{margin:0 0 10px;font-size:20px}
+  #notice code{background:rgba(255,204,77,.14);color:var(--accent);padding:2px 7px;border-radius:6px;font-size:13px}
+  #notice ol{margin:14px 0 0;padding-left:20px;color:var(--dim)}
+  #notice li{margin:7px 0}
+
+  /* InfoWindow 내용 */
+  .iw{font-family:inherit;color:#1a2230;min-width:170px}
+  .iw .t{font-size:15px;font-weight:800;margin-bottom:6px}
+  .iw .l{display:flex;align-items:center;gap:7px;font-size:13px;margin:3px 0}
+  .iw .sw{width:12px;height:12px;border-radius:3px}
+  .iw .s{color:#5b6573}
+  @media(max-width:520px){#panel{width:calc(100vw - 28px)}#board{max-height:30vh}}
+</style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <div id="panel">
+    <h1>영유권 현황 · 대한민국 시군구</h1>
+    <div id="lead">
+      <div class="lab">현재 최대 영유국</div>
+      <div class="who"><span class="sw" id="leadSw"></span><span id="leadNm">집계 중…</span></div>
+      <div class="sub" id="leadSub">지도를 불러오는 중입니다</div>
+    </div>
+    <div class="ctrl">
+      <div class="lab">플레이어 수</div>
+      <div class="seg" id="seg">
+        <button data-n="8">8명</button>
+        <button data-n="30" class="on">30명</button>
+        <button data-n="100">100명</button>
+      </div>
+    </div>
+    <div id="board"></div>
+  </div>
+
+  <div id="hint">구역을 누르면 점령자·점수를 볼 수 있어요 · 데모용 가상 데이터</div>
+
+  <div id="notice">
+    <div class="card">
+      <h2>구글 지도 키를 한 줄만 넣어주세요</h2>
+      이 파일은 아래 한 곳에만 키를 채우면 바로 진짜 지도가 떠요.<br>
+      파일 안의 <code>const GOOGLE_MAPS_API_KEY = "..."</code> 부분을 찾아 값만 바꿔주세요.
+      <ol>
+        <li><b>flarev.co</b> 접속 → 마우스 오른쪽 → <b>페이지 소스 보기</b></li>
+        <li><code>key=</code> 뒤에 붙은 글자(키)를 복사</li>
+        <li>이 파일의 <code>GOOGLE_MAPS_API_KEY</code> 자리에 붙여넣기 후 저장</li>
+        <li>flarev에 다시 올리고 그 주소로 접속</li>
+      </ol>
+    </div>
+  </div>
+
+<script>
+/* ===== 여기 한 줄만 채우면 됩니다 ===== */
+const GOOGLE_MAPS_API_KEY = "여기에_구글지도_키_붙여넣기";
+/* ===================================== */
+
+const GEO_URL = "https://raw.githubusercontent.com/southkorea/southkorea-maps/master/kostat/2012/json/municipalities-geo-simple.json";
+
+let map, infoWindow, geo = null, numPlayers = 30, ownerCount = {};
+
+/* 매번 같은 결과가 나오도록 하는 간단 난수기 */
+function rng(seed){return function(){seed|=0;seed=(seed+0x6D2B79F5)|0;let t=Math.imul(seed^seed>>>15,1|seed);t=(t+Math.imul(t^t>>>7,61|t))^t;return((t^t>>>14)>>>0)/4294967296;};}
+
+/* 플레이어별 구분되는 색 생성 */
+function playerColor(i){const h=(i*137.508)%360;const s=60+(i%3)*9;const l=50+(i%2)*8;return `hsl(${h.toFixed(1)},${s}%,${l}%)`;}
+
+function assignTerritories(){
+  const rand = rng(20260625 + numPlayers*7);
+  ownerCount = {};
+  geo.features.forEach(f=>{
+    const owner = Math.floor(rand()*numPlayers);
+    const score = 1000 + Math.floor(rand()*9000);
+    f.properties.owner = owner;
+    f.properties.score = score;
+    f.properties.color = playerColor(owner);
+    if(!ownerCount[owner]) ownerCount[owner]={cnt:0,sum:0};
+    ownerCount[owner].cnt++; ownerCount[owner].sum+=score;
+  });
+}
+
+function paint(){
+  map.data.forEach(ft=>map.data.remove(ft));
+  map.data.addGeoJson(geo);
+  map.data.setStyle(f=>({
+    fillColor: f.getProperty('color'),
+    fillOpacity: 0.55,
+    strokeColor: '#0d1117',
+    strokeWeight: 0.6
+  }));
+}
+
+function renderBoard(){
+  const ranked = Object.entries(ownerCount)
+    .map(([id,v])=>({id:+id,cnt:v.cnt,sum:v.sum}))
+    .sort((a,b)=> b.cnt-a.cnt || b.sum-a.sum);
+
+  const top = ranked[0];
+  document.getElementById('leadSw').style.background = playerColor(top.id);
+  document.getElementById('leadNm').textContent = `플레이어 ${top.id+1}`;
+  document.getElementById('leadSub').textContent = `${top.cnt}개 시군구 · 누적 ${top.sum.toLocaleString()}점`;
+
+  const board = document.getElementById('board');
+  board.innerHTML = ranked.slice(0,12).map((r,i)=>`
+    <div class="row">
+      <span class="rk">${i+1}</span>
+      <span class="sw" style="background:${playerColor(r.id)}"></span>
+      <span class="nm">플레이어 ${r.id+1}</span>
+      <span class="ct"><b>${r.cnt}</b>곳 · ${r.sum.toLocaleString()}</span>
+    </div>`).join('');
+}
+
+function bindInteractions(){
+  map.data.addListener('mouseover', e=> map.data.overrideStyle(e.feature,{fillOpacity:0.82}));
+  map.data.addListener('mouseout', ()=> map.data.revertStyle());
+  map.data.addListener('click', e=>{
+    const f=e.feature, owner=f.getProperty('owner');
+    const html=`<div class="iw">
+      <div class="t">${f.getProperty('name')}</div>
+      <div class="l"><span class="sw" style="background:${f.getProperty('color')}"></span>점령자 · 플레이어 ${owner+1}</div>
+      <div class="l s">점수 ${f.getProperty('score').toLocaleString()}점 · 이 플레이어 보유 ${ownerCount[owner].cnt}곳</div>
+    </div>`;
+    infoWindow.setContent(html);
+    infoWindow.setPosition(e.latLng);
+    infoWindow.setOptions({pixelOffset:new google.maps.Size(0,-2)});
+    infoWindow.open(map);
+  });
+}
+
+async function initMap(){
+  map = new google.maps.Map(document.getElementById('map'),{
+    center:{lat:36.4,lng:127.9}, zoom:7, mapTypeControl:false, streetViewControl:false,
+    backgroundColor:'#0d1117', styles:[{elementType:'geometry',stylers:[{color:'#1d2530'}]},
+      {elementType:'labels.text.fill',stylers:[{color:'#8b97a8'}]},
+      {elementType:'labels.text.stroke',stylers:[{color:'#0d1117'}]},
+      {featureType:'water',elementType:'geometry',stylers:[{color:'#0f161f'}]},
+      {featureType:'road',stylers:[{visibility:'off'}]},
+      {featureType:'poi',stylers:[{visibility:'off'}]}]
+  });
+  infoWindow = new google.maps.InfoWindow();
+
+  try{
+    const res = await fetch(GEO_URL);
+    geo = await res.json();
+  }catch(err){
+    alert('경계 데이터를 불러오지 못했어요. 인터넷 연결 또는 데이터 주소를 확인해 주세요.');
+    return;
+  }
+
+  assignTerritories(); paint(); bindInteractions(); renderBoard();
+
+  document.getElementById('seg').addEventListener('click', ev=>{
+    const btn = ev.target.closest('button'); if(!btn) return;
+    document.querySelectorAll('#seg button').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on');
+    numPlayers = +btn.dataset.n;
+    assignTerritories(); paint(); renderBoard();
+  });
+}
+
+/* 키가 채워졌을 때만 지도 로드, 아니면 안내 화면 */
+(function(){
+  if(!GOOGLE_MAPS_API_KEY || GOOGLE_MAPS_API_KEY.indexOf("붙여넣기")>=0){
+    document.getElementById('notice').style.display='grid';
+    return;
+  }
+  window.initMap = initMap;
+  const s=document.createElement('script');
+  s.src=`https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&callback=initMap&language=ko&region=KR`;
+  s.async=true; s.defer=true;
+  s.onerror=()=>alert('구글 지도 스크립트를 불러오지 못했어요. 키 또는 도메인 설정을 확인해 주세요.');
+  document.head.appendChild(s);
+})();
+</script>
+</body>
+</html>
