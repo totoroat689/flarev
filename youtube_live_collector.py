@@ -1,9 +1,12 @@
 # ============================================
 # Flare[V] 유튜브 라이브 웹캠 수집기  (youtube_live_collector.py)
-# 버전: 1.8 / 2026-06-17 (단계별 로그 + 타임아웃/재시도 + 저장 분할 — 멈춤 방지)
+# 버전: 1.9 / 2026-06-25 (보안: service_role 키로 전환 + 1000행 한도 해결 + 친절한 키 확인)
 # 역할: "webcam live" 라이브 검색 → 외부재생 가능 + 라이브 중 + 신규만 추려서
 #       Claude로 위치/좌표/kind/설명/소개글/볼거리/국가를 정제(전부 영어)한 뒤 live_videos에 저장
-# 변경(1.8):
+# 변경(1.9):
+#   - Supabase 연결을 anon(코드 박힘) → service_role(Secrets) 로 전환 (보안)
+#   - 기존 캠 목록 조회를 페이지 나눠 읽기로 (캠 1000개 넘어도 중복체크 정상)
+#   - 필수 비밀키가 없으면 친절히 알려주고 종료 (require_env)
 #   - 단계마다 진행 로그를 실시간 출력 (어디까지 갔는지 눈으로 보임)
 #   - 유튜브/Claude 요청에 타임아웃 + 재시도 (한 요청이 무한정 매달려 러너가 죽는 것 방지)
 #   - 저장을 100개씩 분할 (큰 한 방 저장이 멈추는 것 방지)
@@ -35,17 +38,50 @@ from anthropic import Anthropic
 
 # ============================================
 # 연결 설정
-#  - Supabase anon 키는 공개돼도 되는 키라 코드에 그대로 둠 (다른 수집기와 동일)
-#  - 유튜브/Claude 키는 금고(Secrets)에서 꺼냄
+#  - Supabase 쓰기는 service_role 키 사용 (금고/Secrets에서 꺼냄, 절대 코드에 박지 않음)
+#    live_videos 는 anon 에게 읽기만 허용하므로, 쓰기 작업은 service_role 이 필요함
+#  - 유튜브/Claude 키도 금고(Secrets)에서 꺼냄
 # ============================================
 SUPABASE_URL = "https://pbrbzjxdjqqmhvhzhwlp.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicmJ6anhkanFxbWh2aHpod2xwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjc3NTcsImV4cCI6MjA5NTMwMzc1N30.E6-GthxwIFN2-jy4ojf5ZxR7YcdPJULG6Mxj9LvkI1c"
 
-YOUTUBE_KEY = os.environ["GOOGLE_API_KEY"]
-ANTHROPIC_KEY = os.environ["ANTHROPIC_API_KEY"]
+
+def require_env(name):
+    """필수 환경변수를 친절하게 확인. 없으면 무엇이 빠졌는지 알려주고 종료."""
+    val = os.environ.get(name)
+    if not val:
+        raise SystemExit(
+            f"❌ 필수 비밀키 '{name}' 가 없습니다. "
+            f"GitHub 저장소 → Settings → Secrets and variables → Actions 에 "
+            f"'{name}' 를 등록했는지 확인하세요."
+        )
+    return val
+
+
+SUPABASE_KEY = require_env("SUPABASE_SERVICE_KEY")
+YOUTUBE_KEY = require_env("GOOGLE_API_KEY")
+ANTHROPIC_KEY = require_env("ANTHROPIC_API_KEY")
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 claude = Anthropic(api_key=ANTHROPIC_KEY)
+
+
+def fetch_all_rows(table, columns, match=None, page_size=1000):
+    """Supabase 는 한 번에 최대 1000행만 주므로, 페이지를 나눠 전부 가져온다.
+    match: {"컬럼": 값} 형태의 등호 필터 (선택)."""
+    out = []
+    start = 0
+    while True:
+        q = supabase.table(table).select(columns)
+        if match:
+            for k, v in match.items():
+                q = q.eq(k, v)
+        res = q.range(start, start + page_size - 1).execute()
+        batch = res.data or []
+        out.extend(batch)
+        if len(batch) < page_size:
+            break
+        start += page_size
+    return out
 
 # 로그가 모였다가 한꺼번에 나오지 않고 실시간으로 보이게 (멈춤처럼 보이는 것 방지)
 try:
@@ -430,8 +466,8 @@ def main():
     existing = set()
     existing_slugs = set()
     try:
-        res = supabase.table("live_videos").select("video_id, slug").execute()
-        for row in (res.data or []):
+        rows = fetch_all_rows("live_videos", "video_id, slug")
+        for row in rows:
             if row.get("video_id"):
                 existing.add(row["video_id"])
             if row.get("slug"):
