@@ -2,7 +2,7 @@
 # Flare(V) 유튜브 라이브 웹캠 수집 (수동 실행)
 # 위치: .github/workflows/youtube_live.yml
 # 실행: GitHub → Actions 탭 → "YouTube Live Collector" → Run workflow 버튼
-# 필요한 Secrets: GOOGLE_API_KEY, ANTHROPIC_API_KEY (이미 등록돼 있음)
+# 필요한 Secrets: GOOGLE_API_KEY, ANTHROPIC_API_KEY, SUPABASE_SERVICE_KEY
 # ============================================
 name: YouTube Live Collector
 
@@ -28,4 +28,5 @@ jobs:
         env:
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: python youtube_live_collector.py

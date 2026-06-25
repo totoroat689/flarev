@@ -2,7 +2,7 @@
 # Flare(V) 유튜브 라이브 상태 점검 (자동: 30분마다)
 # 위치: .github/workflows/youtube_live_check.yml
 # 실행: 30분마다 자동 + Actions 탭에서 "YouTube Live Checker" 수동 실행도 가능
-# 필요한 Secrets: GOOGLE_API_KEY (이미 등록돼 있음 — 유튜브 키)
+# 필요한 Secrets: GOOGLE_API_KEY, SUPABASE_SERVICE_KEY
 # 메모: 깃허브 스케줄은 UTC 기준이며, 서버가 바쁘면 몇 분 늦게 돌 수 있음(정상).
 # ============================================
 name: YouTube Live Checker
@@ -30,4 +30,5 @@ jobs:
       - name: 상태 점검 실행
         env:
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: python youtube_live_checker.py
