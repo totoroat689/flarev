@@ -2437,9 +2437,7 @@ async function lvLikeReview(id) {
   if (!r) return;
   const newLikes = (r.likes || 0) + 1;
   const { error } = await supabaseClient
-    .from('reviews')
-    .update({ likes: newLikes })
-    .eq('id', id);
+    .rpc('like_review', { p_id: String(id) });
   if (error) { toast('Please try again in a moment'); return; }
   r.likes = newLikes;
   likedIds.add(id);
@@ -2463,13 +2461,9 @@ async function lvDoDelete(id) {
   const pw = input ? input.value.trim() : '';
   if (!pw) { toast('Please enter the password'); return; }
   const { data, error } = await supabaseClient
-    .from('reviews')
-    .delete()
-    .eq('id', id)
-    .eq('password', pw)
-    .select();
+    .rpc('delete_review', { p_id: String(id), p_pw: pw });
   if (error) { toast('Please try again in a moment'); return; }
-  if (!data || data.length === 0) { toast('Wrong password'); return; }
+  if (!data) { toast('Wrong password'); return; }
   lvReviews = lvReviews.filter((x) => x.id !== id);
   renderLvReviews();
   renderLvRating();
