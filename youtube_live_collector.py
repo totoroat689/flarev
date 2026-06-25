@@ -1,9 +1,11 @@
 # ============================================
 # Flare[V] 유튜브 라이브 웹캠 수집기  (youtube_live_collector.py)
-# 버전: 1.9 / 2026-06-25 (보안: service_role 키로 전환 + 1000행 한도 해결 + 친절한 키 확인)
+# 버전: 1.10 / 2026-06-25 (제3세계 현지어 검색어 그룹 추가 — 각 30개씩)
 # 역할: "webcam live" 라이브 검색 → 외부재생 가능 + 라이브 중 + 신규만 추려서
 #       Claude로 위치/좌표/kind/설명/소개글/볼거리/국가를 정제(전부 영어)한 뒤 live_videos에 저장
-# 변경(1.9):
+# 변경(1.10):
+#   - 제3세계 현지어 검색어 그룹(SEARCH_QUERIES_REGIONAL) 추가, 각 검색어당 30개 제한
+#   - 주요 검색어(SEARCH_QUERIES)는 기존 그대로 유지
 #   - Supabase 연결을 anon(코드 박힘) → service_role(Secrets) 로 전환 (보안)
 #   - 기존 캠 목록 조회를 페이지 나눠 읽기로 (캠 1000개 넘어도 중복체크 정상)
 #   - 필수 비밀키가 없으면 친절히 알려주고 종료 (require_env)
@@ -111,7 +113,7 @@ def yt_get(url, params, tries=3):
 # 검색어 목록 — 여기에 추가/삭제만 하면 됨 (검색어 1개당 약 100~150유닛)
 # 검색어마다 다른 웹캠이 잡혀서, 합치면 수백 개 후보가 모임
 SEARCH_QUERIES = [
-    #"webcam live",
+    "webcam live",
     #"beach live cam",
     #"city live stream",
     "라이브 캠",
@@ -120,14 +122,33 @@ SEARCH_QUERIES = [
     "hotel live cam",
     "train live",
     #"store live",
-    "camera trực tiếp",
-    "กล้องวงจรปิด สด",
-    "pantauan cctv langsung",
-    "camera đường phố",
-    "ดูสด cctv",
+    #"camera trực tiếp",
+    #"กล้องวงจรปิด สด",
+    #"pantauan cctv langsung",
+    #"camera đường phố",
+    #"ดูสด cctv",
     "live walking",
 ]
 SEARCH_PAGES = 2               # 검색어당 페이지 수 (1페이지=50개, 100유닛). 2 = 검색어당 약 200유닛
+
+# 제3세계(현지어) 검색어 — 각 검색어당 30개만 (REGIONAL_PER_QUERY)
+# 비용: 검색어당 search.list 1회(100유닛). 30개 제한은 정제 비용/노이즈를 줄이는 용도.
+SEARCH_QUERIES_REGIONAL = [
+    "लाइव दर्शन",          # 인도(힌디): 사원 라이브
+    "लाइव कैमरा",          # 인도(힌디): 라이브 카메라
+    "لائیو کیمرہ",         # 파키스탄(우르두): 라이브 카메라
+    "লাইভ ক্যামেরা",       # 방글라데시(벵골): 라이브 카메라
+    "بث مباشر كاميرا",     # 중동(아랍어): 라이브 카메라
+    "كاميرا مباشرة",       # 중동(아랍어): 직접 카메라
+    "cctv langsung",       # 인니/말레이: 실시간 cctv
+    "kamera langsung",     # 인니/말레이: 실시간 카메라
+    "safari live cam",     # 아프리카: 사파리 라이브
+    "caméra direct",       # 아프리카(불어권): 라이브
+    "nigeria live",        # 나이지리아: 라이브
+    "cámara en vivo",      # 중남미(스페인어): 라이브
+    "câmera ao vivo",      # 중남미(포르투갈어): 라이브
+]
+REGIONAL_PER_QUERY = 30       # 제3세계 검색어 1개당 가져올 최대 개수
 MAX_TO_REFINE = 500            # Claude로 정제할 최대 후보 수 (인기순 상위부터). 500=사실상 전부
 CLAUDE_MODEL = "claude-sonnet-4-6"  # 위치 추론 정확도 위해 Sonnet. 더 싸게는 haiku로 교체 가능
 
@@ -162,11 +183,21 @@ def assign_slugs(rows, used):
 # ============================================
 # 1) 유튜브에서 여러 검색어로 라이브 검색 → video_id 목록 (합쳐서 중복 제거)
 # ============================================
-def _search_one_query(query):
-    """검색어 하나를 SEARCH_PAGES 만큼 페이지 넘기며 video_id 모으기"""
+def _search_one_query(query, pages=None, max_results=None):
+    """검색어 하나를 페이지 넘기며 video_id 모으기.
+    pages: 가져올 페이지 수 (기본 SEARCH_PAGES).
+    max_results: 이 개수만큼 모이면 멈춤 (제3세계 검색어의 30개 제한용)."""
+    if pages is None:
+        pages = SEARCH_PAGES
     ids = []
     page_token = None
-    for _ in range(SEARCH_PAGES):
+    for _ in range(pages):
+        per_page = 50
+        if max_results is not None:
+            remaining = max_results - len(ids)
+            if remaining <= 0:
+                break
+            per_page = min(50, remaining)
         params = {
             "key": YOUTUBE_KEY,
             "part": "snippet",
@@ -174,7 +205,7 @@ def _search_one_query(query):
             "type": "video",
             "eventType": "live",   # 지금 라이브 중인 영상만
             "order": "viewCount",  # (라이브에선 무시될 수 있어 뒤에서 다시 정렬)
-            "maxResults": 50,
+            "maxResults": per_page,
         }
         if page_token:
             params["pageToken"] = page_token
@@ -190,6 +221,9 @@ def _search_one_query(query):
             vid = it.get("id", {}).get("videoId")
             if vid:
                 ids.append(vid)
+        if max_results is not None and len(ids) >= max_results:
+            ids = ids[:max_results]
+            break
         page_token = data.get("nextPageToken")
         if not page_token:
             break
@@ -199,12 +233,21 @@ def _search_one_query(query):
 
 def search_live_video_ids():
     all_ids = []
-    log(f"🔎 검색 시작 (검색어 {len(SEARCH_QUERIES)}개)")
+    total_q = len(SEARCH_QUERIES) + len(SEARCH_QUERIES_REGIONAL)
+    log(f"🔎 검색 시작 (주요 {len(SEARCH_QUERIES)} + 제3세계 {len(SEARCH_QUERIES_REGIONAL)} = {total_q}개)")
+
     for n, q in enumerate(SEARCH_QUERIES, 1):
         got = _search_one_query(q)
-        log(f"  🔎 [{n}/{len(SEARCH_QUERIES)}] '{q}' → {len(got)}개")
+        log(f"  🔎 [주요 {n}/{len(SEARCH_QUERIES)}] '{q}' → {len(got)}개")
         all_ids.extend(got)
         time.sleep(0.3)
+
+    for n, q in enumerate(SEARCH_QUERIES_REGIONAL, 1):
+        got = _search_one_query(q, pages=1, max_results=REGIONAL_PER_QUERY)
+        log(f"  🌍 [제3세계 {n}/{len(SEARCH_QUERIES_REGIONAL)}] '{q}' → {len(got)}개")
+        all_ids.extend(got)
+        time.sleep(0.3)
+
     # 중복 제거 (순서 유지)
     seen = set()
     uniq = []
@@ -212,7 +255,7 @@ def search_live_video_ids():
         if v not in seen:
             seen.add(v)
             uniq.append(v)
-    print(f"🔎 검색어 {len(SEARCH_QUERIES)}개 합산 → 중복 제거 후 {len(uniq)}개 영상 ID")
+    print(f"🔎 검색어 {total_q}개 합산 → 중복 제거 후 {len(uniq)}개 영상 ID")
     return uniq
 
 
